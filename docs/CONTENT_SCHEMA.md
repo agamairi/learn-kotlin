@@ -36,14 +36,14 @@ Every exercise has `type`, `id` and `prompt` (Markdown). Other fields by type:
 
 ### `write_function`
 - `starter_code`: what the learner starts from (can contain `TODO()`)
-- `hidden_tests`: a Kotlin JUnit 4 test class using `kotlin.test` assertions, run with the learner's file
+- `hidden_tests`: a Kotlin JUnit 4 test class (`import org.junit.Test`, `import org.junit.Assert.assertEquals` and friends; no `kotlin.test`), run with the learner's file. Tests may only call functions and types declared in `starter_code`, so `starter_code` must declare every signature the tests use (bodies can be `TODO()`)
 - `reference_solution`: a complete solution that must pass `hidden_tests` (the content compiler checks this against the compiler server in CI)
 - `hints`: 0 to 3 strings, in increasing order of help
 - `explanation` (optional)
 
 ### `multi_part_problem`
 - `story`: Markdown context for the whole problem
-- `parts`: an ordered list. Each part has `id`, `prompt`, `starter_code` (optional; later parts usually start from the learner's previous code), `hidden_tests`, `reference_solution`, `expected` (Markdown describing the expected result shown to the learner after passing)
+- `parts`: an ordered list. Each part has `id`, `prompt`, `starter_code` (optional; later parts start from the learner's previous code, so new parts add new functions instead of changing earlier signatures), `hidden_tests` (testing this part), `reference_solution` (the complete file through this part, so it passes this part's tests and every earlier part's tests), `expected` (Markdown describing the expected result shown to the learner after passing)
 - `faq`: a list of `question` / `answer` pairs (the clarifying answers)
 - `discussion` (optional): Markdown for a discussion-only final part
 - `source_note` (optional): where the problem comes from, for example "Stripe's published sample, paraphrased"
