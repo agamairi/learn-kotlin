@@ -42,7 +42,14 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.datetime)
+    implementation(libs.ktor.client.core)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.ktor.client.mock)
 }
+
+tasks.named("preBuild") {
+    dependsOn(":content:compileContent")
+}
+

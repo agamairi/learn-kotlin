@@ -30,6 +30,8 @@ class MultiPartProblemViewModel(
     private val codeRunner: CodeRunner,
     private val aiTutor: AiTutor? = null,
     isInterviewModeDefault: Boolean = false,
+    /** False when no API key is saved; the AI controls then show the add-key hint and do nothing. */
+    hasApiKey: Boolean = false,
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
@@ -61,6 +63,7 @@ class MultiPartProblemViewModel(
                 currentCode = initialCode,
                 isInterviewMode = isInterviewModeDefault,
                 isAiAvailable = aiTutor != null,
+                hasApiKey = hasApiKey,
                 timerSeconds = 45 * 60,
                 isTimerRunning = false
             )
@@ -204,7 +207,7 @@ class MultiPartProblemViewModel(
 
     fun askAiExplainMistake() {
         val tutor = aiTutor ?: return
-        if (_uiState.value.isInterviewMode) return
+        if (_uiState.value.isInterviewMode || !_uiState.value.hasApiKey) return
 
         val currentPart = problem.parts.getOrNull(_uiState.value.currentPartIndex) ?: return
         val dummyExercise = Exercise.WriteFunction(
@@ -236,7 +239,7 @@ class MultiPartProblemViewModel(
 
     fun askAiHint() {
         val tutor = aiTutor ?: return
-        if (_uiState.value.isInterviewMode) return
+        if (_uiState.value.isInterviewMode || !_uiState.value.hasApiKey) return
 
         val currentPart = problem.parts.getOrNull(_uiState.value.currentPartIndex) ?: return
         val dummyExercise = Exercise.WriteFunction(
@@ -264,7 +267,7 @@ class MultiPartProblemViewModel(
 
     fun askAiReview() {
         val tutor = aiTutor ?: return
-        if (_uiState.value.isInterviewMode) return
+        if (_uiState.value.isInterviewMode || !_uiState.value.hasApiKey) return
 
         val currentPart = problem.parts.getOrNull(_uiState.value.currentPartIndex) ?: return
         val dummyExercise = Exercise.WriteFunction(

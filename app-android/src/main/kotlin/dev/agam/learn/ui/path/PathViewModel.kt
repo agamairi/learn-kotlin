@@ -29,7 +29,7 @@ class PathViewModel(
     private val _uiState = MutableStateFlow(PathUiState())
     val uiState: StateFlow<PathUiState> = _uiState.asStateFlow()
 
-    fun loadPath(courseId: String = "kotlin-foundations") {
+    fun loadPath(courseId: String = "kotlin-stripe") {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val courses = courseRepository.listCourses()

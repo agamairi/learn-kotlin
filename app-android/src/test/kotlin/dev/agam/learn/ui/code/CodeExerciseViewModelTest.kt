@@ -48,6 +48,7 @@ class CodeExerciseViewModelTest {
             codeRunner = fakeRunner,
             aiTutor = fakeAiTutor,
             isInterviewMode = false,
+            hasApiKey = true,
             coroutineScope = testScope
         )
 
@@ -60,6 +61,7 @@ class CodeExerciseViewModelTest {
         assertFalse(state.isChecking)
         assertNull(state.outcome)
         assertTrue(state.isAiAvailable)
+        assertTrue(state.hasApiKey)
         assertFalse(state.isInterviewMode)
     }
 
@@ -197,6 +199,7 @@ class CodeExerciseViewModelTest {
             codeRunner = fakeRunner,
             aiTutor = fakeAiTutor,
             isInterviewMode = false,
+            hasApiKey = true,
             coroutineScope = testScope
         )
 
@@ -220,6 +223,7 @@ class CodeExerciseViewModelTest {
             codeRunner = fakeRunner,
             aiTutor = fakeAiTutor,
             isInterviewMode = true,
+            hasApiKey = true,
             coroutineScope = testScope
         )
 
@@ -231,6 +235,48 @@ class CodeExerciseViewModelTest {
 
         viewModel.askAiReview()
         assertNull(viewModel.uiState.value.aiDialogState)
+        assertEquals("interview mode must not reach the tutor", 0, fakeAiTutor.calls)
+    }
+
+    @Test
+    fun withoutAnApiKeyTheAiControlsShowTheHintAndNeverCallTheTutor() {
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            aiTutor = fakeAiTutor,
+            isInterviewMode = false,
+            hasApiKey = false,
+            coroutineScope = testScope
+        )
+
+        // The menu is still offered (disabled with a hint), so the screen can explain what is missing.
+        assertTrue(viewModel.uiState.value.isAiAvailable)
+        assertFalse(viewModel.uiState.value.hasApiKey)
+
+        viewModel.askAiExplainMistake()
+        viewModel.askAiHint()
+        viewModel.askAiReview()
+
+        assertNull(viewModel.uiState.value.aiDialogState)
+        assertEquals(0, fakeAiTutor.calls)
+    }
+
+    @Test
+    fun withAnApiKeyTheHintControlReachesTheTutor() {
+        fakeAiTutor.hintResponse = AiResult.Success("Try a single expression.")
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            aiTutor = fakeAiTutor,
+            isInterviewMode = false,
+            hasApiKey = true,
+            coroutineScope = testScope
+        )
+
+        viewModel.askAiHint()
+
+        assertEquals(1, fakeAiTutor.calls)
+        assertEquals("Try a single expression.", viewModel.uiState.value.aiDialogState?.content)
     }
 
     @Test
@@ -262,19 +308,28 @@ class CodeExerciseViewModelTest {
         var explainResponse: AiResult<String> = AiResult.Success("Mock explanation")
         var hintResponse: AiResult<String> = AiResult.Success("Mock hint")
         var reviewResponse: AiResult<String> = AiResult.Success("Mock review")
+        var calls = 0
 
         override suspend fun explainMistake(
             exercise: Exercise,
             userAnswer: String,
             expectedResult: String
-        ): AiResult<String> = explainResponse
+        ): AiResult<String> {
+            calls++
+            return explainResponse
+        }
 
-        override suspend fun hint(exercise: Exercise, level: Int): AiResult<String> = hintResponse
+        override suspend fun hint(exercise: Exercise, level: Int): AiResult<String> {
+            calls++
+            return hintResponse
+        }
 
         override suspend fun generateCards(topic: String, count: Int): AiResult<List<Exercise>> =
             AiResult.Success(emptyList())
 
-        override suspend fun reviewCode(exercise: Exercise, code: String): AiResult<String> =
-            reviewResponse
+        override suspend fun reviewCode(exercise: Exercise, code: String): AiResult<String> {
+            calls++
+            return reviewResponse
+        }
     }
 }

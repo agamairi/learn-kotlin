@@ -16,11 +16,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -33,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.agam.learn.ai.AI_API_KEY_MISSING_MESSAGE
 import dev.agam.learn.runner.RunOutcome
 import dev.agam.learn.runner.TestFailure
 
@@ -51,6 +56,7 @@ data class CodeExerciseUiState(
     val outcome: RunOutcome? = null,
     val isAiAvailable: Boolean = false,
     val isInterviewMode: Boolean = false,
+    val hasApiKey: Boolean = false,
     val aiDialogState: AiDialogState? = null
 )
 
@@ -70,6 +76,8 @@ fun CodeExerciseScreen(
     onReviewCodeClick: () -> Unit,
     onDismissOutcome: () -> Unit,
     onDismissAiDialog: () -> Unit,
+    onNavigateBack: (() -> Unit)? = null,
+    onFinish: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -84,6 +92,26 @@ fun CodeExerciseScreen(
                 .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
+            if (onNavigateBack != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                    Text(
+                        text = "Code Drill",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
             // Prompt Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -208,15 +236,23 @@ fun CodeExerciseScreen(
                     }
                 }
 
-                // AI Tutor Menu (only shown when AI is available and NOT in interview mode)
+                // AI Tutor Menu (hidden in interview mode; disabled with a hint until a key is saved)
                 if (state.isAiAvailable && !state.isInterviewMode) {
                     AiTutorMenuButton(
                         onExplainMistake = onExplainMistakeClick,
                         onAskHint = onAskHintClick,
                         onReviewCode = onReviewCodeClick,
-                        enabled = !state.isRunning && !state.isChecking
+                        enabled = !state.isRunning && !state.isChecking && state.hasApiKey
                     )
                 }
+            }
+            if (state.isAiAvailable && !state.isInterviewMode && !state.hasApiKey) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = AI_API_KEY_MISSING_MESSAGE,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             // Results Panel
@@ -226,6 +262,16 @@ fun CodeExerciseScreen(
                     outcome = state.outcome,
                     onDismiss = onDismissOutcome
                 )
+                if (state.outcome is RunOutcome.Passed && onFinish != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = onFinish,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Complete & Return to Lesson")
+                    }
+                }
             }
         }
 
@@ -250,7 +296,8 @@ private fun CodeExerciseScreenPreview() {
                 hints = listOf("Use the + operator.", "Return expression directly."),
                 revealedHintsCount = 1,
                 isAiAvailable = true,
-                isInterviewMode = false
+                isInterviewMode = false,
+                hasApiKey = true
             ),
             onCodeChange = {},
             onRunClick = {},
@@ -280,7 +327,8 @@ private fun CodeExerciseScreenFailedPreview() {
                     stdout = ""
                 ),
                 isAiAvailable = true,
-                isInterviewMode = false
+                isInterviewMode = false,
+                hasApiKey = true
             ),
             onCodeChange = {},
             onRunClick = {},

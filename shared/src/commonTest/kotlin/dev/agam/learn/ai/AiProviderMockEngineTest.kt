@@ -1,5 +1,6 @@
 package dev.agam.learn.ai
 
+import dev.agam.learn.data.SecretStore
 import dev.agam.learn.model.Exercise
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -147,8 +148,8 @@ class AiProviderMockEngineTest {
             for ((status, message) in expected) {
                 val client = mockClient { respondJson("{}", status) }
                 val tutor = AiTutorImpl(
-                    settings = AiSettings(provider = provider, apiKey = ""),
-                    secretStore = SecretStore { "test-key" },
+                    settings = AiSettings(provider = provider),
+                    secretStore = StaticSecretStore("test-key"),
                     httpClient = client
                 )
 
@@ -166,13 +167,37 @@ class AiProviderMockEngineTest {
         })
         val client = testHttpClient(engine)
         val tutor = AiTutorImpl(
-            settings = AiSettings(provider = AiProvider.OPENAI, apiKey = ""),
-            secretStore = SecretStore { "test-key" },
+            settings = AiSettings(provider = AiProvider.OPENAI),
+            secretStore = StaticSecretStore("test-key"),
             httpClient = client
         )
 
         assertEquals(AiResult.Error("No connection"), tutor.hint(sampleExercise(), 1))
         client.close()
+    }
+
+    @Test
+    fun missingSavedKeyFailsBeforeAnyRequest() = runTest {
+        for (provider in AiProvider.entries) {
+            var requestCount = 0
+            val client = mockClient {
+                requestCount++
+                respondJson("{}")
+            }
+            val tutor = AiTutorImpl(
+                settings = AiSettings(provider = provider),
+                secretStore = StaticSecretStore(null),
+                httpClient = client
+            )
+
+            assertEquals(
+                AiResult.Error("Add your API key in Settings"),
+                tutor.hint(sampleExercise(), 1),
+                "$provider"
+            )
+            assertEquals(0, requestCount, "$provider must not call the network without a key")
+            client.close()
+        }
     }
 
     @Test
@@ -185,10 +210,9 @@ class AiProviderMockEngineTest {
         val tutor = AiTutorImpl(
             settings = AiSettings(
                 provider = AiProvider.OPENAI,
-                apiKey = "",
                 interviewMode = true
             ),
-            secretStore = SecretStore { "test-key" },
+            secretStore = StaticSecretStore("test-key"),
             httpClient = client
         )
 
@@ -212,8 +236,8 @@ class AiProviderMockEngineTest {
         """.trimIndent()
         val client = mockClient { respondJson(response) }
         val tutor = AiTutorImpl(
-            settings = AiSettings(provider = AiProvider.OPENAI, apiKey = ""),
-            secretStore = SecretStore { "test-key" },
+            settings = AiSettings(provider = AiProvider.OPENAI),
+            secretStore = StaticSecretStore("test-key"),
             httpClient = client
         )
 
@@ -256,4 +280,9 @@ class AiProviderMockEngineTest {
             headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
         )
 
+    private class StaticSecretStore(private val key: String?) : SecretStore {
+        override suspend fun get(): String? = key
+        override suspend fun set(value: String) {}
+        override suspend fun delete() {}
+    }
 }

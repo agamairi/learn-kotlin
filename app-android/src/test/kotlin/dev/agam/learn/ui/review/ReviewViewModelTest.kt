@@ -1,13 +1,12 @@
 package dev.agam.learn.ui.review
 
-import dev.agam.learn.data.ProgressRepository
 import dev.agam.learn.domain.ReviewScheduler
-import dev.agam.learn.model.DailyActivity
+import dev.agam.learn.fake.FakeProgressRepository
 import dev.agam.learn.model.Exercise
-import dev.agam.learn.model.ExerciseResult
 import dev.agam.learn.model.ReviewCard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -26,13 +25,13 @@ class ReviewViewModelTest {
         fakeScheduler = FakeReviewScheduler()
     }
 
+    private fun seed(vararg cards: ReviewCard) = runBlocking {
+        cards.forEach { fakeRepo.upsertReviewCard(it) }
+    }
+
     @Test
     fun testQueueLoading() {
-        fakeRepo.dueCards = listOf(
-            ReviewCard("card-1", 1, 100),
-            ReviewCard("card-2", 2, 100)
-        )
-        fakeRepo.allCards = listOf(
+        seed(
             ReviewCard("card-1", 1, 100),
             ReviewCard("card-2", 2, 100),
             ReviewCard("card-3", 3, 110)
@@ -53,9 +52,26 @@ class ReviewViewModelTest {
     }
 
     @Test
+    fun cardWithoutExerciseIsLeftOutOfTheSessionNotFabricated() {
+        seed(ReviewCard("missing-item", 1, 100))
+
+        val viewModel = ReviewViewModel(
+            progressRepository = fakeRepo,
+            reviewScheduler = fakeScheduler,
+            currentEpochDay = 100,
+            exerciseLookup = { null },
+            coroutineScope = testScope
+        )
+
+        viewModel.startSession()
+
+        assertFalse(viewModel.uiState.value.isInSession)
+        assertTrue(viewModel.uiState.value.sessionItems.isEmpty())
+    }
+
+    @Test
     fun testSessionFlowCorrectAnswer() {
-        fakeRepo.dueCards = listOf(ReviewCard("item-mc", 1, 100))
-        fakeRepo.allCards = fakeRepo.dueCards
+        seed(ReviewCard("item-mc", 1, 100))
 
         val mcExercise = Exercise.MultipleChoice(
             id = "item-mc",
@@ -87,26 +103,6 @@ class ReviewViewModelTest {
         // Advance to finish
         viewModel.nextCard()
         assertTrue(viewModel.uiState.value.isSessionComplete)
-    }
-
-    private class FakeProgressRepository : ProgressRepository {
-        var dueCards: List<ReviewCard> = emptyList()
-        var allCards: List<ReviewCard> = emptyList()
-        val upserted = mutableListOf<ReviewCard>()
-        val results = mutableListOf<ExerciseResult>()
-
-        override suspend fun recordExerciseResult(result: ExerciseResult) { results.add(result) }
-        override suspend fun getExerciseResults(): List<ExerciseResult> = results
-        override suspend fun getExerciseResultsForExercise(exerciseId: String): List<ExerciseResult> = emptyList()
-        override suspend fun recordDailyActivity(activity: DailyActivity) {}
-        override suspend fun getDailyActivities(): List<DailyActivity> = emptyList()
-        override suspend fun getDailyActivity(epochDay: Long): DailyActivity? = null
-        override suspend fun upsertReviewCard(card: ReviewCard) { upserted.add(card) }
-        override suspend fun getAllReviewCards(): List<ReviewCard> = allCards
-        override suspend fun getDueReviewCards(epochDay: Long): List<ReviewCard> = dueCards
-        override suspend fun getReviewCard(itemId: String): ReviewCard? = allCards.find { it.itemId == itemId }
-        override suspend fun getSetting(key: String): String? = null
-        override suspend fun setSetting(key: String, value: String) {}
     }
 
     private class FakeReviewScheduler : ReviewScheduler {

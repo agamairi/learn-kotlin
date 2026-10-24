@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -94,6 +95,22 @@ class RepositoryTest {
                 ),
                 repository.observeSettings().first()
             )
+        } finally {
+            driver.close()
+        }
+    }
+
+    @Test
+    fun progressRepositoryRejectsSecretApiKeySetting() = runTest {
+        val driver = LearnDatabaseDriverFactory().createDriver(":memory:")
+        try {
+            val repository = SqlDelightProgressRepository(LearnDatabase(driver))
+            assertFailsWith<IllegalArgumentException> {
+                repository.setSetting(AI_API_KEY_SETTING, "plain-text-secret")
+            }
+            assertFailsWith<IllegalArgumentException> {
+                repository.getSetting(AI_API_KEY_SETTING)
+            }
         } finally {
             driver.close()
         }

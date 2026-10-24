@@ -1,8 +1,11 @@
 package dev.agam.learn.ui.stats
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import dev.agam.learn.data.ProgressRepository
+import dev.agam.learn.data.SettingsRepository
+import dev.agam.learn.di.AppContainer
 import dev.agam.learn.model.DailyActivity
 import dev.agam.learn.model.ExerciseResult
 import kotlinx.coroutines.CoroutineScope
@@ -17,6 +20,7 @@ import kotlinx.coroutines.launch
  */
 class StatsViewModel(
     private val progressRepository: ProgressRepository,
+    private val settingsRepository: SettingsRepository,
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
@@ -35,7 +39,7 @@ class StatsViewModel(
         scope.launch {
             val activities = progressRepository.getDailyActivities().sortedBy { it.epochDay }
             val results = progressRepository.getExerciseResults()
-            val dailyGoalSetting = progressRepository.getSetting("settings.daily_goal")?.toIntOrNull() ?: 50
+            val dailyGoalSetting = settingsRepository.getSettings().dailyGoalXp
 
             val totalXp = activities.sumOf { it.xpEarned }
             val totalExercises = activities.sumOf { it.exercisesCompleted }
@@ -126,6 +130,7 @@ class StatsViewModel(
             Triple("ch09", "Stripe Classics", setOf("ch09", "stripe", "terminal", "problem"))
         )
 
+        // Only chapters with attempts are listed; the screen shows an empty state otherwise.
         return chapterDefs.mapNotNull { (id, title, prefixes) ->
             val matching = results.filter { r ->
                 prefixes.any { p -> r.exerciseId.contains(p, ignoreCase = true) }
@@ -145,13 +150,19 @@ class StatsViewModel(
             } else {
                 null
             }
-        }.ifEmpty {
-            // Default sample display if no results yet
-            listOf(
-                ChapterAccuracy("ch01", "Syntax Basics", 0, 0, 0),
-                ChapterAccuracy("ch02", "Strings", 0, 0, 0),
-                ChapterAccuracy("ch03", "Collections", 0, 0, 0)
-            )
         }
+    }
+
+    companion object {
+        fun provideFactory(appContainer: AppContainer): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return StatsViewModel(
+                        progressRepository = appContainer.progressRepository,
+                        settingsRepository = appContainer.settingsRepository
+                    ) as T
+                }
+            }
     }
 }

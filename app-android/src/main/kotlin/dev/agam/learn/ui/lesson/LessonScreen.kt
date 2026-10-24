@@ -63,6 +63,7 @@ import dev.agam.learn.ui.lesson.components.PredictOutputCard
 fun LessonScreen(
     lessonId: String,
     onNavigateBack: () -> Unit,
+    onOpenExercise: (route: String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: LessonViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
         factory = LessonViewModel.provideFactory(LocalAppContainer.current)
@@ -226,6 +227,12 @@ fun LessonScreen(
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
+                                        Button(
+                                            onClick = { viewModel.routeForExercise(exercise)?.let(onOpenExercise) },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Open in Code Studio")
+                                        }
                                     }
                                 }
 
@@ -239,19 +246,26 @@ fun LessonScreen(
                                             text = exercise.story,
                                             style = MaterialTheme.typography.bodyMedium
                                         )
+                                        Button(
+                                            onClick = { viewModel.routeForExercise(exercise)?.let(onOpenExercise) },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Open Problem Studio")
+                                        }
                                     }
                                 }
                             }
                         }
                     }
 
-                    // Bottom action area: Check button when not checked, or animated feedback banner when checked
+                    // Bottom action area: Check button when not checked, or animated feedback banner when checked.
+                    // Studio exercises have no Check button: their result comes back from the studio screen.
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
                     ) {
-                        if (!uiState.isAnswerChecked) {
+                        if (!uiState.isAnswerChecked && !uiState.isStudioExercise) {
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
                                 color = MaterialTheme.colorScheme.background,

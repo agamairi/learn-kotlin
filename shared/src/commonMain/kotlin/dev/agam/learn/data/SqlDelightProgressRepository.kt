@@ -255,10 +255,17 @@ class SqlDelightProgressRepository(
             rows.mapTo(linkedSetOf()) { it.lesson_id }
         }
 
-    override suspend fun getSetting(key: String): String? =
-        settings.selectSettingByKey(key).executeAsOneOrNull()
+    override suspend fun getSetting(key: String): String? {
+        require(key != AI_API_KEY_SETTING) {
+            "Secret settings cannot be accessed via ProgressRepository; use SecretStore instead"
+        }
+        return settings.selectSettingByKey(key).executeAsOneOrNull()
+    }
 
     override suspend fun setSetting(key: String, value: String) {
+        require(key != AI_API_KEY_SETTING) {
+            "Secret settings cannot be stored via ProgressRepository; use SecretStore instead"
+        }
         settings.insertSetting(key, value)
     }
 
