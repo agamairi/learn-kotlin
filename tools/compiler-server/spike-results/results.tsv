@@ -1,0 +1,26 @@
+case	endpoint	http	seconds	outcome
+01-correct-cold	/api/compiler/test	200	1.691	both tests OK (first compile after container start)
+01-correct-warm-1	/api/compiler/test	200	0.491	both tests OK
+01-correct-warm-2	/api/compiler/test	200	0.374	both tests OK
+01-correct-warm-3	/api/compiler/test	200	0.416	both tests OK
+01-correct-warm-4	/api/compiler/test	200	0.391	both tests OK
+01-correct-warm-5	/api/compiler/test	200	0.347	both tests OK
+02-compile-error	/api/compiler/test	200	0.178	errors[Solution.kt] ERROR line 0 ch 33 (type mismatch); no testResults
+03-infinite-loop	/api/compiler/test	200	10.185	text = timeout message; no testResults; no leftover JVM
+04-memory-bomb	/api/compiler/test	200	0.751	test status ERROR, java.lang.OutOfMemoryError: Java heap space
+05-system-exit	/api/compiler/test	200	0.521	top-level exception MismatchedInputException (no content to map)
+06a-fake-pass-lines	/api/compiler/test	200	0.385	both tests FAIL (printed PASS lines ignored)
+06b-forged-json-static-init	/api/compiler/test	200	0.408	FORGED: both failing tests reported OK
+06c-forged-json-then-halt	/api/compiler/test	200	0.336	FORGED: failing test reported OK
+07-filesystem-probe	/api/compiler/test	200	1.122	runs as root; reads /etc/passwd, /root, app dir; test .kt absent; test .class readable; example.com reachable
+09-highlight-broken	/api/compiler/highlight	200	0.149	4 diagnostics (2 warnings, 2 errors), 0-based line/ch
+run-hello	/api/compiler/run	200	0.365	text contains Hello from /run inside outStream tags
+10-output-flood-run	/api/compiler/run	200	0.399	exception OutOfMemoryError in child (32 MB heap)
+11a-junit5-test	/api/compiler/test	200	0.087	compile error Unresolved reference 'jupiter'
+11b-packaged-test	/api/compiler/test	200	0.343	no testResults and no error (silent)
+11c-no-test-classes	/api/compiler/test	200	0.236	no testResults and no error (silent)
+13-serialization-and-libs	/api/compiler/test	200	0.386	@Serializable + kotlinx.serialization json OK
+14-path-traversal	/api/compiler/test	200	0.635	absolute file name wrote /tmp/traversal-probe-marker.txt on server (marker removed after)
+15-shutdown-hook-hang	/api/compiler/test	no response in 60 s	>60	shutdown hook loop survives SIGTERM; request never returns; runner locked until child killed with kill -9
+conc-quick-behind-loop	/api/compiler/test	200	9.561	quick request queued behind 03-infinite-loop (serialized by synchronize)
+after-kill-warm	/api/compiler/test	200	0.299	server recovered after kill -9 of leaked child

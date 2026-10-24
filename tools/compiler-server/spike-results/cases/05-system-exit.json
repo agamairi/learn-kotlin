@@ -1,0 +1,14 @@
+{
+  "args": "",
+  "files": [
+    {
+      "name": "Solution.kt",
+      "text": "fun sum(a: Int, b: Int): Int {\n    System.exit(0)\n    return a + b\n}\n"
+    },
+    {
+      "name": "SumTest.kt",
+      "text": "import kotlin.test.*\n\nclass SumTest {\n    @Test fun addsTwoNumbers() {\n        assertEquals(5, sum(2, 3))\n    }\n\n    @Test fun addsNegatives() {\n        assertEquals(-1, sum(2, -3))\n    }\n}\n"
+    }
+  ],
+  "compilerArguments": {}
+}

@@ -1,0 +1,1 @@
+{"args": "", "files": [{"name": "/tmp/traversal-probe-marker.txt", "text": "written-outside-input-dir"}, {"name": "Solution.kt", "text": "fun sum(a: Int, b: Int): Int = a + b\n"}], "compilerArguments": {}}

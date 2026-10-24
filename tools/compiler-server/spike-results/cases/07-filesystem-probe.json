@@ -1,0 +1,14 @@
+{
+  "args": "",
+  "files": [
+    {
+      "name": "Solution.kt",
+      "text": "import java.io.File\nimport java.net.HttpURLConnection\nimport java.net.URL\n\nfun sum(a: Int, b: Int): Int = a + b\n\nfun probe(): String {\n    val sb = StringBuilder()\n    sb.append(\"user.dir=\" + System.getProperty(\"user.dir\") + \" \")\n    sb.append(\"cwd_exists=\" + File(\".\").absoluteFile.exists() + \" \")\n    sb.append(\"cwd_list=\" + (File(\".\").list()?.toList()?.take(20)?.toString() ?: \"null\") + \" \")\n    for (p in listOf(\"/\", \"/kotlin-compiler-server\", \"/root\", \"/etc/passwd\", \"/proc/1/cmdline\", \"/tmp\", \"/var/run/docker.sock\")) {\n        val f = File(p)\n        sb.append(p + \" exists=\" + f.exists() + \" read=\" + f.canRead() + \" \")\n    }\n    sb.append(\"testfile_in_cwd=\" + File(\"SumTest.kt\").exists() + \" \")\n    sb.append(\"testclass_resource=\" + (ClassLoader.getSystemResource(\"SumTest.class\") != null) + \" \")\n    sb.append(\"env_count=\" + System.getenv().size + \" \")\n    try {\n        val p = ProcessBuilder(\"id\").redirectErrorStream(true).start()\n        sb.append(\"id=\" + p.inputStream.bufferedReader().readText().trim() + \" \")\n    } catch (e: Throwable) { sb.append(\"id_err=\" + e.javaClass.simpleName + \" \") }\n    for (u in listOf(\"https://example.com\", \"http://169.254.169.254/latest/meta-data/\", \"http://host.docker.internal:8080/health\")) {\n        try {\n            val c = URL(u).openConnection() as HttpURLConnection\n            c.connectTimeout = 3000; c.readTimeout = 3000\n            sb.append(\"net:\" + u + \"=\" + c.responseCode + \" \")\n        } catch (e: Throwable) { sb.append(\"net:\" + u + \"=\" + e.javaClass.simpleName + \" \") }\n    }\n    return sb.toString()\n}\n"
+    },
+    {
+      "name": "SumTest.kt",
+      "text": "import kotlin.test.*\n\nclass SumTest {\n    @Test fun probeTheSandbox() {\n        assertEquals(\"expected\", probe())\n    }\n}\n"
+    }
+  ],
+  "compilerArguments": {}
+}
