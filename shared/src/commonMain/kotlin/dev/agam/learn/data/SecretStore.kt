@@ -15,4 +15,4 @@ interface SecretStore {
 /** Creates the platform-specific secret store for a database. */
 expect fun createSecretStore(database: LearnDatabase): SecretStore
 
-internal const val AI_API_KEY_SETTING = "secret.ai_api_key"
+const val AI_API_KEY_SETTING = "secret.ai_api_key"

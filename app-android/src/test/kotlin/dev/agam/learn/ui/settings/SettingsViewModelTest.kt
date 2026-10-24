@@ -233,6 +233,51 @@ class SettingsViewModelTest {
         assertEquals(0, fakeAiTutor.hintCalls)
     }
 
+    @Test
+    fun keystoreExceptionOnSaveBecomesFriendlyErrorMessageRatherThanCrashing() {
+        val failingStore = object : SecretStore {
+            override suspend fun get(): String? = null
+            override suspend fun set(value: String) {
+                throw java.security.KeyStoreException("Keystore hardware unavailable")
+            }
+            override suspend fun delete() {}
+        }
+        val viewModel = SettingsViewModel(
+            settingsRepository = fakeRepo,
+            secretStore = failingStore,
+            coroutineScope = testScope
+        )
+
+        viewModel.onApiKeyChange("sk-ant-test-key")
+        viewModel.saveAiSettings()
+
+        val state = viewModel.uiState.value
+        assertNotNull(state.keystoreErrorMessage)
+        assertTrue(state.keystoreErrorMessage!!.contains("Unable to save API key to secure storage"))
+    }
+
+    @Test
+    fun keystoreExceptionOnRemoveBecomesFriendlyErrorMessageRatherThanCrashing() {
+        val failingStore = object : SecretStore {
+            override suspend fun get(): String? = "existing-key"
+            override suspend fun set(value: String) {}
+            override suspend fun delete() {
+                throw java.security.KeyStoreException("Keystore failed to delete alias")
+            }
+        }
+        val viewModel = SettingsViewModel(
+            settingsRepository = fakeRepo,
+            secretStore = failingStore,
+            coroutineScope = testScope
+        )
+
+        viewModel.removeApiKey()
+
+        val state = viewModel.uiState.value
+        assertNotNull(state.keystoreErrorMessage)
+        assertTrue(state.keystoreErrorMessage!!.contains("Unable to remove API key from secure storage"))
+    }
+
     private class FakeAiTutor : AiTutor {
         var hintResult: AiResult<String> = AiResult.Success("OK")
         var hintCalls = 0

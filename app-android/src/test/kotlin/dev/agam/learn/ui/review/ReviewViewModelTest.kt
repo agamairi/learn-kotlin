@@ -1,7 +1,9 @@
 package dev.agam.learn.ui.review
 
 import dev.agam.learn.domain.ReviewScheduler
+import dev.agam.learn.fake.FakeCourseRepository
 import dev.agam.learn.fake.FakeProgressRepository
+import dev.agam.learn.fake.SampleCourseData
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.model.ReviewCard
 import kotlinx.coroutines.CoroutineScope
@@ -103,6 +105,27 @@ class ReviewViewModelTest {
         // Advance to finish
         viewModel.nextCard()
         assertTrue(viewModel.uiState.value.isSessionComplete)
+    }
+
+    @Test
+    fun testAsyncCourseLoadingWithCourseRepository() {
+        val course = SampleCourseData.defaultCourse
+        val firstExercise = course.chapters.first().lessons.first().exercises.first()
+        seed(ReviewCard(firstExercise.id, 1, 100))
+
+        val viewModel = ReviewViewModel(
+            progressRepository = fakeRepo,
+            reviewScheduler = fakeScheduler,
+            courseRepository = FakeCourseRepository(listOf(course)),
+            currentEpochDay = 100,
+            coroutineScope = testScope
+        )
+
+        assertFalse("isLoading should be false after loading completes", viewModel.uiState.value.isLoading)
+        viewModel.startSession()
+        assertTrue("Session should start using exercises from courseRepository", viewModel.uiState.value.isInSession)
+        assertEquals(1, viewModel.uiState.value.sessionItems.size)
+        assertEquals(firstExercise.id, viewModel.uiState.value.sessionItems.first().exercise.id)
     }
 
     private class FakeReviewScheduler : ReviewScheduler {

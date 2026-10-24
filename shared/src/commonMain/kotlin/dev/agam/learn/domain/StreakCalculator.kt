@@ -34,6 +34,23 @@ object NoStreakFreezes : StreakFreezePolicy {
     override fun isFrozen(date: LocalDate): Boolean = false
 }
 
+/** Streak freeze policy backed by a set of frozen dates. */
+class SetStreakFreezePolicy(
+    val frozenDates: Set<LocalDate>
+) : StreakFreezePolicy {
+    override fun isFrozen(date: LocalDate): Boolean = date in frozenDates
+}
+
+/**
+ * Result of evaluating streaks and streak freezes over a learner's history.
+ */
+data class StreakFreezeState(
+    val heldFreezes: Int,
+    val frozenDates: Set<LocalDate>,
+    val currentStreak: Int,
+    val longestStreak: Int
+)
+
 /**
  * Calculates learner streaks with a 4:00 AM local day rollover boundary.
  */
@@ -56,20 +73,85 @@ interface StreakCalculator {
 /**
  * Calculates streaks using a 04:00 local rollover and no Android dependencies.
  *
- * Every timestamp supplied to this class represents a day whose daily goal was
- * met. A future timestamp is ignored. Streak freezes are deliberately not
- * applied here; the summary calculation leaves that policy at the call site
- * for a later phase.
+ * When no explicit [freezePolicy] is provided, the Phase 3 streak freeze policy
+ * is applied automatically: 1 freeze earned per 7 consecutive goal days (capped at 2),
+ * and missed past days covered automatically by a held freeze.
  */
 class DefaultStreakCalculator(
-    private val freezePolicy: StreakFreezePolicy = NoStreakFreezes
+    private val freezePolicy: StreakFreezePolicy? = null
 ) : StreakCalculator {
 
     override fun calculateStreak(
         activityTimestamps: Collection<Instant>,
         now: Instant,
         timeZone: TimeZone
-    ): Int = calculateSummary(activityTimestamps, now, timeZone).currentStreak
+    ): Int {
+        return if (freezePolicy != null) {
+            calculateSummary(activityTimestamps, now, timeZone).currentStreak
+        } else {
+            calculateStreakState(activityTimestamps, now, timeZone).currentStreak
+        }
+    }
+
+    /**
+     * Evaluates the learner's full streak freeze state including held freezes,
+     * dates covered by a freeze, and current / longest streak.
+     */
+    fun calculateStreakState(
+        activityTimestamps: Collection<Instant>,
+        now: Instant,
+        timeZone: TimeZone
+    ): StreakFreezeState {
+        val today = effectiveLocalDate(now, timeZone)
+        val activeDays = activityTimestamps
+            .asSequence()
+            .filter { it <= now }
+            .map { effectiveLocalDate(it, timeZone) }
+            .filter { it <= today }
+            .toSet()
+
+        if (activeDays.isEmpty()) {
+            return StreakFreezeState(
+                heldFreezes = 0,
+                frozenDates = emptySet(),
+                currentStreak = 0,
+                longestStreak = 0
+            )
+        }
+
+        val earliest = activeDays.minOrNull() ?: today
+        var day = earliest
+        var heldFreezes = 0
+        var consecutiveGoalDays = 0
+        val frozenDays = mutableSetOf<LocalDate>()
+
+        while (day <= today) {
+            if (day in activeDays) {
+                consecutiveGoalDays++
+                if (consecutiveGoalDays % 7 == 0) {
+                    heldFreezes = minOf(2, heldFreezes + 1)
+                }
+            } else if (day < today) {
+                if (heldFreezes > 0) {
+                    heldFreezes--
+                    frozenDays.add(day)
+                    consecutiveGoalDays = 0
+                } else {
+                    consecutiveGoalDays = 0
+                }
+            }
+            day = day.nextDay()
+        }
+
+        val summary = calculateSummaryInternal(activeDays, frozenDays, today)
+
+        return StreakFreezeState(
+            heldFreezes = heldFreezes,
+            frozenDates = frozenDays,
+            currentStreak = summary.currentStreak,
+            longestStreak = summary.longestStreak
+        )
+    }
 
     /**
      * Calculates both the current and longest streak for the supplied history.
@@ -79,6 +161,11 @@ class DefaultStreakCalculator(
         now: Instant,
         timeZone: TimeZone
     ): StreakSummary {
+        if (freezePolicy == null) {
+            val state = calculateStreakState(activityTimestamps, now, timeZone)
+            return StreakSummary(currentStreak = state.currentStreak, longestStreak = state.longestStreak)
+        }
+
         val today = effectiveLocalDate(now, timeZone)
         val activeDays = activityTimestamps
             .asSequence()
@@ -91,14 +178,28 @@ class DefaultStreakCalculator(
             return StreakSummary(currentStreak = 0, longestStreak = 0)
         }
 
-        val currentStart = if (isCounted(today, activeDays)) today else today.previousDay()
-        val current = countBackwards(currentStart, activeDays)
+        return calculateSummaryInternal(
+            activeDays = activeDays,
+            frozenDays = emptySet(),
+            today = today,
+            customPolicy = freezePolicy
+        )
+    }
+
+    private fun calculateSummaryInternal(
+        activeDays: Set<LocalDate>,
+        frozenDays: Set<LocalDate>,
+        today: LocalDate,
+        customPolicy: StreakFreezePolicy? = null
+    ): StreakSummary {
+        val currentStart = if (isCounted(today, activeDays, frozenDays, customPolicy)) today else today.previousDay()
+        val current = countBackwards(currentStart, activeDays, frozenDays, customPolicy)
         val earliest = activeDays.minOrNull() ?: today
         var day = earliest
         var run = 0
         var longest = 0
         while (day <= today) {
-            if (isCounted(day, activeDays)) {
+            if (isCounted(day, activeDays, frozenDays, customPolicy)) {
                 run++
                 longest = maxOf(longest, run)
             } else {
@@ -122,7 +223,7 @@ class DefaultStreakCalculator(
         activityTimestamps: Collection<Instant>,
         now: Instant,
         timeZone: TimeZone
-    ): Int = calculateSummary(activityTimestamps, now, timeZone).currentStreak
+    ): Int = calculateStreak(activityTimestamps, now, timeZone)
 
     /** Calculates only the longest streak in the recorded history. */
     fun longestStreak(
@@ -131,18 +232,28 @@ class DefaultStreakCalculator(
         timeZone: TimeZone
     ): Int = calculateSummary(activityTimestamps, now, timeZone).longestStreak
 
-    private fun countBackwards(start: LocalDate, activeDays: Set<LocalDate>): Int {
+    private fun countBackwards(
+        start: LocalDate,
+        activeDays: Set<LocalDate>,
+        frozenDays: Set<LocalDate>,
+        customPolicy: StreakFreezePolicy?
+    ): Int {
         var day = start
         var count = 0
-        while (isCounted(day, activeDays)) {
+        while (isCounted(day, activeDays, frozenDays, customPolicy)) {
             count++
             day = day.previousDay()
         }
         return count
     }
 
-    private fun isCounted(day: LocalDate, activeDays: Set<LocalDate>): Boolean =
-        day in activeDays || freezePolicy.isFrozen(day)
+    private fun isCounted(
+        day: LocalDate,
+        activeDays: Set<LocalDate>,
+        frozenDays: Set<LocalDate>,
+        customPolicy: StreakFreezePolicy?
+    ): Boolean =
+        day in activeDays || day in frozenDays || customPolicy?.isFrozen(day) == true
 }
 
 /** Compatibility name for callers that use the conventional implementation suffix. */

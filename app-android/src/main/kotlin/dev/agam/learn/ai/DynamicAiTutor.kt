@@ -13,16 +13,26 @@ import io.ktor.client.HttpClient
 class DynamicAiTutor(
     private val settingsRepository: SettingsRepository,
     private val secretStore: SecretStore,
-    private val httpClient: HttpClient = createAiHttpClient()
+    private val httpClient: HttpClient = createAiHttpClient(),
+    private val sessionInterviewMode: (() -> Boolean)? = null
 ) : AiTutor {
+
+    fun forSession(sessionMode: () -> Boolean): DynamicAiTutor =
+        DynamicAiTutor(
+            settingsRepository = settingsRepository,
+            secretStore = secretStore,
+            httpClient = httpClient,
+            sessionInterviewMode = sessionMode
+        )
 
     suspend fun createTutorImpl(): AiTutorImpl {
         val appSettings = settingsRepository.getSettings()
+        val effectiveInterviewMode = sessionInterviewMode?.invoke() ?: appSettings.interviewMode
         val aiSettings = AiSettings(
             provider = appSettings.selectedAiProvider,
             model = appSettings.selectedAiModel,
             enabled = true,
-            interviewMode = appSettings.interviewMode
+            interviewMode = effectiveInterviewMode
         )
         return AiTutorImpl(
             settings = aiSettings,

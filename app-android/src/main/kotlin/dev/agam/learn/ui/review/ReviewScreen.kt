@@ -20,6 +20,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -54,6 +55,7 @@ data class ReviewSessionItem(
  * State of the Leitner Review screen.
  */
 data class ReviewUiState(
+    val isLoading: Boolean = false,
     val dueCards: List<ReviewCard> = emptyList(),
     val boxCounts: Map<Int, Int> = mapOf(1 to 0, 2 to 0, 3 to 0, 4 to 0, 5 to 0),
     val isInSession: Boolean = false,
@@ -128,6 +130,16 @@ fun ReviewScreen(
                 .padding(16.dp)
         ) {
             when {
+                state.isLoading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
                 state.isSessionComplete -> {
                     ReviewSessionCompleteView(
                         state = state,

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.agam.learn.ai.AiResult
 import dev.agam.learn.ai.AiTutor
+import dev.agam.learn.ai.DynamicAiTutor
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.model.ProblemPart
 import dev.agam.learn.runner.CodeRunner
@@ -28,7 +29,7 @@ import kotlinx.coroutines.launch
 class MultiPartProblemViewModel(
     private val problem: Exercise.MultiPartProblem,
     private val codeRunner: CodeRunner,
-    private val aiTutor: AiTutor? = null,
+    aiTutor: AiTutor? = null,
     isInterviewModeDefault: Boolean = false,
     /** False when no API key is saved; the AI controls then show the add-key hint and do nothing. */
     hasApiKey: Boolean = false,
@@ -36,6 +37,12 @@ class MultiPartProblemViewModel(
 ) : ViewModel() {
 
     private val scope = coroutineScope ?: viewModelScope
+
+    private val aiTutor: AiTutor? = if (aiTutor is DynamicAiTutor) {
+        aiTutor.forSession { _uiState.value.isInterviewMode }
+    } else {
+        aiTutor
+    }
 
     // Code per part index
     private val partCodes = mutableMapOf<Int, TextFieldValue>()

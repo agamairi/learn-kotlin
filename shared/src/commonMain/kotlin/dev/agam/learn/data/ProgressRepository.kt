@@ -110,6 +110,18 @@ interface ProgressRepository {
     /** Observes all completed lesson identifiers. */
     fun observeCompletedLessonIds(): Flow<Set<String>>
 
+    /** Returns all epoch days that were covered by a streak freeze. */
+    suspend fun getFrozenEpochDays(): Set<Long>
+
+    /** Records that an epoch day was covered by a streak freeze. */
+    suspend fun recordStreakFreeze(epochDay: Long)
+
+    /** Returns the number of currently held streak freezes. */
+    suspend fun getHeldStreakFreezes(): Int
+
+    /** Sets the number of held streak freezes. */
+    suspend fun setHeldStreakFreezes(count: Int)
+
     /**
      * Gets a key-value setting.
      */
