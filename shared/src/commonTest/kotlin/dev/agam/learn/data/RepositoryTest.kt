@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
 class RepositoryTest {
     @Test
     fun progressQueriesFilterAndObserveByScope() = runTest {
-        val driver = LearnDatabaseDriverFactory().createDriver(":memory:")
+        val driver = createInMemoryTestDriver()
         try {
             val repository = SqlDelightProgressRepository(LearnDatabase(driver))
             repository.recordExerciseResult(
@@ -50,7 +50,7 @@ class RepositoryTest {
 
     @Test
     fun dailyXpReviewsAndLessonCompletionPersist() = runTest {
-        val driver = LearnDatabaseDriverFactory().createDriver(":memory:")
+        val driver = createInMemoryTestDriver()
         try {
             val repository = SqlDelightProgressRepository(LearnDatabase(driver))
             repository.recordDailyActivity(DailyActivity(10, 30, 2, false))
@@ -74,7 +74,7 @@ class RepositoryTest {
 
     @Test
     fun settingsApplyDefaultsAndPersistUpdates() = runTest {
-        val driver = LearnDatabaseDriverFactory().createDriver(":memory:")
+        val driver = createInMemoryTestDriver()
         try {
             val repository = SqlDelightSettingsRepository(LearnDatabase(driver))
             assertEquals(AppSettings(), repository.getSettings())
@@ -102,7 +102,7 @@ class RepositoryTest {
 
     @Test
     fun progressRepositoryRejectsSecretApiKeySetting() = runTest {
-        val driver = LearnDatabaseDriverFactory().createDriver(":memory:")
+        val driver = createInMemoryTestDriver()
         try {
             val repository = SqlDelightProgressRepository(LearnDatabase(driver))
             assertFailsWith<IllegalArgumentException> {
