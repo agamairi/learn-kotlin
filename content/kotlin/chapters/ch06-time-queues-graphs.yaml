@@ -1,4 +1,4 @@
-id: kotlin-ch06-time-queues-graphs
+id: ch06-time-queues-graphs
 title: Time, queues, and graphs
 summary: Keep rolling state in queues, make time boundaries explicit, and choose BFS or Dijkstra for the graph question.
 lessons:
@@ -60,10 +60,11 @@ lessons:
         id: kotlin-ch06-queues-mc-window
         prompt: 'With an inclusive 60-second window, which timestamp is kept when `now` is 100?'
         options:
-          - 40
           - 39
+          - 40
           - 101
-        correct_index: 0
+          - 0
+        correct_index: 1
         explanation: 'The inclusive lower edge is `now - 60`, so 40 is still inside the window.'
       - type: cloze
         id: kotlin-ch06-queues-cloze-window
@@ -117,10 +118,11 @@ lessons:
         id: kotlin-ch06-graphs-mc-algorithm
         prompt: Which algorithm finds the fewest hops when every edge has equal cost?
         options:
-          - BFS with a queue
           - Dijkstra with arbitrary negative edge costs
           - Sorting the node names
-        correct_index: 0
+          - BFS with a queue
+          - DFS with a stack
+        correct_index: 2
         explanation: BFS visits all nodes at distance 1, then distance 2, and so on.
       - type: cloze
         id: kotlin-ch06-graphs-cloze-previous
@@ -174,10 +176,11 @@ lessons:
         id: kotlin-ch06-graphs-mc-priority
         prompt: 'What should a Dijkstra implementation do with a queue entry whose cost is greater than `best[node]`?'
         options:
-          - Skip it because it is stale.
           - Replace the best cost with the larger cost.
           - Add the same entry forever.
-        correct_index: 0
+          - Return it as the shortest path.
+          - Skip it because it is stale.
+        correct_index: 3
         explanation: A later, cheaper route may have already been found; stale entries can be ignored.
       - type: cloze
         id: kotlin-ch06-graphs-cloze-map

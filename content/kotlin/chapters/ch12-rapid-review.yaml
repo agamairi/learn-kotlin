@@ -1,4 +1,4 @@
-id: kotlin-ch12-rapid-review
+id: ch12-rapid-review
 title: 'Rapid review: Kotlin and Terminal'
 summary: A fast review deck built from the verified Kotlin and Stripe Terminal rapid-fire questions.
 lessons:
@@ -32,10 +32,10 @@ lessons:
         prompt: 'What does the Elvis operator `?:` do?'
         options:
           - 'It returns the right side unless both sides are null.'
-          - 'It returns the left side when non-null, otherwise evaluates the right side.'
           - 'It force-unwraps the left side.'
+          - 'It returns the left side when non-null, otherwise evaluates the right side.'
           - 'It compares two nullable values.'
-        correct_index: 1
+        correct_index: 2
         explanation: |
           It returns the left side if it is not `null`, and evaluates the right side (such as a default value, `return`, `continue`, or `error(...)`) if the left side is `null`.
       - type: multiple_choice
@@ -43,21 +43,21 @@ lessons:
         prompt: Which Kotlin expression matches Swift's `guard let x = maybeX else { return null }`?
         options:
           - '`val x = maybeX!!`'
-          - '`val x = maybeX ?: return null`'
           - '`val x = maybeX?.return(null)`'
           - '`var x = maybeX || return null`'
-        correct_index: 1
+          - '`val x = maybeX ?: return null`'
+        correct_index: 3
         explanation: |
           `val x = maybeX ?: return null`
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-avoid-bang
         prompt: Why should you avoid `!!` in a Stripe interview?
         options:
+          - 'It can immediately throw `NullPointerException` when a value is null.'
           - 'It converts every value to a string.'
           - 'It makes nullable values immutable.'
-          - 'It can immediately throw `NullPointerException` when a value is null.'
           - 'It only works inside a `when` expression.'
-        correct_index: 2
+        correct_index: 0
         explanation: |
           Because `!!` crashes immediately with a `NullPointerException` if a value is unexpectedly `null`; using `?:`, `?.`, or `getOrDefault` shows defensive, production-grade coding.
       - type: multiple_choice
@@ -65,10 +65,10 @@ lessons:
         prompt: What is the difference between `0..n` and `0 until n`?
         options:
           - '`0..n` excludes `n`; `0 until n` includes it.'
-          - 'Both ranges always include `n`.'
           - '`0..n` includes `n`; `0 until n` stops at `n - 1`.'
+          - 'Both ranges always include `n`.'
           - '`until` only works with strings.'
-        correct_index: 2
+        correct_index: 1
         explanation: |
           `0..n` is inclusive and includes `n`, while `0 until n` is half-open and stops at `n - 1` (like `0..<n` in Swift).
       - type: multiple_choice
@@ -76,32 +76,32 @@ lessons:
         prompt: How do you count backwards from `n - 1` down to `0` in a Kotlin `for` loop?
         options:
           - '`for (i in n - 1 .. 0)`'
-          - '`for (i in n - 1 downTo 0)`'
           - '`for (i in 0 downTo n - 1)`'
+          - '`for (i in n - 1 downTo 0)`'
           - '`for (i in n until 0)`'
-        correct_index: 1
+        correct_index: 2
         explanation: |
           `for (i in n - 1 downTo 0)` — never `n - 1 .. 0`, which is an empty range!
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-with-index
         prompt: How do you loop over both the index and item of a list?
         options:
-          - '`for ((index, item) in list.withIndex())`'
           - '`for (index, item in list)`'
           - '`for (index in list.indices, item in list)`'
           - '`list.indexedLoop { item, index -> }`'
-        correct_index: 0
+          - '`for ((index, item) in list.withIndex())`'
+        correct_index: 3
         explanation: |
           `for ((index, item) in list.withIndex())`
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-csv-line-number
         prompt: After dropping a CSV header with `.drop(1)` and looping with `withIndex()`, what is the original 1-based file line number of row `index`?
         options:
+          - '`index + 2`'
           - '`index`'
           - '`index + 1`'
-          - '`index + 2`'
           - '`index * 2`'
-        correct_index: 2
+        correct_index: 0
         explanation: |
           `index + 2` (because `index` starts at `0`, and line `1` was the header).
       - type: multiple_choice
@@ -120,10 +120,10 @@ lessons:
         prompt: When should you replace an implicit `it` with an explicit lambda parameter name?
         options:
           - 'Only when the parameter is an `Int`.'
-          - 'Whenever lambdas are nested or the lambda is more than one or two lines.'
           - 'Never; explicit names are slower.'
+          - 'Whenever lambdas are nested or the lambda is more than one or two lines.'
           - 'Only inside a class constructor.'
-        correct_index: 1
+        correct_index: 2
         explanation: |
           Whenever you nest one lambda inside another or when the lambda is more than one or two lines long, so the reader never confuses outer `it` with inner `it`.
       - type: multiple_choice
@@ -132,20 +132,20 @@ lessons:
         options:
           - '`Unit`'
           - '`Any`'
-          - '`Nothing`'
           - '`Todo`'
-        correct_index: 2
+          - '`Nothing`'
+        correct_index: 3
         explanation: |
           Its return type is `Nothing`, which is a subtype of every type in Kotlin, so placing `TODO()` in any function body allows the function to compile regardless of its declared return type.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-destructure-ignore
         prompt: How do you ignore the second element when destructuring a 3-element list or `Triple`?
         options:
-          - '`val (first, ignore, third) = triple`'
           - '`val (first, _, third) = triple`'
+          - '`val (first, ignore, third) = triple`'
           - '`val (first, null, third) = triple`'
           - '`val (first, skip(), third) = triple`'
-        correct_index: 1
+        correct_index: 0
         explanation: |
           Use an underscore `_` for the unused position: `val (first, _, third) = triple`.
 
@@ -158,22 +158,22 @@ lessons:
         id: kotlin-ch12-rapid-review-csv-lines
         prompt: How do you split a multiline CSV into non-empty data rows after skipping its header?
         options:
-          - '`csv.lines().drop(1).filter { it.isNotBlank() }`'
           - '`csv.split(",").drop(1)`'
+          - '`csv.lines().drop(1).filter { it.isNotBlank() }`'
           - '`csv.lines().take(1).filter { it.isBlank() }`'
           - '`csv.trim().dropHeader().rows()`'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           `csv.lines().drop(1).filter { it.isNotBlank() }`
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-trim-columns
         prompt: How do you split a CSV row by commas and strip spaces around every column?
         options:
-          - '`row.split(",").map { it.trim() }`'
           - '`row.trim(",").split(" ")`'
           - '`row.columns().stripWhitespace()`'
+          - '`row.split(",").map { it.trim() }`'
           - '`row.split(Regex("\\s+"))`'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           `row.split(",").map { it.trim() }`
       - type: multiple_choice
@@ -181,21 +181,21 @@ lessons:
         prompt: Why check `cols.size` before `val (a, b, c) = cols`?
         options:
           - 'Destructuring sorts the list first.'
-          - 'A list with fewer than three elements causes `IndexOutOfBoundsException`.'
           - 'The compiler cannot infer `String` otherwise.'
           - 'It prevents `NullPointerException` only for maps.'
-        correct_index: 1
+          - 'A list with fewer than three elements causes `IndexOutOfBoundsException`.'
+        correct_index: 3
         explanation: |
           Because destructuring a list with fewer than 3 elements throws an `IndexOutOfBoundsException` immediately.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-substring-fallback
         prompt: What does `"fr-CA".substringAfter("q=", missingDelimiterValue = "1")` return?
         options:
+          - '`"1"`'
           - '`"fr-CA"`'
           - '`""`'
-          - '`"1"`'
           - 'It throws because `q=` is missing.'
-        correct_index: 2
+        correct_index: 0
         explanation: |
           It returns `"1"`, because `"q="` is not present in `"fr-CA"`, so `missingDelimiterValue` supplies the fallback instead of returning `"fr-CA"`.
       - type: multiple_choice
@@ -213,11 +213,11 @@ lessons:
         id: kotlin-ch12-rapid-review-cents-format
         prompt: How do you format 5 cents as the two-character string `"05"`?
         options:
-          - '`5.toString().padStart(2, ''0'')`'
           - '`5.padEnd(2, "0")`'
           - '`format(5, 2)`'
+          - '`5.toString().padStart(2, ''0'')`'
           - '`5.toString().repeat(2)`'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           `5.toString().padStart(2, '0')`
       - type: multiple_choice
@@ -225,10 +225,10 @@ lessons:
         prompt: What lesson explains why a `formatCents(0)` implementation returned an empty string?
         options:
           - 'Zero cannot be represented by `Long`.'
-          - 'An unnecessary `if (cents != 0L)` skipped the formatting logic; zero should be tested.'
           - 'The `%` operator removes zero values.'
           - 'Padding only works for positive `Int` values.'
-        correct_index: 1
+          - 'An unnecessary `if (cents != 0L)` skipped the formatting logic; zero should be tested.'
+        correct_index: 3
         explanation: |
           Because of an unnecessary `if (cents != 0L)` guard around the formatting logic; the lesson is to let general math handle `0` (`0 / 100` is `0` and `0 % 100` padded is `"00"`) and always write a test for `0`.
       - type: multiple_choice
@@ -246,11 +246,11 @@ lessons:
         id: kotlin-ch12-rapid-review-basis-points
         prompt: Which expression computes basis points out of 10,000 using rounded half-up `Long` math?
         options:
-          - '`(amountCents * basisPoints + 5_000) / 10_000`'
           - '`amountCents / basisPoints / 10_000`'
+          - '`(amountCents * basisPoints + 5_000) / 10_000`'
           - '`(amountCents + basisPoints) * 10_000`'
           - '`amountCents * basisPoints / 5_000`'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           `(amountCents * basisPoints + 5_000) / 10_000`
       - type: multiple_choice
@@ -258,10 +258,10 @@ lessons:
         prompt: How do you get the length of a `String` versus the size of a `List` or `Map`?
         options:
           - 'Use `.size` for strings and `.length` for collections.'
-          - 'Use `.length` for strings and `.size` for lists, sets, and maps.'
           - 'Call `.length()` for both.'
+          - 'Use `.length` for strings and `.size` for lists, sets, and maps.'
           - 'Use `.count` for strings and `.length` for maps.'
-        correct_index: 1
+        correct_index: 2
         explanation: |
           On a `String`, use `.length` (a property, no parentheses). On a `List`, `Set`, or `Map`, use `.size` (also a property, no parentheses).
       - type: multiple_choice
@@ -269,21 +269,21 @@ lessons:
         prompt: What does `"hello"[1]` return, and what is its type?
         options:
           - '`"e"`, a `String`'
-          - '`''e''`, a `Char`'
           - '`1`, an `Int`'
           - '`"h"`, a `String`'
-        correct_index: 1
+          - '`''e''`, a `Char`'
+        correct_index: 3
         explanation: |
           It returns the character `'e'`, and its type is `Char`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-substring-range
         prompt: What is the difference between `s.substring(1, 4)` and `s.substring(1..4)`?
         options:
-          - 'Both return the same three characters.'
           - 'The first end is exclusive; the range end is inclusive.'
+          - 'Both return the same three characters.'
           - 'The first uses a regex; the second uses bytes.'
           - 'The first is inclusive; the range end is exclusive.'
-        correct_index: 1
+        correct_index: 0
         explanation: |
           `s.substring(1, 4)` has an exclusive end index (`4`), returning 3 characters at indices `1, 2, 3`. `s.substring(1..4)` uses an inclusive range `1..4`, returning 4 characters at indices `1, 2, 3, 4`.
       - type: multiple_choice
@@ -302,21 +302,21 @@ lessons:
         prompt: What does `"".split(",")` return?
         options:
           - 'An empty list.'
-          - 'A one-element list containing the empty string: `[""]`.'
           - 'A list containing `null`.'
+          - 'A one-element list containing the empty string: `[""]`.'
           - 'It throws `NoSuchElementException`.'
-        correct_index: 1
+        correct_index: 2
         explanation: |
           A one-element list `[""]` containing the empty string, not an empty list!
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-split-limit
         prompt: 'How do you split `"key:val:with:colons"` into at most two pieces around the first colon?'
         options:
-          - '`split(":", limit = 2)`'
           - '`split(":", limit = 0)`'
           - '`splitFirst(":")`'
           - '`substring(":", 2)`'
-        correct_index: 0
+          - '`split(":", limit = 2)`'
+        correct_index: 3
         explanation: |
           Call `"key:val:with:colons".split(":", limit = 2)`, which returns `["key", "val:with:colons"]`.
       - type: multiple_choice
@@ -345,44 +345,44 @@ lessons:
         id: kotlin-ch12-rapid-review-pad-start
         prompt: How do you pad `"7"` with leading zeros to width 4?
         options:
-          - '`"7".padStart(4, ''0'')`'
           - '`"7".padEnd(4, ''0'')`'
           - '`"7".prepend(4, "0")`'
+          - '`"7".padStart(4, ''0'')`'
           - '`"7".repeat(4)`'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           `"7".padStart(4, '0')`, which returns `"0007"` (note that `'0'` is a `Char` in single quotes).
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-digit-to-int
         prompt: How do you convert the digit character `'9'` to integer `9`?
         options:
-          - '`''9''.digitToInt()`'
           - '`''9''.code`'
           - '`"9".toChar()`'
           - '`9.toChar()`'
-        correct_index: 0
+          - '`''9''.digitToInt()`'
+        correct_index: 3
         explanation: |
           Call `'9'.digitToInt()`, which returns `9`. Using `'9'.code` returns its ASCII code point `57`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-int-or-null
         prompt: What does `"42a".toIntOrNull()` return?
         options:
-          - '`42`'
           - '`null`, without throwing `NumberFormatException`.'
+          - '`42`'
           - '`0`'
           - 'It always throws.'
-        correct_index: 1
+        correct_index: 0
         explanation: |
           It returns `null` instead of throwing `NumberFormatException`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-regex-destructure
         prompt: How can two regex capture groups be extracted directly into two variables?
         options:
-          - 'Call `match.destructured` and destructure the result.'
           - 'Call `match.groups()` and assign the whole object to two variables.'
+          - 'Call `match.destructured` and destructure the result.'
           - 'Use `Regex.capture(a, b)`.'
           - 'Regex groups can only be accessed by numeric indices.'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           Match with `Regex("""(\w+)=(\d+)""").matchEntire(input)` (or `.find(input)`) and destructure `.destructured`: `val (key, num) = match.destructured`.
       - type: multiple_choice
@@ -390,10 +390,10 @@ lessons:
         prompt: What do `-7 / 2` and `-7 % 2` evaluate to in Kotlin?
         options:
           - '`-4` and `1`'
-          - '`-3` and `-1`'
           - '`3` and `1`'
+          - '`-3` and `-1`'
           - '`-3` and `1`'
-        correct_index: 1
+        correct_index: 2
         explanation: |
           `-7 / 2` truncates toward zero to `-3`, and `-7 % 2` evaluates to `-1`.
       - type: multiple_choice
@@ -402,31 +402,31 @@ lessons:
         options:
           - '`-1`'
           - '`0`'
-          - '`1`'
           - '`3`'
-        correct_index: 2
+          - '`1`'
+        correct_index: 3
         explanation: |
           It returns `1`, because floor modulo always takes the sign of the positive divisor `2`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-rounding
         prompt: What is the difference between `2.5.roundToInt()` and `kotlin.math.round(2.5).toInt()`?
         options:
+          - 'The first returns `3`; the second uses half-even and returns `2`.'
           - 'Both return `2` using half-even rounding.'
           - 'Both return `3` using half-up rounding.'
-          - 'The first returns `3`; the second uses half-even and returns `2`.'
           - 'The first returns `2`; the second returns `3`.'
-        correct_index: 2
+        correct_index: 0
         explanation: |
           `2.5.roundToInt()` delegates to `Math.round` (ties toward positive infinity) and returns `3`, whereas `kotlin.math.round(2.5)` uses half-to-even (banker's rounding) and returns `2.0` (`2` as `Int`).
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-coerce-in
         prompt: How do you clamp an `Int` fee `f` to the inclusive range 50 through 5000?
         options:
-          - '`f.coerceIn(50, 5000)`'
           - '`f.clampExclusive(50, 5000)`'
+          - '`f.coerceIn(50, 5000)`'
           - '`minOf(50, maxOf(5000, f))`'
           - '`f.limit(50..5000)`'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           Call `f.coerceIn(50, 5000)` (or `f.coerceIn(50..5000)`).
       - type: multiple_choice
@@ -434,10 +434,10 @@ lessons:
         prompt: Why is `BigDecimal("2.0") == BigDecimal("2.00")` false, and how should numeric value be compared?
         options:
           - '`BigDecimal` compares only object identity; use `===`.'
-          - '`equals` requires matching value and scale; use `compareTo(...) == 0`.'
           - 'The strings have different signs; use `toDouble()`.'
+          - '`equals` requires matching value and scale; use `compareTo(...) == 0`.'
           - 'The values are not equal numerically.'
-        correct_index: 1
+        correct_index: 2
         explanation: |
           `==` calls `BigDecimal.equals`, which requires both value and scale to match (`1` vs `2`). Use `bd1.compareTo(bd2) == 0` to compare numeric value ignoring scale.
       - type: multiple_choice
@@ -445,10 +445,10 @@ lessons:
         prompt: Why should you construct `BigDecimal` from `"0.1"` instead of `0.1`?
         options:
           - 'A `Double` is always stored as a string.'
-          - 'The `Double` already contains binary floating-point error; a string preserves decimal digits.'
           - '`BigDecimal` only accepts strings for negative values.'
           - 'A string makes arithmetic integer-only.'
-        correct_index: 1
+          - 'The `Double` already contains binary floating-point error; a string preserves decimal digits.'
+        correct_index: 3
         explanation: |
           Because `0.1` as a binary `Double` is already slightly inaccurate (`0.10000000000000000555...`). Always pass a `String`: `BigDecimal("0.1")`.
 
@@ -472,55 +472,55 @@ lessons:
         id: kotlin-ch12-rapid-review-groupby-associateby
         prompt: What is the difference between `groupBy { it.id }` and `associateBy { it.id }`?
         options:
-          - '`groupBy` keeps a list for every key; `associateBy` keeps one value and overwrites earlier duplicates.'
           - '`groupBy` overwrites duplicates; `associateBy` keeps all values.'
+          - '`groupBy` keeps a list for every key; `associateBy` keeps one value and overwrites earlier duplicates.'
           - 'Both return `Map<K, List<T>>`.'
           - 'Both reject duplicate keys with an exception.'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           `groupBy` returns `Map<K, List<T>>` keeping every item with the same key, whereas `associateBy` returns `Map<K, T>` and silently overwrites earlier items if duplicate keys exist!
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-grouping-count
         prompt: How do you count how many items belong to each category in one expression?
         options:
-          - '`list.groupingBy { it.category }.eachCount()`'
           - '`list.groupBy { it.category }.count()`'
           - '`list.countBy { it.category }`'
+          - '`list.groupingBy { it.category }.eachCount()`'
           - '`list.associate { it.category to 1 }`'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           `list.groupingBy { it.category }.eachCount()`
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-merchant-sort
         prompt: How do you sort merchants by `netCents` highest-first, then `name` A-to-Z?
         options:
-          - '`merchants.sortedWith(compareByDescending<MerchantSummary> { it.netCents }.thenBy { it.name })`'
           - '`merchants.sortedBy { it.netCents }.thenBy { it.name }`'
           - '`merchants.sortedDescending { it.name }`'
           - '`merchants.sort(compareBy { it.netCents })`'
-        correct_index: 0
+          - '`merchants.sortedWith(compareByDescending<MerchantSummary> { it.netCents }.thenBy { it.name })`'
+        correct_index: 3
         explanation: |
           `merchants.sortedWith(compareByDescending<MerchantSummary> { it.netCents }.thenBy { it.name })`
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-sorted-stable
         prompt: Is Kotlin's `sortedBy` stable?
         options:
-          - 'No; ties are randomized.'
           - 'Yes; equal sort keys keep their original input order.'
+          - 'No; ties are randomized.'
           - 'Only for `Int` keys.'
           - 'Only after calling `distinct()`.'
-        correct_index: 1
+        correct_index: 0
         explanation: |
           Yes, it is stable, meaning items with equal sort keys automatically stay in their original input order.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-get-or-put
         prompt: How do you append `tx` to a map bucket whether or not its key already exists?
         options:
-          - '`buckets.getOrPut(tx.card) { mutableListOf() }.add(tx)`'
           - '`buckets[tx.card].add(tx)`'
+          - '`buckets.getOrPut(tx.card) { mutableListOf() }.add(tx)`'
           - '`buckets.putIfAbsent(tx.card, tx)`'
           - '`buckets.get(tx.card) ?: add(tx)`'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           `buckets.getOrPut(tx.card) { mutableListOf() }.add(tx)`
       - type: multiple_choice
@@ -528,21 +528,21 @@ lessons:
         prompt: In `headers.zip(values).toMap()`, which list becomes map keys?
         options:
           - 'The right list, `values`.'
-          - 'The left list, `headers`; `values` become map values.'
           - 'Both lists become keys.'
+          - 'The left list, `headers`; `values` become map values.'
           - 'Neither list; `toMap()` discards them.'
-        correct_index: 1
+        correct_index: 2
         explanation: |
           The left list (`headers`) becomes the keys, and the right list (`values`) becomes the values.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-duplicate-set
         prompt: How can a `MutableSet<String>` detect a duplicate in one `if` check?
         options:
-          - '`if (!seen.add(id))`'
           - '`if (seen.add(id))`'
           - '`if (seen.containsNew(id))`'
           - '`if (seen[id] == id)`'
-        correct_index: 0
+          - '`if (!seen.add(id))`'
+        correct_index: 3
         explanation: |
           `if (!seen.add(id))` — because `MutableSet.add` returns `false` if the element was already in the set!
       - type: multiple_choice
@@ -560,33 +560,33 @@ lessons:
         id: kotlin-ch12-rapid-review-bfs-dijkstra
         prompt: When should you use BFS instead of Dijkstra on a graph?
         options:
-          - 'BFS for equal-weight steps; Dijkstra for different positive costs.'
           - 'BFS only for negative edges; Dijkstra for equal weights.'
+          - 'BFS for equal-weight steps; Dijkstra for different positive costs.'
           - 'Always use Dijkstra because BFS cannot use `ArrayDeque`.'
           - 'Use BFS for sorting and Dijkstra for parsing.'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           Use BFS when every step has equal weight (finding fewest hops), and use Dijkstra when edges have different positive costs (finding cheapest total cost).
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-insertion-order
         prompt: Does `setOf("b", "a", "c")` preserve insertion order on the JVM?
         options:
-          - 'Yes, the default set and map implementations preserve insertion order.'
           - 'No, sets always sort alphabetically.'
           - 'Only `TreeSet` preserves insertion order.'
+          - 'Yes, the default set and map implementations preserve insertion order.'
           - 'Only sets of integers preserve order.'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           Yes, `setOf` and `mutableSetOf` (as well as `mapOf` and `mutableMapOf`) preserve insertion order by default using `LinkedHashSet` and `LinkedHashMap`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-list-factory
         prompt: How do you create a list of five zeros without a loop?
         options:
-          - '`List(5) { 0 }`'
           - '`listOf(5, 0)`'
           - '`Array(0) { 5 }`'
           - '`zeros(5, 0)`'
-        correct_index: 0
+          - '`List(5) { 0 }`'
+        correct_index: 3
         explanation: |
           `List(5) { 0 }`, which calls the lambda for indices `0..4` and returns `[0, 0, 0, 0, 0]`.
       - type: multiple_choice
@@ -604,33 +604,33 @@ lessons:
         id: kotlin-ch12-rapid-review-remove-all
         prompt: How do you remove all negative numbers from a `MutableList<Int>` in place?
         options:
-          - '`list.removeAll { it < 0 }`'
           - '`list.filter { it >= 0 }` without assigning the result'
+          - '`list.removeAll { it < 0 }`'
           - '`list.deleteWhere { it < 0 }`'
           - '`list.dropWhile { it < 0 }`'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           Call `list.removeAll { it < 0 }`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-map-access
         prompt: What is the difference between `map[key]` and `map.getValue(key)`?
         options:
-          - '`map[key]` returns null when absent; `getValue` throws `NoSuchElementException`.'
           - 'Both throw when absent.'
           - '`map[key]` inserts a default; `getValue` returns null.'
+          - '`map[key]` returns null when absent; `getValue` throws `NoSuchElementException`.'
           - 'Both return a nullable value without throwing.'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           `map[key]` returns `null` if `key` is absent, whereas `map.getValue(key)` throws `NoSuchElementException` if `key` is absent.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-map-get-or-put
         prompt: How do you append `x` to a mutable-list value in a map, creating the list for a new key?
         options:
-          - '`map.getOrPut(key) { mutableListOf() }.add(x)`'
           - '`map[key] = x`'
           - '`map.getOrDefault(key, x).add()`'
           - '`map.create(key).append(x)`'
-        correct_index: 0
+          - '`map.getOrPut(key) { mutableListOf() }.add(x)`'
+        correct_index: 3
         explanation: |
           `map.getOrPut(key) { mutableListOf() }.add(x)`.
       - type: multiple_choice
@@ -639,7 +639,7 @@ lessons:
         options:
           - '`map[key] = map.getOrDefault(key, 0L) + delta`'
           - '`map[key] += delta`'
-          - '`map[key] = map.getOrDefault(key, 0) + delta`'
+          - '`map[key] = map[key]!! + delta`'
           - '`map.increment(key, delta)`'
         correct_index: 0
         explanation: |
@@ -648,33 +648,33 @@ lessons:
         id: kotlin-ch12-rapid-review-map-destructure
         prompt: How do you iterate over both keys and values of a map?
         options:
-          - '`for ((key, value) in map) { ... }`'
           - '`for (key, value in map) { ... }`'
+          - '`for ((key, value) in map) { ... }`'
           - '`for (map.key, map.value) { ... }`'
           - '`map.eachKeyValue { ... }`'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           Use destructuring in parentheses: `for ((key, value) in map) { ... }`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-queue-stack
         prompt: Which class supports both a FIFO queue and a LIFO stack in pure Kotlin?
         options:
-          - '`ArrayDeque<T>()`'
           - '`MutableMap<T, T>()`'
           - '`LinkedHashSet<T>()`'
+          - '`ArrayDeque<T>()`'
           - '`TreeMap<T, T>()`'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           `ArrayDeque<T>()`, using `addLast(x)` and `removeFirst()` for a queue, or `addLast(x)` and `removeLast()` for a stack.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-max-heap
         prompt: How do you create a max-heap of `Int` with `PriorityQueue`?
         options:
-          - '`PriorityQueue<Int>(compareByDescending { it })`'
           - '`PriorityQueue<Int>()` always means max-heap.'
           - '`PriorityQueue<Int>(minOrder())`'
           - '`ArrayDeque<Int>(reverseOrder())`'
-        correct_index: 0
+          - '`PriorityQueue<Int>(compareByDescending { it })`'
+        correct_index: 3
         explanation: |
           `PriorityQueue<Int>(compareByDescending { it })` (or `PriorityQueue<Int>(reverseOrder())`).
       - type: multiple_choice
@@ -692,33 +692,33 @@ lessons:
         id: kotlin-ch12-rapid-review-map-not-null
         prompt: How do you transform strings into valid integers while dropping parse failures?
         options:
-          - '`strings.mapNotNull { it.toIntOrNull() }`'
           - '`strings.map { it.toInt() }`'
+          - '`strings.mapNotNull { it.toIntOrNull() }`'
           - '`strings.filter { it.toIntOrNull() == null }`'
           - '`strings.parseAll<Int>()`'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           `strings.mapNotNull { it.toIntOrNull() }`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-partition
         prompt: In `val (a, b) = list.partition { it > 0 }`, which variable gets true matches?
         options:
-          - '`a` gets true matches; `b` gets false elements.'
           - '`b` gets true matches; `a` gets false elements.'
           - 'Both get all elements.'
+          - '`a` gets true matches; `b` gets false elements.'
           - 'Neither gets elements until sorted.'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           The first variable, `a`, always gets the `true` matches, and `b` gets the `false` elements.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-distinct-associate
         prompt: What happens when duplicate keys exist in `distinctBy` versus `associateBy`?
         options:
-          - '`distinctBy` keeps the first element; `associateBy` keeps the last.'
           - '`distinctBy` keeps the last; `associateBy` keeps the first.'
           - 'Both keep all duplicates.'
           - 'Both throw on duplicates.'
-        correct_index: 0
+          - '`distinctBy` keeps the first element; `associateBy` keeps the last.'
+        correct_index: 3
         explanation: |
           `distinctBy` returns a `List` keeping the **first** element for each key, whereas `associateBy` returns a `Map` keeping the **last** element for each key!
       - type: multiple_choice
@@ -736,33 +736,33 @@ lessons:
         id: kotlin-ch12-rapid-review-zip-with-next
         prompt: How do you compute adjacent differences for `[10, 13, 20]`?
         options:
-          - '`listOf(10, 13, 20).zipWithNext { a, b -> b - a }`'
           - '`listOf(10, 13, 20).zip { a, b -> a - b }`'
+          - '`listOf(10, 13, 20).zipWithNext { a, b -> b - a }`'
           - '`listOf(10, 13, 20).difference()`'
           - '`listOf(10, 13, 20).windowed(1).sum()`'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           `listOf(10, 13, 20).zipWithNext { a, b -> b - a }`, which returns `[3, 7]`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-associate-direction
         prompt: What is the difference between `associateBy` and `associateWith`?
         options:
-          - 'In `associateBy`, elements become values and the lambda computes keys; in `associateWith`, elements become keys and the lambda computes values.'
           - 'Both make elements keys and ignore the lambda.'
           - '`associateBy` makes a list; `associateWith` makes a set.'
+          - 'In `associateBy`, elements become values and the lambda computes keys; in `associateWith`, elements become keys and the lambda computes values.'
           - '`associateWith` only works on maps.'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           In `list.associateBy { keySelector }`, each list element becomes a map **value** and the lambda computes its **key**. In `list.associateWith { valueSelector }`, each list element becomes a map **key** and the lambda computes its **value**.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-frequency
         prompt: How do you count the frequency of each string in a list?
         options:
-          - '`list.groupingBy { it }.eachCount()`'
           - '`list.groupBy { it }.size`'
           - '`list.frequencyMap()`'
           - '`list.associate { it to true }`'
-        correct_index: 0
+          - '`list.groupingBy { it }.eachCount()`'
+        correct_index: 3
         explanation: |
           `list.groupingBy { it }.eachCount()`.
       - type: multiple_choice
@@ -780,11 +780,11 @@ lessons:
         id: kotlin-ch12-rapid-review-sumof-long
         prompt: How do you make `sumOf { ... }` return a `Long` rather than an `Int`?
         options:
-          - 'Ensure the lambda expression has type `Long`, such as `it.cents.toLong()`.'
           - 'Call `.asLong()` after `sumOf`.'
+          - 'Ensure the lambda expression has type `Long`, such as `it.cents.toLong()`.'
           - 'Use `sumOf<Int>` explicitly.'
           - '`sumOf` always returns `Int`.'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           Ensure the expression inside the `sumOf` lambda has type `Long` (for example, `list.sumOf { it.cents.toLong() }`).
       - type: multiple_choice
@@ -792,54 +792,54 @@ lessons:
         prompt: What does `emptyList<Int>().all { it > 0 }` return?
         options:
           - '`false` because no item passed.'
-          - '`true`, because there are no counterexamples.'
           - '`null`.'
+          - '`true`, because there are no counterexamples.'
           - 'It throws because the list is empty.'
-        correct_index: 1
+        correct_index: 2
         explanation: |
           It returns `true` (vacuous truth—there are no counterexamples in an empty list!).
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-max-by-of
         prompt: What is the difference between `maxByOrNull { it.age }` and `maxOfOrNull { it.age }`?
         options:
-          - 'The first returns the element object; the second returns the maximum age value.'
           - 'The first returns the age; the second returns the element.'
           - 'Both return the same element.'
           - 'Both throw on an empty list.'
-        correct_index: 0
+          - 'The first returns the element object; the second returns the maximum age value.'
+        correct_index: 3
         explanation: |
           `maxByOrNull` returns the **element object** (e.g., `Person?`) that had the maximum age, while `maxOfOrNull` returns the **age value itself** (`Int?`).
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-sorted-copy
         prompt: Does `list.sorted()` modify `list` in place?
         options:
-          - 'Yes, all sorting extensions mutate the receiver.'
           - 'No; it returns a new sorted `List` and leaves the original untouched.'
+          - 'Yes, all sorting extensions mutate the receiver.'
           - 'Only `sortedDescending()` mutates it.'
           - 'It sorts only if the list is mutable.'
-        correct_index: 1
+        correct_index: 0
         explanation: |
           No! `sorted()`, `sortedBy()`, `sortedDescending()`, and `sortedWith()` all leave the original collection untouched and return a **new** sorted `List`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-item-sort
         prompt: How do you sort `Item` objects by score descending and then name ascending?
         options:
-          - '`items.sortedWith(compareByDescending<Item> { it.score }.thenBy { it.name })`'
           - '`items.sortedBy { it.score }.thenByDescending { it.name }`'
+          - '`items.sortedWith(compareByDescending<Item> { it.score }.thenBy { it.name })`'
           - '`items.sortDescending { it.score, it.name }`'
           - '`items.sortedWith(compareBy { it.name }.thenByDescending { it.score })`'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           `items.sortedWith(compareByDescending<Item> { it.score }.thenBy { it.name })`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-comparator-overflow
         prompt: Why is `Comparator { a, b -> a - b }` dangerous?
         options:
-          - 'Subtracting can overflow `Int`; use `a.compareTo(b)` or `compareBy { it }`.'
           - 'Comparators cannot use lambdas.'
           - 'Subtraction sorts in descending order.'
+          - 'Subtracting can overflow `Int`; use `a.compareTo(b)` or `compareBy { it }`.'
           - 'It only fails for strings.'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           `a - b` can overflow 32-bit `Int` when `a` and `b` have opposite signs and large magnitudes. Always write `Comparator { a, b -> a.compareTo(b) }` (or `compareBy { it }`).
 
@@ -852,55 +852,55 @@ lessons:
         id: kotlin-ch12-rapid-review-data-class
         prompt: What four things does putting `data` before `class` provide?
         options:
-          - 'Value equality and hashCode, readable toString, copy(), and destructuring.'
           - 'Automatic serialization, networking, threading, and caching.'
           - 'A private constructor, singleton object, and inheritance.'
           - 'Only a shorter constructor.'
-        correct_index: 0
+          - 'Value equality and hashCode, readable toString, copy(), and destructuring.'
+        correct_index: 3
         explanation: |
           Value equality (`equals` / `==` and `hashCode`), a readable `toString()`, `.copy()`, and destructuring (`val (a, b) = obj`).
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-regular-class-test
         prompt: What happens when an `expect()` test compares two equal-looking regular class instances?
         options:
-          - 'The fields are compared automatically.'
           - '`expected == actual` compares memory addresses, so identical fields can still fail.'
+          - 'The fields are compared automatically.'
           - 'The test cannot compile because regular classes cannot be tested.'
           - 'The objects are always considered equal.'
-        correct_index: 1
+        correct_index: 0
         explanation: |
           `expected == actual` compares memory addresses instead of field values, so the test prints `FAIL` even when both objects hold identical data!
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-enum-parse
         prompt: How can an enum be parsed safely despite unknown or lowercase input?
         options:
-          - '`entries.firstOrNull { it.name.equals(text, ignoreCase = true) }`'
           - '`Enum.valueOf(text)` without handling errors.'
+          - '`entries.firstOrNull { it.name.equals(text, ignoreCase = true) }`'
           - '`entries[text]!!`'
           - '`text.toEnum()` always returns a valid case.'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           Write a helper on the enum's `companion object`: `entries.firstOrNull { it.name.equals(text, ignoreCase = true) }`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-enum-sealed
         prompt: When should you use an `enum class` versus a `sealed interface`?
         options:
-          - 'Enum cases share one shape; sealed subtypes can carry different fields.'
           - 'Enums are for different fields; sealed interfaces are only for constants.'
           - 'Use enums for nullable values and sealed interfaces for strings.'
+          - 'Enum cases share one shape; sealed subtypes can carry different fields.'
           - 'They are interchangeable in every model.'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           Use an `enum class` when all cases have the exact same shape (like `CHARGE, REFUND, PAYOUT`), and use a `sealed interface` when different cases carry different fields (like `Ok(val reader: Reader)` vs `Invalid(val line: Int, val reason: String)`).
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-sealed-exhaustive
         prompt: What makes a `when` expression over a sealed interface exhaustive?
         options:
-          - 'All subtypes are known at compile time, so every subtype can be checked without `else`.'
           - 'A sealed interface always has exactly two subtypes.'
           - 'The compiler inserts a default case that hides missing branches.'
           - 'Exhaustiveness applies only to strings.'
-        correct_index: 0
+          - 'All subtypes are known at compile time, so every subtype can be checked without `else`.'
+        correct_index: 3
         explanation: |
           Because all subtypes are known at compile time, you do not need an `else` branch, and the compiler will flag an error if you ever add a new subtype and forget to handle it in `when`.
       - type: multiple_choice
@@ -918,66 +918,66 @@ lessons:
         id: kotlin-ch12-rapid-review-require-check-error
         prompt: What is the difference between `require(cond)`, `check(cond)`, and `error(msg)`?
         options:
-          - '`require` means invalid input, `check` means invalid state, and `error` unconditionally throws `IllegalStateException`.'
           - 'All three throw `NullPointerException` for null.'
+          - '`require` means invalid input, `check` means invalid state, and `error` unconditionally throws `IllegalStateException`.'
           - '`require` checks state, `check` checks input, and `error` returns a message.'
           - '`error` only logs and continues.'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           `require` throws `IllegalArgumentException` when an input parameter is invalid, `check` throws `IllegalStateException` when an object is in the wrong state, and `error(msg)` unconditionally throws `IllegalStateException` right away.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-key-equality
         prompt: 'Why do two `class Key(val id: String)` instances with `"k1"` not match as `HashMap` keys?'
         options:
-          - 'A plain class uses identity equality; use `data class Key(val id: String)` for value equality.'
           - 'Strings cannot be map keys.'
           - 'Hash maps compare only object size.'
+          - 'A plain class uses identity equality; use `data class Key(val id: String)` for value equality.'
           - 'The constructor must be private.'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           A plain `class` uses object memory identity for `equals` and `hashCode`. Prefix it with `data` (`data class Key(val id: String)`) so the compiler generates value-based `equals` and `hashCode`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-scope-return
         prompt: Which two scope functions return the original receiver object rather than the lambda result?
         options:
-          - '`apply` and `also`'
           - '`let` and `run`'
           - '`with` and `let`'
           - '`run` and `also`'
-        correct_index: 0
+          - '`apply` and `also`'
+        correct_index: 3
         explanation: |
           `apply` (which uses `this`) and `also` (which uses `it`)—the two starting with the letter **a**.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-take-if
         prompt: What does `"  ".trim().takeIf { it.isNotEmpty() }` return?
         options:
+          - '`null`.'
           - 'The original two spaces.'
           - 'An empty string.'
-          - '`null`.'
           - 'It throws because `takeIf` needs a non-empty value.'
-        correct_index: 2
+        correct_index: 0
         explanation: |
           It returns `null`, because `"".isNotEmpty()` is `false`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-string-template
         prompt: Why does `"$user.name"` fail to interpolate the `name` property?
         options:
-          - 'Kotlin binds only `$user` and treats `.name` as literal text; use `${user.name}`.'
           - 'Kotlin never supports properties in templates.'
+          - 'Kotlin binds only `$user` and treats `.name` as literal text; use `${user.name}`.'
           - 'The dot means a nullable call.'
           - 'The correct syntax is `$user->name`.'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           Without braces, Kotlin only binds the identifier `$user` and treats `.name` as literal text. Wrap the dotted expression in curly braces: `"${user.name}"`.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-array-equality
         prompt: Why does `intArrayOf(1, 2) == intArrayOf(1, 2)` evaluate to false?
         options:
-          - '`==` on arrays checks reference identity; use `contentEquals` or compare lists.'
           - 'Arrays cannot contain integers.'
           - '`==` always means reference identity for lists too.'
+          - '`==` on arrays checks reference identity; use `contentEquals` or compare lists.'
           - 'The arrays have different lengths.'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           `==` on arrays checks reference identity, not element equality. Call `arr1.contentEquals(arr2)` (or use `listOf(1, 2) == listOf(1, 2)`).
 
@@ -990,11 +990,11 @@ lessons:
         id: kotlin-ch12-rapid-review-fake-clock
         prompt: How should you test a 1,000 ms batch flush without `Thread.sleep`?
         options:
-          - 'Inject a `Clock` interface and advance a fake clock manually in the test.'
           - 'Sleep for 1,000 ms in every test.'
           - 'Read the system clock directly from the class.'
           - 'Use a random timestamp until the test passes.'
-        correct_index: 0
+          - 'Inject a `Clock` interface and advance a fake clock manually in the test.'
+        correct_index: 3
         explanation: |
           Define `fun interface Clock { fun nowMillis(): Long }`, inject it into your class's constructor, and pass a `FakeClock(var now: Long = 0)` whose `now` field you advance manually in tests.
       - type: multiple_choice
@@ -1012,33 +1012,33 @@ lessons:
         id: kotlin-ch12-rapid-review-expect-order
         prompt: In `expect(name, expected, actual)`, what are the three arguments in order?
         options:
-          - 'Label, expected right answer, actual function result.'
           - 'Actual result, label, expected right answer.'
+          - 'Label, expected right answer, actual function result.'
           - 'Expected answer, actual result, label.'
           - 'Label, actual result, expected right answer.'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           First is the string label `name`, second is the `expected` right answer, and third is the `actual` result returned by calling your function.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-preserve-part-input
         prompt: Why should Part 1's test input remain unchanged when Part 2 adds rows or rules?
         options:
-          - 'Changing shared input can break earlier checks; keep `inputPart1` and define `inputPart2` separately.'
           - 'Part 1 tests are never run again.'
           - 'Kotlin strings cannot be concatenated.'
+          - 'Changing shared input can break earlier checks; keep `inputPart1` and define `inputPart2` separately.'
           - 'Later parts may only use empty input.'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           Because changing Part 1's shared input can break Part 1's existing `expect()` checks; always keep `inputPart1` intact and define `inputPart2` separately so all parts stay green.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-expect-throws
         prompt: How do you check that an expression throws inside `main()` using `expect()`?
         options:
-          - '`expect("throws on bad input", true, runCatching { myFunction(badInput) }.isFailure)`'
           - '`expectThrows(myFunction(badInput))`'
           - '`expect("throws", false, myFunction(badInput))`'
           - '`runCatching { myFunction(badInput) }.getOrThrow()`'
-        correct_index: 0
+          - '`expect("throws on bad input", true, runCatching { myFunction(badInput) }.isFailure)`'
+        correct_index: 3
         explanation: |
           `expect("throws on bad input", true, runCatching { myFunction(badInput) }.isFailure)`
       - type: multiple_choice
@@ -1062,33 +1062,33 @@ lessons:
         id: kotlin-ch12-rapid-review-graph-choice
         prompt: When should a graph solution use BFS versus Dijkstra?
         options:
-          - 'BFS handles equal-weight hops; Dijkstra handles different positive edge costs.'
           - 'BFS handles weighted edges; Dijkstra handles only strings.'
+          - 'BFS handles equal-weight hops; Dijkstra handles different positive edge costs.'
           - 'Dijkstra is required whenever a graph has cycles.'
           - 'Use either algorithm; their results are always identical.'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           Use BFS when every step has equal weight (finding fewest hops), and use Dijkstra when edges have different positive costs (finding cheapest total cost).
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-bigdecimal-constructor
         prompt: Why must `BigDecimal` receive `BigDecimal("1.37")` rather than `BigDecimal(1.37)`?
         options:
-          - 'The `Double` already contains binary floating-point error; the string preserves exact base-10 digits.'
           - 'The constructor accepts only values with two decimal places.'
           - 'A `Double` cannot be used in Kotlin at all.'
+          - 'The `Double` already contains binary floating-point error; the string preserves exact base-10 digits.'
           - 'Strings automatically round toward zero.'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           Because a `Double` literal already contains binary floating-point error before `BigDecimal` even sees it, whereas a `String` preserves the exact base-10 decimal digits.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-payout-order
         prompt: Why must a payout check the balance before subtracting it?
         options:
-          - 'Subtracting first can let a rejected payout mutate the balance; validate before mutation.'
           - 'Balances must always be strings.'
           - 'The check is only needed after sorting.'
           - 'Subtraction automatically rolls back on failure.'
-        correct_index: 0
+          - 'Subtracting first can let a rejected payout mutate the balance; validate before mutation.'
+        correct_index: 3
         explanation: |
           Because it subtracted the payout from the balance *before* checking if the balance went negative; always check `if (balance < amount)` *before* mutating the balance, like an ATM!
       - type: multiple_choice
@@ -1106,22 +1106,22 @@ lessons:
         id: kotlin-ch12-rapid-review-luhn
         prompt: In the Luhn checksum, which digits are doubled and how is a doubled value above 9 handled?
         options:
-          - 'Double every second digit from the right; subtract 9 if the doubled value exceeds 9.'
           - 'Double every digit from the left; add 9 when above 9.'
+          - 'Double every second digit from the right; subtract 9 if the doubled value exceeds 9.'
           - 'Double only the first digit; divide values above 9 by 2.'
           - 'Never double digits; sum the card number as a string.'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           Starting from the rightmost digit, you double every second digit (indices 1, 3, 5... from the right), and if the doubled value is greater than 9, you subtract 9; the card number is valid if the sum of all digits is divisible by 10.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-card-data
         prompt: What payment-card data must never be written to logs or telemetry?
         options:
-          - 'Full PAN, CVV/CVC, PIN, and raw magnetic-stripe or chip track data.'
           - 'Only the merchant name.'
           - 'Only the last four digits, even when masked.'
+          - 'Full PAN, CVV/CVC, PIN, and raw magnetic-stripe or chip track data.'
           - 'The payment status and a masked last-four display.'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           Never log the full card number (PAN—only mask to last 4 like `•••• 4242`), CVV/CVC security code, PIN, or raw magnetic-stripe/chip track data.
 
@@ -1134,11 +1134,11 @@ lessons:
         id: kotlin-ch12-rapid-review-money-long
         prompt: Why should money use `Long` rather than `Int` or `Double` in Kotlin?
         options:
-          - '`Long` stores exact whole cents without floating-point rounding or 32-bit overflow.'
           - '`Double` always stores decimal cents exactly, while `Long` rounds.'
           - '`Int` cannot represent any money amount.'
           - '`Long` is required only for display formatting.'
-        correct_index: 0
+          - '`Long` stores exact whole cents without floating-point rounding or 32-bit overflow.'
+        correct_index: 3
         explanation: |
           `Double` has binary floating-point rounding bugs (turning `"19.99"` into `1998` cents), and 32-bit `Int` overflows at around 21 million dollars in cents, whereas 64-bit `Long` holds exact whole cents without overflow or rounding error.
       - type: multiple_choice
@@ -1156,22 +1156,22 @@ lessons:
         id: kotlin-ch12-rapid-review-manual-capture-window
         prompt: In Stripe Terminal manual capture (`requires_capture`), how long do you have to capture?
         options:
-          - 'Within 2 days.'
           - 'Within 2 minutes.'
+          - 'Within 2 days.'
           - 'Within 30 days.'
           - 'There is no expiry.'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           Within 2 days.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-idempotency
         prompt: What is an idempotency key, and why is a payment ID useful for offline retries?
         options:
-          - 'It lets the server deduplicate retries, so resending payment `p1` returns the original result without charging twice.'
           - 'It encrypts the card number and guarantees every retry charges again.'
           - 'It is a UI label that has no server meaning.'
+          - 'It lets the server deduplicate retries, so resending payment `p1` returns the original result without charging twice.'
           - 'It deletes duplicate payments locally but cannot affect the server.'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           An idempotency key is a unique key sent with a request so the server deduplicates retries; if the app crashes after sending payment `"p1"` and resends `"p1"` on restart, the server recognizes key `"p1"` and returns the original result without charging twice.
 
@@ -1184,11 +1184,11 @@ lessons:
         id: kotlin-ch12-rapid-review-operating-principles
         prompt: Which list contains Stripe's six operating principles?
         options:
-          - 'Users first; Create with craft and beauty; Move with urgency and focus; Collaborate egolessly; Stay curious; Obsess over talent.'
           - 'Move fast; win every argument; ship alone; avoid documentation; optimize only for speed; never ask questions.'
           - 'Users first; maximize revenue; use any tool; skip tests; minimize code; avoid feedback.'
           - 'Craft; hierarchy; secrecy; perfection; independence; competition.'
-        correct_index: 0
+          - 'Users first; Create with craft and beauty; Move with urgency and focus; Collaborate egolessly; Stay curious; Obsess over talent.'
+        correct_index: 3
         explanation: |
           Users first; Create with craft and beauty; Move with urgency and focus; Collaborate egolessly; Stay curious; Obsess over talent.
       - type: multiple_choice
@@ -1206,33 +1206,33 @@ lessons:
         id: kotlin-ch12-rapid-review-first-five-minutes
         prompt: What should you do in the first five minutes of the 45-minute coding portion?
         options:
-          - 'Read carefully, ask 3–5 clarifying questions, and restate Part 1 and its example before coding.'
           - 'Type the fastest implementation without discussing edge cases.'
+          - 'Read carefully, ask 3–5 clarifying questions, and restate Part 1 and its example before coding.'
           - 'Start with the hardest optional part and skip the example.'
           - 'Wait silently for the interviewer to provide the algorithm.'
-        correct_index: 0
+        correct_index: 1
         explanation: |
           Read the prompt carefully, ask 3–5 clarifying questions (on invalid input, ordering/ties, rounding, or edge boundaries), and restate Part 1 and its example in your own words before typing code.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-forgotten-method
         prompt: What should you do if you forget a Kotlin standard-library method name during the interview?
         options:
-          - 'Say what you want to do, check the allowed stdlib reference, or write a clear 3-line loop.'
           - 'Stay silent until the method comes back.'
           - 'Use AI-generated code despite the rules.'
+          - 'Say what you want to do, check the allowed stdlib reference, or write a clear 3-line loop.'
           - 'Invent a method name and hope it compiles.'
-        correct_index: 0
+        correct_index: 2
         explanation: |
           Say out loud what you want to do and either check your open Kotlin stdlib reference tab (which is explicitly allowed) or write a clean 3-line `for` loop so you never stall in silence.
       - type: multiple_choice
         id: kotlin-ch12-rapid-review-stall-rule
         prompt: What is the 3-minute stall rule during the coding screen?
         options:
-          - 'After 3 minutes, state what you expected, what you see, and what you will test next, or ask for a sanity check.'
           - 'After 3 minutes, stop the interview.'
           - 'After 3 minutes, rewrite the whole solution silently.'
           - 'After 3 minutes, conceal the bug until the end.'
-        correct_index: 0
+          - 'After 3 minutes, state what you expected, what you see, and what you will test next, or ask for a sanity check.'
+        correct_index: 3
         explanation: |
           If you are stuck on a bug or requirement for more than 3 minutes, state out loud what you expected, what you are seeing, and what you are testing next—or ask the interviewer to sanity-check your assumption.
       - type: multiple_choice

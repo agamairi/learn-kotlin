@@ -50,10 +50,10 @@ lessons:
         id: ch02-strings-splitting-mc-blank
         prompt: What is the result of `"   ".isBlank()`?
         options:
-          - true
           - false
+          - true
           - null
-        correct_index: 0
+        correct_index: 1
         explanation: "`isBlank` treats whitespace-only text as blank."
       - type: cloze
         id: ch02-strings-splitting-cloze-padding
@@ -86,11 +86,11 @@ lessons:
         id: ch02-strings-structured-mc-before
         prompt: What does `"fr-CA;q=0.8".substringBefore(";")` return?
         options:
-          - fr-CA
           - q=0.8
           - fr-CA;q=0.8
+          - fr-CA
           - an empty string
-        correct_index: 0
+        correct_index: 2
         explanation: "`substringBefore` returns the text before the first matching delimiter."
       - type: predict_output
         id: ch02-strings-structured-output-default
@@ -115,11 +115,11 @@ lessons:
         id: ch02-strings-structured-mc-zip
         prompt: What does `headers.zip(values)` produce when both lists have the same length?
         options:
-          - Pairs each header with the value at the same position
           - Sorts both lists alphabetically
           - Joins every header with every value
           - Drops all duplicate values
-        correct_index: 0
+          - Pairs each header with the value at the same position
+        correct_index: 3
         explanation: "`zip` combines corresponding positions into pairs."
       - type: predict_output
         id: ch02-strings-structured-output-locale
@@ -133,7 +133,7 @@ lessons:
         explanation: Lowercasing happens first, then splitting on the hyphen creates two list elements.
       - type: write_function
         id: ch02-strings-structured-write-pairs
-        prompt: Parse a semicolon-separated string of integer settings such as `"limit=25;window=10;burst=5"` into a map from setting name to value. Return an empty map for an empty input and ignore no valid pairs.
+        prompt: Parse a semicolon-separated string of integer settings such as `"limit=25;window=10;burst=5"` into a map from setting name to value. Return an empty map for an empty input and do not skip any valid pair.
         starter_code: |
           fun parseSettings(text: String): Map<String, Int> = TODO()
         hidden_tests: |

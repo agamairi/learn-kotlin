@@ -96,7 +96,8 @@ data class ProblemPart(
     val hiddenTests: String,
     @SerialName("reference_solution")
     val referenceSolution: String,
-    val expected: String
+    val expected: String,
+    val hints: List<String> = emptyList()
 )
 
 @Serializable

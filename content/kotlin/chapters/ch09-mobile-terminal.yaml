@@ -1,4 +1,4 @@
-id: kotlin-ch09-mobile-terminal
+id: ch09-mobile-terminal
 title: "Stripe practice: mobile and Terminal"
 summary: Six multi-part Kotlin problems about offline payments, readers, retries, rollout, routing, and telemetry.
 lessons:
@@ -292,10 +292,6 @@ lessons:
 
               Queue [p1, p2, p3]; the sender answers `PERMANENT`, `SUCCESS`, `SUCCESS`: `sync() → [MOVED_TO_FAILED, SENT, SENT] · failed [p1]`.
 
-          - id: kotlin-ch09-offline-part-4
-            prompt: The app can crash after a payment is sent but before it is removed from the queue. What happens on restart, and why does reusing the same idempotency key make the resend safe? Where would you persist the queue, and what limits would you add?
-            expected: |
-              The persisted queue still contains the payment, so restart resends it. Reusing the same idempotency key lets the server recognize the earlier logical operation instead of authorizing the card twice. Persist the queue and keys in transactional durable storage; add encryption, retention and count/byte limits, retry metadata, expiry rules, monitoring, and an operator path for permanent failures.
         faq:
           - question: Can a later payment skip one that's retrying?
             answer: No. Keep the order.
@@ -306,7 +302,7 @@ lessons:
           - question: How do I test without a network?
             answer: Pass in a fake sender that returns scripted answers (Lesson 8).
         discussion: |
-          Discuss crash recovery, idempotency, durable queue storage, and practical size and retention limits.
+          Discuss crash recovery, idempotency, durable queue storage, and practical size and retention limits. The persisted queue still contains a payment after a crash, so restart resends it; reusing the same idempotency key lets the server recognize the earlier logical operation instead of authorizing the card twice. Persist the queue and keys in transactional durable storage, with encryption, retention and count/byte limits, retry metadata, expiry rules, monitoring, and an operator path for permanent failures.
         source_note: Stripe's published sample, paraphrased
 
   - id: kotlin-ch09-telemetry-batcher
@@ -354,8 +350,8 @@ lessons:
 
                   @Test fun doesNotReturnBeforeTheConfiguredSize() {
                       val batcher = TelemetryBatcher(2)
-                      batcher.add("a")
-                      assertEquals(emptyList<StoredEvent>(), batcher.add("b").drop(2))
+                      assertEquals(emptyList<StoredEvent>(), batcher.add("a"))
+                      assertEquals(listOf(StoredEvent("a", 0), StoredEvent("b", 0)), batcher.add("b"))
                   }
               }
             reference_solution: |
@@ -411,9 +407,9 @@ lessons:
 
               class TelemetryBatcher(
                   private val batchSize: Int,
-                  private val maxAgeMillis: Long,
+                  private val maxAgeMillis: Long = Long.MAX_VALUE,
                   private val capacity: Int = Int.MAX_VALUE,
-                  private val clock: Clock
+                  private val clock: Clock = Clock { 0L }
               ) {
                   fun add(value: String): List<StoredEvent> = TODO()
                   fun check(): List<StoredEvent> = TODO()
@@ -451,9 +447,9 @@ lessons:
 
               class TelemetryBatcher(
                   private val batchSize: Int,
-                  private val maxAgeMillis: Long,
+                  private val maxAgeMillis: Long = Long.MAX_VALUE,
                   private val capacity: Int = Int.MAX_VALUE,
-                  private val clock: Clock
+                  private val clock: Clock = Clock { 0L }
               ) {
                   private val events = ArrayDeque<StoredEvent>()
                   private val droppedEvents = mutableListOf<StoredEvent>()
@@ -493,9 +489,9 @@ lessons:
 
               class TelemetryBatcher(
                   private val batchSize: Int,
-                  private val maxAgeMillis: Long,
-                  private val capacity: Int,
-                  private val clock: Clock
+                  private val maxAgeMillis: Long = Long.MAX_VALUE,
+                  private val capacity: Int = Int.MAX_VALUE,
+                  private val clock: Clock = Clock { 0L }
               ) {
                   fun add(value: String): List<StoredEvent> = TODO()
                   fun check(): List<StoredEvent> = TODO()
@@ -547,9 +543,9 @@ lessons:
 
               class TelemetryBatcher(
                   private val batchSize: Int,
-                  private val maxAgeMillis: Long,
-                  private val capacity: Int,
-                  private val clock: Clock
+                  private val maxAgeMillis: Long = Long.MAX_VALUE,
+                  private val capacity: Int = Int.MAX_VALUE,
+                  private val clock: Clock = Clock { 0L }
               ) {
                   private val events = ArrayDeque<StoredEvent>()
                   private val droppedEvents = mutableListOf<StoredEvent>()
@@ -580,10 +576,6 @@ lessons:
             expected: |
               `dropped [e1] · sent [[e2, e3, e4], [e5]] · stored []`.
 
-          - id: kotlin-ch09-batcher-part-4
-            prompt: Discuss at-least-once delivery and duplicates, who owns the timer, flushing when the app shuts down, and keeping card data out of telemetry.
-            expected: |
-              At-least-once delivery permits duplicates, so events need stable ids and server-side deduplication where duplicates matter. The lifecycle or scheduler can wake the batcher, while the batcher owns readiness. Shutdown flushing is best effort; durable storage is the guarantee. Telemetry must exclude card numbers, authentication data, secrets, and unnecessary customer identifiers, using allowlists, redaction, size limits, retention controls, and access controls.
         faq:
           - question: Is the age check "at least T"?
             answer: Yes, `>= T`.
@@ -594,7 +586,7 @@ lessons:
           - question: How do tests control time?
             answer: A `Clock` interface with a fake you set by hand.
         discussion: |
-          Consider delivery semantics, lifecycle ownership, shutdown behavior, and privacy boundaries for diagnostics.
+          Consider delivery semantics, lifecycle ownership, shutdown behavior, and privacy boundaries for diagnostics. At-least-once delivery permits duplicates, so events need stable ids and server-side deduplication where duplicates matter. The lifecycle or scheduler can wake the batcher, while the batcher owns readiness. Shutdown flushing is best effort; durable storage is the guarantee. Telemetry must exclude card numbers, authentication data, secrets, and unnecessary customer identifiers, using allowlists, redaction, size limits, retention controls, and access controls.
         source_note: Stripe's published sample, paraphrased
 
   - id: kotlin-ch09-checkout-retries
@@ -806,10 +798,6 @@ lessons:
             expected: |
               A: `CAPTURED (pi_1)` · B: `AUTHORIZED_NOT_CAPTURED (pi_2)` · C: `NEEDS_RECONCILIATION (pi_3)`. Follow-ups: `pi_2 capture or cancel within 2 days`; `pi_3 check its status before doing anything`. Three PaymentIntents total.
 
-          - id: kotlin-ch09-checkout-part-4
-            prompt: Why is a new PaymentIntent after a timeout dangerous? If the app crashes mid-payment, what must already be saved? How would offline mode change this flow?
-            expected: |
-              A timeout leaves the payment outcome unknown; creating a new intent can authorize the card twice. Save the original PaymentIntent id and stable operation state before processing, then reconcile that same intent after a crash. Offline mode adds durable storage and forwarding, but still needs one stable payment identity and explicit stored, authorized, captured, and unknown states.
         faq:
           - question: Does a decline reset the timeout count?
             answer: Yes. The limit is for consecutive results.
@@ -820,7 +808,7 @@ lessons:
           - question: Is this the real SDK?
             answer: No. It models the rules from Stripe's docs.
         discussion: |
-          Keep the PaymentIntent identity stable across retries and reconcile unknown outcomes before attempting anything new.
+          Keep the PaymentIntent identity stable across retries and reconcile unknown outcomes before attempting anything new. A timeout leaves the payment outcome unknown; creating a new intent can authorize the card twice. Save the original PaymentIntent id and stable operation state before processing, then reconcile that same intent after a crash. Offline mode adds durable storage and forwarding, but still needs one stable payment identity and explicit stored, authorized, captured, and unknown states.
         source_note: Stripe's published sample, paraphrased
 
   - id: kotlin-ch09-version-gate-rollout
@@ -874,7 +862,7 @@ lessons:
                   val parts = text.split('.')
                   if (parts.size != 3 || parts.any { it.isEmpty() || it.any { ch -> !ch.isDigit() } }) null
                   else AppVersion(parts[0].toInt(), parts[1].toInt(), parts[2].toInt())
-              } catch (_: NumberFormatException) { null }
+              } catch (e: NumberFormatException) { null }
               fun compareVersions(left: String, right: String): Int {
                   val a = requireNotNull(parseVersion(left)); val b = requireNotNull(parseVersion(right))
                   return compareValuesBy(a, b, { it.major }, { it.minor }, { it.patch })
@@ -931,7 +919,7 @@ lessons:
               private fun parseVersion(text: String): AppVersion? = try {
                   val parts = text.split('.')
                   if (parts.size != 3 || parts.any { it.isEmpty() || it.any { ch -> !ch.isDigit() } }) null else AppVersion(parts[0].toInt(), parts[1].toInt(), parts[2].toInt())
-              } catch (_: NumberFormatException) { null }
+              } catch (e: NumberFormatException) { null }
               fun compareVersions(left: String, right: String): Int {
                   val a = requireNotNull(parseVersion(left)); val b = requireNotNull(parseVersion(right))
                   return compareValuesBy(a, b, { it.major }, { it.minor }, { it.patch })
@@ -982,7 +970,7 @@ lessons:
             reference_solution: |
               data class AppVersion(val major: Int, val minor: Int, val patch: Int)
               sealed interface FeatureResult { data object Enabled : FeatureResult; data object TooOld : FeatureResult; data object InvalidVersion : FeatureResult; data object DisabledByRollout : FeatureResult }
-              private fun parseVersion(text: String): AppVersion? = try { val p = text.split('.'); if (p.size != 3 || p.any { it.isEmpty() || it.any { c -> !c.isDigit() } }) null else AppVersion(p[0].toInt(), p[1].toInt(), p[2].toInt()) } catch (_: NumberFormatException) { null }
+              private fun parseVersion(text: String): AppVersion? = try { val p = text.split('.'); if (p.size != 3 || p.any { it.isEmpty() || it.any { c -> !c.isDigit() } }) null else AppVersion(p[0].toInt(), p[1].toInt(), p[2].toInt()) } catch (e: NumberFormatException) { null }
               fun compareVersions(left: String, right: String): Int { val a = requireNotNull(parseVersion(left)); val b = requireNotNull(parseVersion(right)); return compareValuesBy(a, b, { it.major }, { it.minor }, { it.patch }) }
               fun gateVersion(version: String, minimum: String): FeatureResult { val a = parseVersion(version) ?: return FeatureResult.InvalidVersion; val b = parseVersion(minimum) ?: return FeatureResult.InvalidVersion; return if (compareValuesBy(a, b, { it.major }, { it.minor }, { it.patch }) >= 0) FeatureResult.Enabled else FeatureResult.TooOld }
               fun rolloutVersion(version: String, minimum: String, installId: String, percentage: Int): FeatureResult { val gate = gateVersion(version, minimum); if (gate != FeatureResult.Enabled) return gate; return if (installId.sumOf { it.code } % 100 < percentage) FeatureResult.Enabled else FeatureResult.DisabledByRollout }
@@ -992,10 +980,6 @@ lessons:
             expected: |
               Install `"abc"` (bucket 94) on 3.1.4: `percentage 94 → DisabledByRollout · 95 → Enabled`. Install `"reader-42"` has bucket 74.
 
-          - id: kotlin-ch09-version-part-4
-            prompt: Discuss pre-release versions such as `2.14.0-beta.3`, keeping rollout stable if the hash changes, an emergency kill switch, and bad remote config.
-            expected: |
-              Pre-release versions need an explicit comparison policy; do not silently strip suffixes. Version the rollout hash algorithm because changing it reshuffles users. Add a remotely controlled kill switch that overrides rollout, validate and cache remote configuration, preserve a last-known-good value, and choose a safe default for bad config.
         faq:
           - question: Is `1.2` valid?
             answer: No. It needs three parts.
@@ -1006,7 +990,7 @@ lessons:
           - question: Do too-old installs join the rollout?
             answer: No.
         discussion: |
-          Decide version and configuration policies before shipping a gradual feature gate.
+          Decide version and configuration policies before shipping a gradual feature gate. Pre-release versions need an explicit comparison policy; do not silently strip suffixes. Version the rollout hash algorithm because changing it reshuffles users. Add a remotely controlled kill switch that overrides rollout, validate and cache remote configuration, preserve a last-known-good value, and choose a safe default for bad config.
         source_note: Stripe's published sample, paraphrased
 
   - id: kotlin-ch09-deep-link-router
@@ -1142,10 +1126,6 @@ lessons:
             expected: |
               `"…refund?paymentId=p1&amount=5&amount=6" → Invalid("duplicate amount")` · `"…refund?amount=500" → Invalid("missing paymentId")` · `"…refund?paymentId=p1&amount=0" → Invalid("amount must be positive")` · `"…refund?paymentId=p1&amount=abc&source=email" → Invalid("amount is not a number")`.
 
-          - id: kotlin-ch09-deeplink-part-4
-            prompt: Discuss percent-encoding, a maximum length, allowlisting schemes and hosts, not logging sensitive ids, and keeping navigation outside the parser.
-            expected: |
-              Decode percent-encoded values with a well-tested URL parser, reject overlong links, allowlist the exact scheme and host/path, avoid logging payment identifiers, and return typed data to a navigation layer rather than navigating from the parser.
         faq:
           - question: Case-sensitive?
             answer: Yes.
@@ -1156,7 +1136,7 @@ lessons:
           - question: Throw or return?
             answer: Return a typed `Invalid`.
         discussion: |
-          Keep parsing pure and validation deterministic; navigation and security policy belong around the parser.
+          Keep parsing pure and validation deterministic; navigation and security policy belong around the parser. Decode percent-encoded values with a well-tested URL parser, reject overlong links, allowlist the exact scheme and host/path, avoid logging payment identifiers, and return typed data to a navigation layer rather than navigating from the parser.
         source_note: Stripe's published sample, paraphrased
 
   - id: kotlin-ch09-reader-states

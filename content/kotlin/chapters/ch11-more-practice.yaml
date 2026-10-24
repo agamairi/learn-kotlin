@@ -236,7 +236,7 @@ lessons:
               fun cheapestRoute(lanes: List<Lane>, from: String, to: String): Route? =
                   cheapestRouteUsing(lanes, from, to)
 
-              private fun cheapestRouteUsing(lanes: List<Lane>, from: String, to: String): Route? {
+              private fun cheapestRouteUsing(lanes: List<Lane>, from: String, to: String, refusedCarrier: String): Route? {
                   if (from == to) return Route(listOf(from), emptyList(), 0)
                   val graph = lanes.groupBy { it.from }
                   val queue = PriorityQueue<QueueItem>(compareBy { it.cost })
@@ -247,7 +247,7 @@ lessons:
                       if (current.cost != best[current.route.places.last()]) continue
                       if (current.route.places.last() == to) return current.route
                       for (lane in graph[current.route.places.last()].orEmpty()) {
-                          if (lane.carrier == refusedCarrierForSearch || lane.to in current.route.places) continue
+                          if (lane.carrier == refusedCarrier || lane.to in current.route.places) continue
                           val nextCost = current.cost + lane.cost
                           if (nextCost < best.getOrDefault(lane.to, Int.MAX_VALUE)) {
                               best[lane.to] = nextCost
@@ -258,11 +258,8 @@ lessons:
                   return null
               }
 
-              private var refusedCarrierForSearch: String = ""
-
               fun cheapestRouteAvoiding(lanes: List<Lane>, from: String, to: String, refusedCarrier: String): Route? {
-                  refusedCarrierForSearch = refusedCarrier
-                  return try { cheapestRouteUsing(lanes, from, to) } finally { refusedCarrierForSearch = "" }
+                  return cheapestRouteUsing(lanes, from, to, refusedCarrier)
               }
             expected: |
               Without DHL: `US→CA→FR, [FedEx, FedEx], 12`.
@@ -657,36 +654,13 @@ lessons:
             expected: |
               `evt_1,0,FFFFFFS` and `evt_2,20,S` disable the endpoint at minute 15;
               neither event is delivered.
-          - id: ch11-more-practice-webhook-retries-part-4
-            prompt: Why add random jitter to retry times? What happens when a merchant receives the same event twice, and how should each side handle it?
-            starter_code: |
-              fun explainWebhookReliability(): String = TODO()
-            hidden_tests: |
-              import org.junit.Assert.assertTrue
-              import org.junit.Test
-
-              class WebhookRetriesPart4Test {
-                  @Test fun explanationCoversJitterAndIdempotency() {
-                      val answer = explainWebhookReliability().lowercase()
-                      assertTrue(answer.contains("jitter"))
-                      assertTrue(answer.contains("idempot"))
-                  }
-              }
-            reference_solution: |
-              fun explainWebhookReliability(): String =
-                  "Add jitter to spread retries and avoid a thundering herd. A merchant may receive the same event twice, so it should deduplicate by event id and handle the operation idempotently; the sender should retry safely."
-            expected: |
-              Add random jitter so many customers do not retry at exactly the same time.
-              Delivery is at-least-once, so a merchant may see an event twice: deduplicate
-              by event id and make its handler idempotent, while the sender retries safely.
         faq:
           - question: More letters than attempts made?
             answer: Ignore the extras.
           - question: Ties in Part 3?
             answer: None in the example. If asked, order by event id.
         discussion: |
-          Why add random jitter to retry times? What happens when a merchant receives
-          the same event twice, and how should each side handle it?
+          Why add random jitter to retry times? Jitter spreads retries and avoids a thundering herd. A merchant may receive the same event twice, so it should deduplicate by event id and handle the operation idempotently; the sender should retry safely.
         source_note: Original exercise; retry guidance is inspired by Stripe documentation.
 
   - id: ch11-more-practice-currency-conversion
@@ -795,6 +769,16 @@ lessons:
 
               private fun money(value: BigDecimal): String = value.setScale(2, RoundingMode.HALF_UP).toPlainString()
 
+              fun convertDirect(ratesText: String, amount: String, from: String, to: String): String {
+                  val graph = graph(ratesText)
+                  if (from == to) {
+                      require(graph.containsKey(from))
+                      return money(BigDecimal(amount))
+                  }
+                  val edge = graph[from].orEmpty().firstOrNull { it.to == to } ?: throw IllegalArgumentException("unknown or non-direct currency")
+                  return money(BigDecimal(amount).multiply(edge.rate))
+              }
+
               private fun findPath(graph: Map<String, List<FxEdge>>, from: String, to: String, maxEdges: Int): List<FxEdge>? {
                   if (from == to) return emptyList()
                   fun visit(current: String, path: List<FxEdge>, seen: Set<String>): List<FxEdge>? {
@@ -857,6 +841,40 @@ lessons:
 
               private fun money(value: BigDecimal): String = value.setScale(2, RoundingMode.HALF_UP).toPlainString()
 
+              fun convertDirect(ratesText: String, amount: String, from: String, to: String): String {
+                  val graph = graph(ratesText)
+                  if (from == to) {
+                      require(graph.containsKey(from))
+                      return money(BigDecimal(amount))
+                  }
+                  val edge = graph[from].orEmpty().firstOrNull { it.to == to } ?: throw IllegalArgumentException("unknown or non-direct currency")
+                  return money(BigDecimal(amount).multiply(edge.rate))
+              }
+
+              private fun findPath(graph: Map<String, List<FxEdge>>, from: String, to: String, maxEdges: Int): List<FxEdge>? {
+                  if (from == to) return emptyList()
+                  fun visit(current: String, path: List<FxEdge>, seen: Set<String>): List<FxEdge>? {
+                      if (current == to) return path
+                      if (path.size == maxEdges) return null
+                      return graph[current].orEmpty().firstNotNullOfOrNull { edge ->
+                          if (edge.to in seen) null else visit(edge.to, path + edge, seen + edge.to)
+                      }
+                  }
+                  require(graph.containsKey(from) && graph.containsKey(to))
+                  return visit(from, emptyList(), setOf(from))
+              }
+
+              private fun convertPath(amount: String, path: List<FxEdge>): String {
+                  var value = BigDecimal(amount)
+                  path.forEach { value = value.multiply(it.rate) }
+                  return money(value)
+              }
+
+              fun convertWithOneIntermediate(ratesText: String, amount: String, from: String, to: String): String {
+                  val path = findPath(graph(ratesText), from, to, 2) ?: throw IllegalArgumentException("no path")
+                  return convertPath(amount, path)
+              }
+
               fun convertAnyPath(ratesText: String, amount: String, from: String, to: String): FxQuote {
                   val graph = graph(ratesText)
                   require(graph.containsKey(from) && graph.containsKey(to))
@@ -909,6 +927,52 @@ lessons:
               }
 
               private fun money(value: BigDecimal): String = value.setScale(2, RoundingMode.HALF_UP).toPlainString()
+
+              fun convertDirect(ratesText: String, amount: String, from: String, to: String): String {
+                  val graph = graph(ratesText)
+                  if (from == to) {
+                      require(graph.containsKey(from))
+                      return money(BigDecimal(amount))
+                  }
+                  val edge = graph[from].orEmpty().firstOrNull { it.to == to } ?: throw IllegalArgumentException("unknown or non-direct currency")
+                  return money(BigDecimal(amount).multiply(edge.rate))
+              }
+
+              private fun findPath(graph: Map<String, List<FxEdge>>, from: String, to: String, maxEdges: Int): List<FxEdge>? {
+                  if (from == to) return emptyList()
+                  fun visit(current: String, path: List<FxEdge>, seen: Set<String>): List<FxEdge>? {
+                      if (current == to) return path
+                      if (path.size == maxEdges) return null
+                      return graph[current].orEmpty().firstNotNullOfOrNull { edge ->
+                          if (edge.to in seen) null else visit(edge.to, path + edge, seen + edge.to)
+                      }
+                  }
+                  require(graph.containsKey(from) && graph.containsKey(to))
+                  return visit(from, emptyList(), setOf(from))
+              }
+
+              private fun convertPath(amount: String, path: List<FxEdge>): String {
+                  var value = BigDecimal(amount)
+                  path.forEach { value = value.multiply(it.rate) }
+                  return money(value)
+              }
+
+              fun convertWithOneIntermediate(ratesText: String, amount: String, from: String, to: String): String {
+                  val path = findPath(graph(ratesText), from, to, 2) ?: throw IllegalArgumentException("no path")
+                  return convertPath(amount, path)
+              }
+
+              fun convertAnyPath(ratesText: String, amount: String, from: String, to: String): FxQuote {
+                  val graph = graph(ratesText)
+                  require(graph.containsKey(from) && graph.containsKey(to))
+                  fun visit(current: String, value: BigDecimal, path: List<String>, seen: Set<String>): FxQuote? {
+                      if (current == to) return FxQuote(money(value), path)
+                      return graph[current].orEmpty().firstNotNullOfOrNull { edge ->
+                          if (edge.to in seen) null else visit(edge.to, value.multiply(edge.rate), path + edge.to, seen + edge.to)
+                      }
+                  }
+                  return visit(from, BigDecimal(amount), listOf(from), setOf(from)) ?: throw IllegalArgumentException("no path")
+              }
 
               fun compareConversions(ratesText: String, amount: String, from: String, to: String): FxComparison {
                   val graph = graph(ratesText)

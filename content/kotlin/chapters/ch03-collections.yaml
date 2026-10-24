@@ -57,11 +57,11 @@ lessons:
         id: ch03-collections-grouping-mc-total
         prompt: Which expression returns the total cents across all transactions?
         options:
-          - txs.sumOf { it.cents }
           - txs.count { it.cents }
+          - txs.sumOf { it.cents }
           - txs.maxByOrNull { it.cents }
           - txs.associateBy { it.cents }
-        correct_index: 0
+        correct_index: 1
         explanation: "`sumOf` projects each transaction to cents and adds the resulting `Long` values."
       - type: predict_output
         id: ch03-collections-grouping-output-count
@@ -126,11 +126,11 @@ lessons:
         id: ch03-collections-searching-mc-first
         prompt: Which operation returns the first matching item or `null` when there is no match?
         options:
-          - firstOrNull { }
           - first { }
           - any { }
+          - firstOrNull { }
           - none { }
-        correct_index: 0
+        correct_index: 2
         explanation: "`firstOrNull` is the non-throwing search operation."
       - type: cloze
         id: ch03-collections-searching-cloze-duplicate
@@ -158,11 +158,11 @@ lessons:
         id: ch03-collections-searching-mc-take
         prompt: Which sequence returns the top two entries after sorting counts from highest to lowest?
         options:
-          - entries.sortedByDescending { it.value }.take(2)
           - entries.take(2).sortedByDescending { it.value }
           - entries.maxByOrNull { it.value }.take(2)
           - entries.groupBy { it.value }.take(2)
-        correct_index: 0
+          - entries.sortedByDescending { it.value }.take(2)
+        correct_index: 3
         explanation: Sort the complete entry set first, then keep its first two entries.
       - type: cloze
         id: ch03-collections-searching-cloze-bucket
