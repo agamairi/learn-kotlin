@@ -41,17 +41,25 @@ object ContentValidator {
     }
 
     /**
-     * Stub for the rules that need a running kotlin-compiler-server: predict_output programs must print exactly their
-     * expected_output, and every reference_solution must pass its hidden_tests (CONTENT_SCHEMA rules 4 and 5).
+     * Verifies [course] against the kotlin-compiler-server (CONTENT_SCHEMA rules 4 and 5).
      *
-     * Not implemented yet. It waits for docs/spike-report.md, which fixes the server endpoints and limits.
-     *
-     * @throws NotImplementedError always, so the stub can never be mistaken for a passed check
+     * Findings are logged to [log].
      */
-    fun verifyWithCompilerServer(course: Course) {
-        throw NotImplementedError(
-            "verifyWithCompilerServer is not implemented yet; it waits for docs/spike-report.md (course ${course.id})"
-        )
+    fun verifyWithCompilerServer(
+        course: Course,
+        client: CompilerServerClient = HttpCompilerServerClient(),
+        log: ContentIssueLog = ContentIssueLog()
+    ): VerificationReport {
+        val verifier = ContentVerifier(client)
+        val report = verifier.verifyCourse(course)
+        for (finding in report.findings) {
+            val path = if (finding.partId != null) "$.parts[${finding.partId}]" else "$"
+            when (finding.severity) {
+                Severity.ERROR -> log.error(finding.chapterFile, path, "${finding.check}: ${finding.evidence}", finding.exerciseId)
+                Severity.WARNING -> log.warning(finding.chapterFile, path, "${finding.check}: ${finding.evidence}", finding.exerciseId)
+            }
+        }
+        return report
     }
 
     private fun validateChapter(log: ContentIssueLog, ids: UniqueIds, file: String, chapter: Chapter) {
