@@ -82,7 +82,15 @@ class CourseDecodingTest {
                           "starter_code": "fun record(amount: Long): Long = TODO()",
                           "hidden_tests": "class Part1Test",
                           "reference_solution": "var balance = 0L\nfun record(amount: Long): Long { balance += amount; return balance }",
-                          "expected": "Returns the updated balance."
+                          "expected": "Returns the updated balance.",
+                          "hints": ["Keep the running total in a property."]
+                        },
+                        {
+                          "id": "part-2",
+                          "prompt": "Add a function to read the balance.",
+                          "hidden_tests": "class Part2Test",
+                          "reference_solution": "fun balanceOf(): Long = 0L",
+                          "expected": "Returns the current balance."
                         }
                       ],
                       "faq": [
@@ -154,8 +162,10 @@ class CourseDecodingTest {
         assertIs<Exercise.MultiPartProblem>(ex5)
         assertEquals("mp-01", ex5.id)
         assertEquals("You are implementing payment tracking.", ex5.story)
-        assertEquals(1, ex5.parts.size)
+        assertEquals(2, ex5.parts.size)
         assertEquals("part-1", ex5.parts.first().id)
+        assertEquals(listOf("Keep the running total in a property."), ex5.parts.first().hints)
+        assertEquals(emptyList(), ex5.parts[1].hints)
         assertEquals(1, ex5.faq.size)
         assertEquals("Can amounts be negative?", ex5.faq.first().question)
         assertEquals("Interview sample drill.", ex5.sourceNote)

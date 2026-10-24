@@ -78,10 +78,10 @@ lessons:
         prompt: "In `fun feeCents(amountCents: Long, basisPoints: Int = 290)`, what happens when callers omit `basisPoints`?"
         options:
           - The function does not compile
-          - Kotlin uses 290
           - Kotlin uses 0
+          - Kotlin uses 290
           - Kotlin asks for the value at runtime
-        correct_index: 1
+        correct_index: 2
         explanation: A default argument is used when that argument is not supplied by the caller.
 
   - id: ch01-syntax-control
@@ -100,10 +100,10 @@ lessons:
         prompt: Which range visits 0 through 4, but not 5?
         options:
           - 0..5
-          - 0 until 5
           - 1..5
           - 5 downTo 0
-        correct_index: 1
+          - 0 until 5
+        correct_index: 3
         explanation: "`until` creates an end-exclusive range."
       - type: predict_output
         id: ch01-syntax-control-output-fee
@@ -132,12 +132,18 @@ lessons:
       - type: multiple_choice
         id: ch01-syntax-control-mc-tier
         prompt: For a tier function with `when`, which label belongs to 100_000 cents?
+        code: |
+          fun tier(amountCents: Long): String = when {
+              amountCents < 100 -> "micro"
+              amountCents < 100_000 -> "standard"
+              else -> "large"
+          }
         options:
+          - invalid
           - micro
           - standard
           - large
-          - invalid
-        correct_index: 2
+        correct_index: 3
         explanation: The rule says under 100 is `micro`, under 100_000 is `standard`, and all other values are `large`; the boundary itself is large.
       - type: predict_output
         id: ch01-syntax-control-output-format

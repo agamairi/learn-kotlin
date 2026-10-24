@@ -46,7 +46,7 @@ lessons:
             reference_solution: |
               data class TransactionFee(val id: String, val feeCents: Long)
 
-              private fun percentageFee(amount: Long, basisPoints: Long): Long = (amount * basisPoints + 500) / 1000
+              private fun percentageFee(amount: Long, basisPoints: Long): Long = (amount * basisPoints + 5_000) / 10_000
 
               fun transactionFees(csv: String): List<TransactionFee> = csv.lineSequence()
                   .drop(1)
@@ -90,7 +90,7 @@ lessons:
               data class TransactionFee(val id: String, val feeCents: Long)
               data class MerchantFeeReport(val merchant: String, val volumeCents: Long, val feesCents: Long, val netCents: Long)
 
-              private fun percentageFee(amount: Long, basisPoints: Long): Long = (amount * basisPoints + 500) / 1000
+              private fun percentageFee(amount: Long, basisPoints: Long): Long = (amount * basisPoints + 5_000) / 10_000
 
               fun transactionFees(csv: String): List<TransactionFee> = csv.lineSequence()
                   .drop(1).filter { it.isNotBlank() }.map { line ->
@@ -144,11 +144,30 @@ lessons:
                   }
               }
             reference_solution: |
+              data class TransactionFee(val id: String, val feeCents: Long)
               data class MerchantFeeReport(val merchant: String, val volumeCents: Long, val feesCents: Long, val netCents: Long)
               data class FeeError(val lineNumber: Int, val reason: String)
               data class FeeReportWithErrors(val reports: List<MerchantFeeReport>, val errors: List<FeeError>)
 
-              private fun percentageFee(amount: Long, basisPoints: Long): Long = (amount * basisPoints + 500) / 1000
+              private fun percentageFee(amount: Long, basisPoints: Long): Long = (amount * basisPoints + 5_000) / 10_000
+
+              fun transactionFees(csv: String): List<TransactionFee> = csv.lineSequence()
+                  .drop(1).filter { it.isNotBlank() }.map { line ->
+                      val fields = line.split(',')
+                      TransactionFee(fields[0], percentageFee(fields[2].toLong(), 29) + 30)
+                  }.toList()
+
+              fun merchantFeeReport(csv: String): List<MerchantFeeReport> = csv.lineSequence()
+                  .drop(1)
+                  .filter { it.isNotBlank() }
+                  .map { it.split(',') }
+                  .groupBy { it[1] }
+                  .map { (merchant, rows) ->
+                      val volume = rows.sumOf { it[2].toLong() }
+                      val fees = rows.sumOf { percentageFee(it[2].toLong(), 29) + 30 }
+                      MerchantFeeReport(merchant, volume, fees, volume - fees)
+                  }
+                  .sortedWith(compareByDescending<MerchantFeeReport> { it.netCents }.thenBy { it.merchant })
 
               fun merchantFeeReportWithErrors(csv: String): FeeReportWithErrors {
                   val totals = mutableMapOf<String, Pair<Long, Long>>()
@@ -214,9 +233,60 @@ lessons:
                   }
               }
             reference_solution: |
+              data class TransactionFee(val id: String, val feeCents: Long)
               data class MerchantFeeReport(val merchant: String, val volumeCents: Long, val feesCents: Long, val netCents: Long)
 
-              private fun percentageFee(amount: Long, basisPoints: Long): Long = (amount * basisPoints + 500) / 1000
+              private fun percentageFee(amount: Long, basisPoints: Long): Long = (amount * basisPoints + 5_000) / 10_000
+
+              fun transactionFees(csv: String): List<TransactionFee> = csv.lineSequence()
+                  .drop(1).filter { it.isNotBlank() }.map { line ->
+                      val fields = line.split(',')
+                      TransactionFee(fields[0], percentageFee(fields[2].toLong(), 29) + 30)
+                  }.toList()
+
+              fun merchantFeeReport(csv: String): List<MerchantFeeReport> = csv.lineSequence()
+                  .drop(1)
+                  .filter { it.isNotBlank() }
+                  .map { it.split(',') }
+                  .groupBy { it[1] }
+                  .map { (merchant, rows) ->
+                      val volume = rows.sumOf { it[2].toLong() }
+                      val fees = rows.sumOf { percentageFee(it[2].toLong(), 29) + 30 }
+                      MerchantFeeReport(merchant, volume, fees, volume - fees)
+                  }
+                  .sortedWith(compareByDescending<MerchantFeeReport> { it.netCents }.thenBy { it.merchant })
+
+              data class FeeError(val lineNumber: Int, val reason: String)
+              data class FeeReportWithErrors(val reports: List<MerchantFeeReport>, val errors: List<FeeError>)
+
+              fun merchantFeeReportWithErrors(csv: String): FeeReportWithErrors {
+                  val totals = mutableMapOf<String, Pair<Long, Long>>()
+                  val errors = mutableListOf<FeeError>()
+                  csv.lineSequence().drop(1).forEachIndexed { index, line ->
+                      if (line.isBlank()) return@forEachIndexed
+                      val lineNumber = index + 2
+                      val fields = line.split(',')
+                      val merchant = fields.getOrNull(1).orEmpty()
+                      val amount = fields.getOrNull(2)?.toLongOrNull()
+                      val card = fields.getOrNull(3)?.lowercase()
+                      when {
+                          amount == null -> errors += FeeError(lineNumber, "amount is not a number")
+                          merchant.isBlank() -> errors += FeeError(lineNumber, "missing merchant")
+                          amount < 0 -> errors += FeeError(lineNumber, "negative amount")
+                          card != "visa" && card != "amex" -> errors += FeeError(lineNumber, "unknown card")
+                          else -> {
+                              val percentage = if (card == "amex") 35L else 29L
+                              val fee = percentageFee(amount, percentage) + 30
+                              val old = totals[merchant] ?: (0L to 0L)
+                              totals[merchant] = (old.first + amount) to (old.second + fee)
+                          }
+                      }
+                  }
+                  val reports = totals.map { (merchant, values) ->
+                      MerchantFeeReport(merchant, values.first, values.second, values.first - values.second)
+                  }.sortedWith(compareByDescending<MerchantFeeReport> { it.netCents }.thenBy { it.merchant })
+                  return FeeReportWithErrors(reports, errors)
+              }
 
               fun merchantFeeReportWithRefunds(csv: String): List<MerchantFeeReport> {
                   val totals = mutableMapOf<String, Pair<Long, Long>>()
@@ -326,6 +396,18 @@ lessons:
                   }
               }
             reference_solution: |
+              fun ledgerBalances(lines: String): List<Pair<String, Long>> {
+                  val balances = mutableMapOf<String, Long>()
+                  lines.lineSequence().filter { it.isNotBlank() }.forEach { line ->
+                      val fields = line.split(',')
+                      val merchant = fields[2]
+                      val amount = fields[3].toLong()
+                      val delta = if (fields[1] == "charge") amount else -amount
+                      balances[merchant] = (balances[merchant] ?: 0L) + delta
+                  }
+                  return balances.toSortedMap().toList()
+              }
+
               data class LedgerResult(val balances: List<Pair<String, Long>>, val rejectedLines: List<Int>)
 
               fun ledgerWithRejections(lines: String): LedgerResult {
@@ -376,7 +458,34 @@ lessons:
                   }
               }
             reference_solution: |
+              fun ledgerBalances(lines: String): List<Pair<String, Long>> {
+                  val balances = mutableMapOf<String, Long>()
+                  lines.lineSequence().filter { it.isNotBlank() }.forEach { line ->
+                      val fields = line.split(',')
+                      val merchant = fields[2]
+                      val amount = fields[3].toLong()
+                      val delta = if (fields[1] == "charge") amount else -amount
+                      balances[merchant] = (balances[merchant] ?: 0L) + delta
+                  }
+                  return balances.toSortedMap().toList()
+              }
+
               data class LedgerResult(val balances: List<Pair<String, Long>>, val rejectedLines: List<Int>)
+
+              fun ledgerWithRejections(lines: String): LedgerResult {
+                  val balances = mutableMapOf<String, Long>()
+                  val rejected = mutableListOf<Int>()
+                  lines.lineSequence().filter { it.isNotBlank() }.forEachIndexed { index, line ->
+                      val fields = line.split(',')
+                      val merchant = fields[2]
+                      val type = fields[1]
+                      val amount = fields[3].toLong()
+                      val current = balances[merchant] ?: 0L
+                      if (type !in setOf("charge", "refund", "payout") || (type != "charge" && current < amount)) rejected += index + 1
+                      else balances[merchant] = current + if (type == "charge") amount else -amount
+                  }
+                  return LedgerResult(balances.toSortedMap().toList(), rejected)
+              }
 
               private data class Entry(val day: Int, val type: String, val merchant: String, val amount: Long, val line: Int)
 
@@ -449,6 +558,59 @@ lessons:
             reference_solution: |
               data class LedgerResult(val balances: List<Pair<String, Long>>, val rejectedLines: List<Int>)
               private data class Entry(val day: Int, val type: String, val merchant: String, val amount: Long, val line: Int)
+
+              fun ledgerBalances(lines: String): List<Pair<String, Long>> {
+                  val balances = mutableMapOf<String, Long>()
+                  lines.lineSequence().filter { it.isNotBlank() }.forEach { line ->
+                      val fields = line.split(',')
+                      val merchant = fields[2]
+                      val amount = fields[3].toLong()
+                      val delta = if (fields[1] == "charge") amount else -amount
+                      balances[merchant] = (balances[merchant] ?: 0L) + delta
+                  }
+                  return balances.toSortedMap().toList()
+              }
+
+              fun ledgerWithRejections(lines: String): LedgerResult {
+                  val balances = mutableMapOf<String, Long>()
+                  val rejected = mutableListOf<Int>()
+                  lines.lineSequence().filter { it.isNotBlank() }.forEachIndexed { index, line ->
+                      val fields = line.split(',')
+                      val merchant = fields[2]
+                      val type = fields[1]
+                      val amount = fields[3].toLong()
+                      val current = balances[merchant] ?: 0L
+                      if (type !in setOf("charge", "refund", "payout") || (type != "charge" && current < amount)) rejected += index + 1
+                      else balances[merchant] = current + if (type == "charge") amount else -amount
+                  }
+                  return LedgerResult(balances.toSortedMap().toList(), rejected)
+              }
+
+              fun settledLedger(lines: String): LedgerResult {
+                  val entries = lines.lineSequence().filter { it.isNotBlank() }.mapIndexed { index, line ->
+                      val fields = line.split(',')
+                      Entry(fields[0].toInt(), fields[1], fields[2], fields[3].toLong(), index + 1)
+                  }.toList()
+                  val balances = mutableMapOf<String, Long>()
+                  val settledCharges = mutableMapOf<String, Long>()
+                  val refunds = mutableMapOf<String, Long>()
+                  val payouts = mutableMapOf<String, Long>()
+                  val rejected = mutableListOf<Int>()
+                  entries.forEach { entry ->
+                      entries.filter { it.type == "charge" && it.merchant == entry.merchant && it.day + 2 <= entry.day }.sumOf { it.amount }.also { settledCharges[entry.merchant] = it }
+                      val balance = balances[entry.merchant] ?: 0L
+                      when (entry.type) {
+                          "charge" -> balances[entry.merchant] = balance + entry.amount
+                          "refund" -> if (balance < entry.amount) rejected += entry.line else { balances[entry.merchant] = balance - entry.amount; refunds[entry.merchant] = (refunds[entry.merchant] ?: 0L) + entry.amount }
+                          "payout" -> {
+                              val available = (settledCharges[entry.merchant] ?: 0L) - (refunds[entry.merchant] ?: 0L) - (payouts[entry.merchant] ?: 0L)
+                              if (available < entry.amount) rejected += entry.line else { balances[entry.merchant] = balance - entry.amount; payouts[entry.merchant] = (payouts[entry.merchant] ?: 0L) + entry.amount }
+                          }
+                          else -> rejected += entry.line
+                      }
+                  }
+                  return LedgerResult(balances.toSortedMap().toList(), rejected)
+              }
 
               fun settledLedgerOutOfOrder(lines: String): LedgerResult {
                   val sorted = lines.lineSequence().filter { it.isNotBlank() }.mapIndexed { index, line ->
@@ -606,7 +768,7 @@ lessons:
             prompt: |
               Quality values like `;q=0.4` are allowed; no q means 1. Order by q, highest first; equal q keeps header order. `q=0` means never return that tag.
 
-              Examples: `(\"fr-FR;q=0.4, en-US, de-DE;q=0.9\", [de-DE, en-US, fr-FR]) → [en-US, de-DE, fr-FR]`; `(\"en-US, fr-FR;q=0\", [fr-FR, en-US]) → [en-US]`; `(\"en;q=0.5, en-GB\", [en-US, en-GB]) → [en-GB, en-US]`.
+              Examples: `("fr-FR;q=0.4, en-US, de-DE;q=0.9", [de-DE, en-US, fr-FR]) → [en-US, de-DE, fr-FR]`; `("en-US, fr-FR;q=0", [fr-FR, en-US]) → [en-US]`; `("en;q=0.5, en-GB", [en-US, en-GB]) → [en-GB, en-US]`.
             starter_code: |
               fun matchLanguages(header: String, supported: List<String>): List<String> = TODO()
             hidden_tests: |
@@ -712,7 +874,7 @@ lessons:
             prompt: |
               Strip spaces and dashes, then check in this order: characters (digits only), brand (`UNKNOWN_BRAND` if none), length (VISA 13, 16 or 19; MASTERCARD 16; AMEX 15), Luhn checksum. Return `VALID` or the first failure.
 
-              Luhn: starting from the rightmost digit, double every second digit and subtract 9 from any result over 9. The number is valid if the total is divisible by 10.
+              Luhn: starting from the second digit from the right, double every other digit moving left. Subtract 9 from any result over 9. The number is valid if the total is divisible by 10.
             starter_code: |
               fun validateCard(number: String, rules: String): String = TODO()
             hidden_tests: |
@@ -735,6 +897,13 @@ lessons:
                   val parts = raw.split(':')
                   val range = parts[0].split('-')
                   CardRule(range[0].toInt(), range.last().toInt(), range[0].length, parts[1])
+              }
+
+              fun cardBrand(number: String, rules: String): String {
+                  val digits = number.trim().filterNot { it == ' ' || it == '-' }
+                  return parseCardRules(rules).firstOrNull { rule ->
+                      digits.length >= rule.length && digits.take(rule.length).toIntOrNull()?.let { it in rule.start..rule.end } == true
+                  }?.brand ?: "UNKNOWN"
               }
 
               private fun normalized(number: String): String = number.trim().filterNot { it == ' ' || it == '-' }
@@ -799,11 +968,37 @@ lessons:
                   CardRule(range[0].toInt(), range.last().toInt(), range[0].length, parts[1])
               }
 
+              fun cardBrand(number: String, rules: String): String {
+                  val digits = number.trim().filterNot { it == ' ' || it == '-' }
+                  return parseCardRules(rules).firstOrNull { rule ->
+                      digits.length >= rule.length && digits.take(rule.length).toIntOrNull()?.let { it in rule.start..rule.end } == true
+                  }?.brand ?: "UNKNOWN"
+              }
+
               private fun normalized(number: String): String = number.trim().filterNot { it == ' ' || it == '-' }
+
+              private fun brand(digits: String, rules: List<CardRule>): String = rules.firstOrNull { rule ->
+                  digits.length >= rule.length && digits.take(rule.length).toIntOrNull()?.let { it in rule.start..rule.end } == true
+              }?.brand ?: "UNKNOWN_BRAND"
+
+              fun validateCard(number: String, rules: String): String {
+                  val digits = normalized(number)
+                  if (digits.any { it !in '0'..'9' }) return "INVALID_CHARACTERS"
+                  val cardBrand = brand(digits, parseCardRules(rules))
+                  if (cardBrand == "UNKNOWN_BRAND") return cardBrand
+                  val validLength = when (cardBrand) {
+                      "VISA" -> digits.length in listOf(13, 16, 19)
+                      "MASTERCARD" -> digits.length == 16
+                      "AMEX" -> digits.length == 15
+                      else -> true
+                  }
+                  if (!validLength) return "INVALID_LENGTH"
+                  return if (luhn(digits)) "VALID" else "INVALID_CHECKSUM"
+              }
 
               private fun selectedBrand(digits: String, rules: List<CardRule>): String = rules.filter { rule ->
                   digits.length >= rule.length && digits.take(rule.length).toIntOrNull()?.let { it in rule.start..rule.end } == true
-              }.maxByOrNull { it.length }?.brand ?: "UNKNOWN_BRAND"
+              }.maxByOrNull { it.length }?.brand ?: "UNKNOWN"
 
               private fun luhn(digits: String): Boolean {
                   var sum = 0
@@ -820,7 +1015,7 @@ lessons:
               fun cardBrandWithOverlaps(number: String, rules: String): String {
                   val digits = normalized(number)
                   if (digits.any { it !in '0'..'9' }) return "UNKNOWN"
-                  return selectedBrand(digits, parseCardRules(rules)).removeSuffix("_BRAND")
+                  return selectedBrand(digits, parseCardRules(rules))
               }
             hints:
               - Keep every matching rule, then choose the one with the greatest prefix length.
@@ -841,6 +1036,64 @@ lessons:
                   }
               }
             reference_solution: |
+              private data class CardRule(val start: Int, val end: Int, val length: Int, val brand: String)
+
+              private fun parseCardRules(rules: String): List<CardRule> = rules.split(',').map { raw ->
+                  val parts = raw.split(':')
+                  val range = parts[0].split('-')
+                  CardRule(range[0].toInt(), range.last().toInt(), range[0].length, parts[1])
+              }
+
+              fun cardBrand(number: String, rules: String): String {
+                  val digits = number.trim().filterNot { it == ' ' || it == '-' }
+                  return parseCardRules(rules).firstOrNull { rule ->
+                      digits.length >= rule.length && digits.take(rule.length).toIntOrNull()?.let { it in rule.start..rule.end } == true
+                  }?.brand ?: "UNKNOWN"
+              }
+
+              private fun normalized(number: String): String = number.trim().filterNot { it == ' ' || it == '-' }
+
+              private fun brand(digits: String, rules: List<CardRule>): String = rules.firstOrNull { rule ->
+                  digits.length >= rule.length && digits.take(rule.length).toIntOrNull()?.let { it in rule.start..rule.end } == true
+              }?.brand ?: "UNKNOWN_BRAND"
+
+              private fun luhn(digits: String): Boolean {
+                  var sum = 0
+                  var double = false
+                  for (index in digits.lastIndex downTo 0) {
+                      var value = digits[index] - '0'
+                      if (double) { value *= 2; if (value > 9) value -= 9 }
+                      sum += value
+                      double = !double
+                  }
+                  return sum % 10 == 0
+              }
+
+              fun validateCard(number: String, rules: String): String {
+                  val digits = normalized(number)
+                  if (digits.any { it !in '0'..'9' }) return "INVALID_CHARACTERS"
+                  val cardBrand = brand(digits, parseCardRules(rules))
+                  if (cardBrand == "UNKNOWN_BRAND") return cardBrand
+                  val validLength = when (cardBrand) {
+                      "VISA" -> digits.length in listOf(13, 16, 19)
+                      "MASTERCARD" -> digits.length == 16
+                      "AMEX" -> digits.length == 15
+                      else -> true
+                  }
+                  if (!validLength) return "INVALID_LENGTH"
+                  return if (luhn(digits)) "VALID" else "INVALID_CHECKSUM"
+              }
+
+              private fun selectedBrand(digits: String, rules: List<CardRule>): String = rules.filter { rule ->
+                  digits.length >= rule.length && digits.take(rule.length).toIntOrNull()?.let { it in rule.start..rule.end } == true
+              }.maxByOrNull { it.length }?.brand ?: "UNKNOWN"
+
+              fun cardBrandWithOverlaps(number: String, rules: String): String {
+                  val digits = normalized(number)
+                  if (digits.any { it !in '0'..'9' }) return "UNKNOWN"
+                  return selectedBrand(digits, parseCardRules(rules))
+              }
+
               fun mask(number: String): String {
                   val digits = number.filter { it.isDigit() }
                   return "•••• ${digits.takeLast(4)}"

@@ -1,4 +1,4 @@
-id: kotlin-ch07-idioms
+id: ch07-idioms
 title: Idiomatic, readable Kotlin
 summary: Prefer clear names and small transformations, then keep money in integer minor units with decimal rates.
 lessons:
@@ -47,10 +47,11 @@ lessons:
         id: kotlin-ch07-readable-mc-val
         prompt: Which declaration best matches the readability rule for a value that is not reassigned?
         options:
-          - '`val fixedFeeCents = 30L`'
           - '`var fixedFeeCents = 30L`'
+          - '`val fixedFeeCents = 30L`'
           - '`const var fixedFeeCents = 30L`'
-        correct_index: 0
+          - '`lateinit var fixedFeeCents = 30L`'
+        correct_index: 1
         explanation: 'Start with `val`; use `var` only when reassignment is part of the design. A `const` is only for compile-time constants and cannot be `var`.'
       - type: cloze
         id: kotlin-ch07-readable-cloze-model
@@ -122,10 +123,11 @@ lessons:
         id: kotlin-ch07-money-mc-decimal
         prompt: 'Why should a decimal rate such as `1.37` be passed to `BigDecimal` as a string?'
         options:
-          - It preserves the decimal text instead of carrying a `Double` approximation.
           - Strings always round toward zero.
           - '`BigDecimal` accepts strings but not numbers.'
-        correct_index: 0
+          - It preserves the decimal text instead of carrying a `Double` approximation.
+          - '`BigDecimal` stores only whole numbers.'
+        correct_index: 2
         explanation: Building from a string preserves the intended decimal value. A `BigDecimal` can also be built from other types, but a binary `Double` may already contain an approximation.
       - type: cloze
         id: kotlin-ch07-money-cloze-round
@@ -160,10 +162,11 @@ lessons:
         id: kotlin-ch07-money-mc-overflow
         prompt: 'What does `Math.multiplyExact(a, b)` do when the `Long` multiplication overflows?'
         options:
-          - It throws instead of silently wrapping.
           - It clamps the answer to `Long.MAX_VALUE`.
           - It converts the answer to a `Double`.
-        correct_index: 0
+          - It returns `null` to signal overflow.
+          - It throws instead of silently wrapping.
+        correct_index: 3
         explanation: The exact arithmetic helpers report overflow with an exception.
       - type: cloze
         id: kotlin-ch07-money-cloze-value

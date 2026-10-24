@@ -34,11 +34,11 @@ lessons:
         id: ch04-testing-junit-mc-null
         prompt: Which assertion is the best direct check that a nullable parser returned no value?
         options:
-          - assertNull(result)
           - assertEquals(true, result)
+          - assertNull(result)
           - assertFalse(result)
           - assertTrue(result)
-        correct_index: 0
+        correct_index: 1
         explanation: "`assertNull` states the intended nullable result directly."
       - type: predict_output
         id: ch04-testing-junit-output-fees
@@ -59,11 +59,11 @@ lessons:
         id: ch04-testing-junit-mc-negative
         prompt: What should a test expect from `feeCents(-1)` under the lesson's rule?
         options:
-          - An `IllegalArgumentException`
           - The value `29`
           - "`null`"
+          - An `IllegalArgumentException`
           - An empty string
-        correct_index: 0
+        correct_index: 2
         explanation: "`require(amountCents >= 0)` rejects a negative amount with `IllegalArgumentException`."
       - type: cloze
         id: ch04-testing-junit-cloze-import
@@ -105,11 +105,11 @@ lessons:
         id: ch04-testing-harness-mc-order
         prompt: Why should a collection test include ties and ordering?
         options:
-          - To make deterministic output and tie-break rules visible
           - Because lists cannot contain equal values
           - To avoid testing the main example
           - Because maps always sort themselves
-        correct_index: 0
+          - To make deterministic output and tie-break rules visible
+        correct_index: 3
         explanation: Equal keys often expose an unstated ordering rule; a test makes the intended result exact.
       - type: cloze
         id: ch04-testing-harness-cloze-failures
