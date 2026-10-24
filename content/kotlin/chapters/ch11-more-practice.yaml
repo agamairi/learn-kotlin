@@ -234,9 +234,9 @@ lessons:
               private data class QueueItem(val cost: Int, val route: Route)
 
               fun cheapestRoute(lanes: List<Lane>, from: String, to: String): Route? =
-                  cheapestRouteUsing(lanes, from, to)
+                  cheapestRouteUsing(lanes, from, to, refusedCarrier = null)
 
-              private fun cheapestRouteUsing(lanes: List<Lane>, from: String, to: String, refusedCarrier: String): Route? {
+              private fun cheapestRouteUsing(lanes: List<Lane>, from: String, to: String, refusedCarrier: String?): Route? {
                   if (from == to) return Route(listOf(from), emptyList(), 0)
                   val graph = lanes.groupBy { it.from }
                   val queue = PriorityQueue<QueueItem>(compareBy { it.cost })
@@ -468,15 +468,18 @@ lessons:
               }
 
               fun bestClosingHourLinear(log: String): Int {
-                  val tokens = logTokens(log)
-                  var current = tokens.count { it == "Y" }
-                  var bestPenalty = current
+                  // Stream the tokens rather than building a list: one token is alive at a time,
+                  // so memory stays flat for a million-hour log. Only the running change is kept.
+                  var delta = 0
+                  var bestDelta = 0
                   var bestHour = 0
-                  for (hour in tokens.indices) {
-                      current += if (tokens[hour] == "Y") -1 else 1
-                      if (current < bestPenalty) {
-                          bestPenalty = current
-                          bestHour = hour + 1
+                  var hour = 0
+                  for (token in Regex("\\s+").splitToSequence(log).filter { it.isNotEmpty() }) {
+                      hour++
+                      delta += if (token == "Y") -1 else 1
+                      if (delta < bestDelta) {
+                          bestDelta = delta
+                          bestHour = hour
                       }
                   }
                   return bestHour

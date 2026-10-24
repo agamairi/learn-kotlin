@@ -62,7 +62,7 @@ lessons:
       - type: cloze
         id: ch01-syntax-values-cloze-null
         prompt: Complete the safe nullable access and fallback.
-        template: "println(nickname____1.uppercase() ____2 \"no nickname\")"
+        template: "println(nickname____1uppercase() ____2 \"no nickname\")"
         blanks:
           - placeholder: ____1
             accepted:

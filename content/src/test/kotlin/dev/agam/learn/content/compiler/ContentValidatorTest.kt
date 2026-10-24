@@ -222,10 +222,19 @@ class ContentValidatorTest {
     }
 
     @Test
-    fun verifyWithCompilerServerIsAStubThatNeverPasses() {
-        assertFailsWith<NotImplementedError> {
-            ContentValidator.verifyWithCompilerServer(course(chapter(lessons = listOf(lesson(listOf(mc("mc-1")))))))
+    fun verifyWithCompilerServerPassesForCourseWithNoSnippets() {
+        val fakeClient = object : CompilerServerClient {
+            override fun version() = "2.5.0-Beta2"
+            override fun run(files: List<ServerFile>) = RunResponse()
+            override fun test(files: List<ServerFile>) = TestResponse()
+            override fun highlight(files: List<ServerFile>) = emptyMap<String, List<Diagnostic>>()
         }
+        val report = ContentValidator.verifyWithCompilerServer(
+            course(chapter(lessons = listOf(lesson(listOf(mc("mc-1")))))),
+            client = fakeClient
+        )
+        assertEquals(0, report.totalFailures)
+        assertEquals(0, report.totalWarnings)
     }
 
     private fun validate(

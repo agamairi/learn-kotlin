@@ -53,12 +53,12 @@ lessons:
                   .filter { it.isNotBlank() }
                   .map { line ->
                       val fields = line.split(',')
-                      TransactionFee(fields[0], percentageFee(fields[2].toLong(), 29) + 30)
+                      TransactionFee(fields[0], percentageFee(fields[2].toLong(), 290) + 30)
                   }
                   .toList()
             hints:
               - Split the header off first and keep the transaction id with the calculated fee.
-              - 2.9% is 29/1000; add 500 before integer division to round half-up.
+              - 2.9% is 290 basis points, so divide by 10_000; add 5_000 before the division to round half-up.
             expected: "Expected: tx1 → 59, tx2 → 104, tx3 → 33"
           - id: ch10-card-fee-report-part-2
             prompt: |
@@ -95,7 +95,7 @@ lessons:
               fun transactionFees(csv: String): List<TransactionFee> = csv.lineSequence()
                   .drop(1).filter { it.isNotBlank() }.map { line ->
                       val fields = line.split(',')
-                      TransactionFee(fields[0], percentageFee(fields[2].toLong(), 29) + 30)
+                      TransactionFee(fields[0], percentageFee(fields[2].toLong(), 290) + 30)
                   }.toList()
 
               fun merchantFeeReport(csv: String): List<MerchantFeeReport> = csv.lineSequence()
@@ -105,7 +105,7 @@ lessons:
                   .groupBy { it[1] }
                   .map { (merchant, rows) ->
                       val volume = rows.sumOf { it[2].toLong() }
-                      val fees = rows.sumOf { percentageFee(it[2].toLong(), 29) + 30 }
+                      val fees = rows.sumOf { percentageFee(it[2].toLong(), 290) + 30 }
                       MerchantFeeReport(merchant, volume, fees, volume - fees)
                   }
                   .sortedWith(compareByDescending<MerchantFeeReport> { it.netCents }.thenBy { it.merchant })
@@ -154,7 +154,7 @@ lessons:
               fun transactionFees(csv: String): List<TransactionFee> = csv.lineSequence()
                   .drop(1).filter { it.isNotBlank() }.map { line ->
                       val fields = line.split(',')
-                      TransactionFee(fields[0], percentageFee(fields[2].toLong(), 29) + 30)
+                      TransactionFee(fields[0], percentageFee(fields[2].toLong(), 290) + 30)
                   }.toList()
 
               fun merchantFeeReport(csv: String): List<MerchantFeeReport> = csv.lineSequence()
@@ -164,7 +164,7 @@ lessons:
                   .groupBy { it[1] }
                   .map { (merchant, rows) ->
                       val volume = rows.sumOf { it[2].toLong() }
-                      val fees = rows.sumOf { percentageFee(it[2].toLong(), 29) + 30 }
+                      val fees = rows.sumOf { percentageFee(it[2].toLong(), 290) + 30 }
                       MerchantFeeReport(merchant, volume, fees, volume - fees)
                   }
                   .sortedWith(compareByDescending<MerchantFeeReport> { it.netCents }.thenBy { it.merchant })
@@ -185,7 +185,7 @@ lessons:
                           amount < 0 -> errors += FeeError(lineNumber, "negative amount")
                           card != "visa" && card != "amex" -> errors += FeeError(lineNumber, "unknown card")
                           else -> {
-                              val percentage = if (card == "amex") 35L else 29L
+                              val percentage = if (card == "amex") 350L else 290L
                               val fee = percentageFee(amount, percentage) + 30
                               val old = totals[merchant] ?: (0L to 0L)
                               totals[merchant] = (old.first + amount) to (old.second + fee)
@@ -241,7 +241,7 @@ lessons:
               fun transactionFees(csv: String): List<TransactionFee> = csv.lineSequence()
                   .drop(1).filter { it.isNotBlank() }.map { line ->
                       val fields = line.split(',')
-                      TransactionFee(fields[0], percentageFee(fields[2].toLong(), 29) + 30)
+                      TransactionFee(fields[0], percentageFee(fields[2].toLong(), 290) + 30)
                   }.toList()
 
               fun merchantFeeReport(csv: String): List<MerchantFeeReport> = csv.lineSequence()
@@ -251,7 +251,7 @@ lessons:
                   .groupBy { it[1] }
                   .map { (merchant, rows) ->
                       val volume = rows.sumOf { it[2].toLong() }
-                      val fees = rows.sumOf { percentageFee(it[2].toLong(), 29) + 30 }
+                      val fees = rows.sumOf { percentageFee(it[2].toLong(), 290) + 30 }
                       MerchantFeeReport(merchant, volume, fees, volume - fees)
                   }
                   .sortedWith(compareByDescending<MerchantFeeReport> { it.netCents }.thenBy { it.merchant })
@@ -275,7 +275,7 @@ lessons:
                           amount < 0 -> errors += FeeError(lineNumber, "negative amount")
                           card != "visa" && card != "amex" -> errors += FeeError(lineNumber, "unknown card")
                           else -> {
-                              val percentage = if (card == "amex") 35L else 29L
+                              val percentage = if (card == "amex") 350L else 290L
                               val fee = percentageFee(amount, percentage) + 30
                               val old = totals[merchant] ?: (0L to 0L)
                               totals[merchant] = (old.first + amount) to (old.second + fee)
@@ -294,7 +294,7 @@ lessons:
                       val fields = line.split(',')
                       val merchant = fields[1]
                       val amount = fields[2].toLong()
-                      val percentage = if (fields[3].lowercase() == "amex") 35L else 29L
+                      val percentage = if (fields[3].lowercase() == "amex") 350L else 290L
                       val sign = if (fields[4].lowercase() == "refund") -1 else 1
                       val old = totals[merchant] ?: (0L to 0L)
                       totals[merchant] = (old.first + sign * amount) to

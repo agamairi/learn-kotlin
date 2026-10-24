@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     application
 }
 
@@ -24,5 +25,19 @@ tasks.register<JavaExec>("compileContent") {
     args = listOf(
         rootProject.file("content").absolutePath,
         rootProject.file("app-android/src/main/assets/courses").absolutePath
+    )
+}
+
+val compilerServerUrl = providers.gradleProperty("compilerServerUrl").orElse("http://127.0.0.1:8080")
+
+tasks.register<JavaExec>("verifyContent") {
+    group = "verification"
+    description = "Verifies YAML course content against the running kotlin-compiler-server"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("dev.agam.learn.content.compiler.ContentVerifierKt")
+    args(
+        rootProject.file("content").absolutePath,
+        compilerServerUrl.get(),
+        rootProject.file("docs/content-verification.md").absolutePath
     )
 }

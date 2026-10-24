@@ -334,7 +334,7 @@ lessons:
                   fun upload(uploader: TelemetryUploader): List<StoredEvent> = TODO()
                   fun stored(): List<StoredEvent> = TODO()
                   fun dropped(): List<StoredEvent> = TODO()
-                  fun setOnline(online: Boolean) = TODO()
+                  fun setOnline(online: Boolean): Unit = TODO()
               }
             hidden_tests: |
               import org.junit.Test
@@ -416,7 +416,7 @@ lessons:
                   fun upload(uploader: TelemetryUploader): List<StoredEvent> = TODO()
                   fun stored(): List<StoredEvent> = TODO()
                   fun dropped(): List<StoredEvent> = TODO()
-                  fun setOnline(online: Boolean) = TODO()
+                  fun setOnline(online: Boolean): Unit = TODO()
               }
             hidden_tests: |
               import org.junit.Test
@@ -498,7 +498,7 @@ lessons:
                   fun upload(uploader: TelemetryUploader): List<StoredEvent> = TODO()
                   fun stored(): List<StoredEvent> = TODO()
                   fun dropped(): List<StoredEvent> = TODO()
-                  fun setOnline(online: Boolean) = TODO()
+                  fun setOnline(online: Boolean): Unit = TODO()
               }
             hidden_tests: |
               import org.junit.Test
