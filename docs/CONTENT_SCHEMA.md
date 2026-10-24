@@ -5,7 +5,7 @@ This is the contract between content authors and the app. The content compiler v
 ## Files and folders
 
 - `content/<language>/course.yaml`: one per course. Fields: `id`, `language` (for example `kotlin`), `title`, `description`, `chapters` (an ordered list of chapter file names, without extension).
-- `content/<language>/chapters/<chapter-id>.yaml`: one per chapter. Fields: `id`, `title`, `summary`, `lessons`.
+- `content/<language>/chapters/<chapter-id>.yaml`: one per chapter. Fields: `id` (must equal the file name without `.yaml`), `title`, `summary`, `lessons`.
 - Ids are lowercase kebab-case, unique across the whole course, and never reused once published.
 
 ## Lesson
@@ -19,9 +19,9 @@ This is the contract between content authors and the app. The content compiler v
 Every exercise has `type`, `id` and `prompt` (Markdown). Other fields by type:
 
 ### `multiple_choice`
-- `code` (optional): a code snippet shown above the options
-- `options`: 2 to 5 strings
-- `correct_index`: zero-based index into `options`
+- `code` (optional): a code snippet shown above the options; it must compile if it is complete code
+- `options`: 2 to 5 strings, exactly one correct
+- `correct_index`: zero-based index into `options`. Across a chapter, correct answers must be spread over positions (no more than about 40% at any one index)
 - `explanation`: shown after answering
 
 ### `cloze`
@@ -31,7 +31,7 @@ Every exercise has `type`, `id` and `prompt` (Markdown). Other fields by type:
 
 ### `predict_output`
 - `code`: a complete program with `fun main()`
-- `expected_output`: exact text printed, lines separated by `\n`
+- `expected_output`: exact text printed, lines separated by `\n`. Graders compare after normalizing line endings and ignoring trailing whitespace on each line and trailing newlines at the end
 - `explanation`
 
 ### `write_function`
@@ -43,7 +43,7 @@ Every exercise has `type`, `id` and `prompt` (Markdown). Other fields by type:
 
 ### `multi_part_problem`
 - `story`: Markdown context for the whole problem
-- `parts`: an ordered list. Each part has `id`, `prompt`, `starter_code` (optional; later parts start from the learner's previous code, so new parts add new functions instead of changing earlier signatures), `hidden_tests` (testing this part), `reference_solution` (the complete file through this part, so it passes this part's tests and every earlier part's tests), `expected` (Markdown describing the expected result shown to the learner after passing)
+- `parts`: an ordered list. Each part has `id`, `prompt`, `starter_code` (optional; later parts start from the learner's previous code, so new parts add new functions instead of changing earlier signatures), `hidden_tests` (testing this part), `reference_solution` (the complete file through this part, so it passes this part's tests and every earlier part's tests), `expected` (Markdown describing the expected result shown to the learner after passing), `hints` (optional, 0 to 3 strings). Every part is a coding part with tests; a discussion-only final part goes in the problem-level `discussion` field, never in `parts`
 - `faq`: a list of `question` / `answer` pairs (the clarifying answers)
 - `discussion` (optional): Markdown for a discussion-only final part
 - `source_note` (optional): where the problem comes from, for example "Stripe's published sample, paraphrased"
