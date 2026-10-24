@@ -226,7 +226,7 @@ Suitable models: fast/cheap `gemini-3.5-flash-lite`; strong `gemini-4-argon`. No
 
 `EncryptedSharedPreferences` and `MasterKey` in `androidx.security:security-crypto` are deprecated as of 1.1.0; Android recommends Android Keystore directly. ([Android API reference](https://developer.android.com/reference/kotlin/androidx/security/crypto/package-summary))
 
-Recommended design: generate a non-exportable AES key in Android Keystore, encrypt the user’s API key using AES-GCM, and store only the ciphertext and IV in Preferences DataStore. Android recommends AES/GCM, and Keystore keeps key material non-exportable. ([cryptography guidance](https://developer.android.com/privacy-and-security/cryptography), [Keystore](https://developer.android.com/privacy-and-security/keystore), [DataStore](https://developer.android.com/topic/libraries/architecture/datastore))
+In this app, the non-exportable AES key is generated in Android Keystore, and the user’s API key is encrypted with AES-GCM. The ciphertext and IV are stored in the app’s SQLDelight `settings_kv` table, not DataStore. Android recommends AES/GCM, and Keystore keeps key material non-exportable. ([cryptography guidance](https://developer.android.com/privacy-and-security/cryptography), [Keystore](https://developer.android.com/privacy-and-security/keystore), [DataStore](https://developer.android.com/topic/libraries/architecture/datastore))
 
 Current coordinates:
 
@@ -238,4 +238,3 @@ For one small secret, direct Keystore plus AES-GCM is simpler. Tink is useful if
 ### Source list
 
 All sources above are official Anthropic, OpenAI, Google Gemini, Android, or Google Tink documentation.
-

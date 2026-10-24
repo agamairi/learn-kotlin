@@ -4,9 +4,9 @@
 # Mac has ~1.9 GiB RAM, so the in-container Gradle daemon (-Xmx6048M) is killed. See README.md.
 #
 # Build (the clone is the build context; this Dockerfile lives outside it):
-#   docker build -f /Users/agamairi/development/learn-kotlin-wt/spike/tools/compiler-server/Dockerfile \
+#   docker build -f /path/to/learn-kotlin-wt/tools/compiler-server/Dockerfile \
 #     -t kotlin-compiler-server:2.5.0-Beta2-host \
-#     /Users/agamairi/development/tools/kotlin-compiler-server
+#     /path/to/kotlin-compiler-server
 #
 # Prerequisite: in the clone, `JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew build -x test` with a
 # JDK 17 toolchain available (see README.md).

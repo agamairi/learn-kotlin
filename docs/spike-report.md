@@ -2,8 +2,8 @@
 
 Date: 2026-10-24. Server: JetBrains kotlin-compiler-server at commit `325cdb872475891da66fc4c9b05763de8f011e16`
 (2026-10-21), built as Kotlin `2.5.0-Beta2`. Run on this Mac in Docker, capped at 2 GiB, bound to `127.0.0.1:8080`.
-Raw payloads and responses: `/Users/agamairi/development/learn-kotlin-wt/spike/tools/compiler-server/spike-results/`
-(`cases/`, `responses/`, `results.tsv`). Container setup: `/Users/agamairi/development/learn-kotlin-wt/spike/tools/compiler-server/README.md`.
+Raw payloads and responses: `/path/to/learn-kotlin-wt/spike/tools/compiler-server/spike-results/`
+(`cases/`, `responses/`, `results.tsv`). Container setup: `/path/to/learn-kotlin-wt/tools/compiler-server/README.md`.
 
 ## Verdict
 
@@ -278,9 +278,9 @@ Requirements before the runner is reachable from anywhere but the laptop, or bef
 
 ## Files
 
-- Report: `/Users/agamairi/development/learn-kotlin-wt/spike/docs/spike-report.md`
-- Container script: `/Users/agamairi/development/learn-kotlin-wt/spike/tools/compiler-server/run.sh`
-- Container README: `/Users/agamairi/development/learn-kotlin-wt/spike/tools/compiler-server/README.md`
-- Runtime Dockerfile: `/Users/agamairi/development/learn-kotlin-wt/spike/tools/compiler-server/Dockerfile`
-- Evidence: `/Users/agamairi/development/learn-kotlin-wt/spike/tools/compiler-server/spike-results/` (`cases/`, `responses/`, `results.tsv`)
-- Clone (not modified, except build output and generated, gitignored properties): `/Users/agamairi/development/tools/kotlin-compiler-server`
+- Report: `/path/to/learn-kotlin-wt/docs/spike-report.md`
+- Container script: `/path/to/learn-kotlin-wt/tools/compiler-server/run.sh`
+- Container README: `/path/to/learn-kotlin-wt/tools/compiler-server/README.md`
+- Runtime Dockerfile: `/path/to/learn-kotlin-wt/tools/compiler-server/Dockerfile`
+- Evidence: `/path/to/learn-kotlin-wt/spike/tools/compiler-server/spike-results/` (`cases/`, `responses/`, `results.tsv`)
+- Clone (not modified, except build output and generated, gitignored properties): `/path/to/kotlin-compiler-server`

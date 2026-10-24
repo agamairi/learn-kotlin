@@ -11,7 +11,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLONE="${KCS_CLONE:-/Users/agamairi/development/tools/kotlin-compiler-server}"
+CLONE="${KCS_CLONE:?Set KCS_CLONE to the path of your kotlin-compiler-server clone}"
 KOTLIN_VERSION="2.5.0-Beta2"
 IMAGE="kotlin-compiler-server:${KOTLIN_VERSION}-host"
 NAME="kotlin-compiler-server"

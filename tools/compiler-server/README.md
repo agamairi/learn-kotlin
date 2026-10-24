@@ -20,7 +20,7 @@ Current state: container `kotlin-compiler-server`, image `kotlin-compiler-server
 ## Prerequisites
 
 1. **Docker Desktop** running. The Docker VM on this machine has about 1.9 GiB of RAM (`docker info`).
-2. **The clone** at `/Users/agamairi/development/tools/kotlin-compiler-server` (upstream commit
+2. **The clone** at `$KCS_CLONE` (upstream commit
    `325cdb872475891da66fc4c9b05763de8f011e16`, 2026-10-21). Pin this commit; upstream has no release tags.
 3. **Host build output.** The upstream `/Dockerfile` runs the Gradle build inside Docker, and that build died
    (Gradle daemon disappeared, consistent with the 1.9 GiB VM limit against the daemon's `-Xmx6048M`). The
@@ -30,7 +30,7 @@ Current state: container `kotlin-compiler-server`, image `kotlin-compiler-server
    # JDK 17 is required by the project's toolchain (buildSrc). It was installed with:
    #   brew install openjdk@17          (17.0.21)
    # JDK 21 runs Gradle itself.
-   cd /Users/agamairi/development/tools/kotlin-compiler-server
+   cd "$KCS_CLONE"
    JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew build -x test \
      -Dorg.gradle.java.installations.paths=/opt/homebrew/opt/openjdk@17
    ```
@@ -105,7 +105,7 @@ These are why code exercises stay local-only (loopback, one user) until isolatio
 
 The image's Kotlin version is whatever the clone builds. To change it:
 
-1. `git -C /Users/agamairi/development/tools/kotlin-compiler-server checkout <commit>`.
+1. `git -C "$KCS_CLONE" checkout <commit>`.
 2. Rebuild the host output (see Prerequisites), then `./run.sh --rebuild`.
 3. Update `KOTLIN_VERSION` and the `-host` image tag in `run.sh` and the `ARG` default in `Dockerfile`, and
    re-check `GET /versions`.
