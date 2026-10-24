@@ -237,6 +237,30 @@ class ProgressRecorderTest {
     }
 
     @Test
+    fun codeDrillWithHintLevelOneReducesXpByTwo() = runTest {
+        val outcome = recorder.record(ExerciseAttempt("c1", "drill", correct = true, aiHintsUsed = listOf(1)))
+        assertEquals(RecordOutcome.Recorded(23, null), outcome)
+        assertEquals(23, repository.getDailyActivity(epochDay(2026, 1, 6))?.xpEarned)
+    }
+
+    @Test
+    fun codeDrillWithAllThreeHintLevelsReducesXp() = runTest {
+        // 25 - 2 - 5 - 10 = 8 XP
+        val outcome = recorder.record(ExerciseAttempt("c1", "drill", correct = true, aiHintsUsed = listOf(1, 2, 3)))
+        assertEquals(RecordOutcome.Recorded(8, null), outcome)
+        assertEquals(8, repository.getDailyActivity(epochDay(2026, 1, 6))?.xpEarned)
+    }
+
+    @Test
+    fun codeDrillRetryWithHintsNeverReducesXpBelowZero() = runTest {
+        recorder.record(ExerciseAttempt("c1", "drill", correct = false))
+        // Retry base is 15. Hints cost 2 + 5 + 10 = 17. 15 - 17 -> 0.
+        val retried = recorder.record(ExerciseAttempt("c2", "drill", correct = true, aiHintsUsed = listOf(1, 2, 3)))
+        assertEquals(RecordOutcome.Recorded(0, null), retried)
+        assertEquals(0, repository.getDailyActivity(epochDay(2026, 1, 6))?.xpEarned)
+    }
+
+    @Test
     fun multiPartPartsPayFiftyOncePerPartAndCompletionPaysNothing() = runTest {
         assertEquals(RecordOutcome.Recorded(50, null), recorder.record(ProblemPartAttempt("p1", "problem", "part-1", correct = true)))
         assertEquals(RecordOutcome.Recorded(0, null), recorder.record(ProblemPartAttempt("p2", "problem", "part-1", correct = true)))

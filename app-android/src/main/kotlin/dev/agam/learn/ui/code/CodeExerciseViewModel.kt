@@ -51,6 +51,8 @@ class CodeExerciseViewModel(
     )
     val uiState: StateFlow<CodeExerciseUiState> = _uiState.asStateFlow()
 
+    private val aiHintsUsed = mutableSetOf<Int>()
+
     fun onCodeChange(newCode: TextFieldValue) {
         updateCode { newCode }
     }
@@ -138,7 +140,8 @@ class CodeExerciseViewModel(
                     ExerciseAttempt(
                         attemptId = newAttemptId(),
                         exerciseId = exercise.id,
-                        correct = passed
+                        correct = passed,
+                        aiHintsUsed = aiHintsUsed.toList()
                     )
                 )
             }
@@ -178,11 +181,11 @@ class CodeExerciseViewModel(
         }
     }
 
-    fun askAiHint() {
+    fun askAiHint(level: Int = 1) {
         val tutor = aiTutor ?: return
         if (isInterviewMode || !hasApiKey) return
 
-        val currentLevel = (_uiState.value.revealedHintsCount + 1).coerceIn(1, 3)
+        val currentLevel = level.coerceIn(1, 3)
         _uiState.update {
             it.copy(
                 aiDialogState = AiDialogState(
@@ -194,6 +197,10 @@ class CodeExerciseViewModel(
 
         scope.launch {
             val result = tutor.hint(exercise = exercise, level = currentLevel)
+            if (result is AiResult.Success) {
+                aiHintsUsed.add(currentLevel)
+                _uiState.update { it.copy(aiHintsUsed = aiHintsUsed.toSet()) }
+            }
             handleAiResult(result, title = "AI Hint (Level $currentLevel)")
         }
     }

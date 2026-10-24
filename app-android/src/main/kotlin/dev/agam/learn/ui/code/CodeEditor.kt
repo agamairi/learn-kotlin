@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,16 +26,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 /**
  * Inserts a string at the current cursor position in a [TextFieldValue], replacing any selected text.
@@ -92,6 +96,21 @@ fun CodeEditor(
                 shape = RoundedCornerShape(8.dp)
             )
     ) {
+        // Code Editor Label Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Code Editor",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
         // Symbol bar
         SymbolBar(
             onSymbolClick = { symbol ->
@@ -123,9 +142,7 @@ fun CodeEditor(
                 for (line in 1..lineCount) {
                     Text(
                         text = line.toString(),
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
+                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                         textAlign = TextAlign.End,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         modifier = Modifier.fillMaxWidth()
@@ -145,10 +162,8 @@ fun CodeEditor(
                 value = value,
                 onValueChange = onValueChange,
                 readOnly = readOnly,
-                textStyle = TextStyle(
+                textStyle = MaterialTheme.typography.bodySmall.copy(
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 ),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
@@ -156,6 +171,7 @@ fun CodeEditor(
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 8.dp)
+                    .semantics { contentDescription = "Code editor" }
             )
         }
     }
@@ -188,15 +204,18 @@ fun SymbolBar(
             label = {
                 Text(
                     text = "Tab",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 )
             },
             colors = AssistChipDefaults.assistChipColors(
                 containerColor = MaterialTheme.colorScheme.surface
             ),
-            modifier = Modifier.padding(end = 4.dp)
+            modifier = Modifier
+                .padding(end = 4.dp)
+                .defaultMinSize(minHeight = 48.dp)
         )
 
         symbols.forEach { symbol ->
@@ -206,15 +225,18 @@ fun SymbolBar(
                 label = {
                     Text(
                         text = symbol,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
                     )
                 },
                 colors = AssistChipDefaults.assistChipColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
-                modifier = Modifier.padding(end = 4.dp)
+                modifier = Modifier
+                    .padding(end = 4.dp)
+                    .defaultMinSize(minHeight = 48.dp)
             )
         }
     }

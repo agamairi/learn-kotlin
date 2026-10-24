@@ -22,7 +22,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.agam.learn.runner.LanguageSupport
 import dev.agam.learn.runtime.kotlin.KotlinLanguageSupport
 import dev.agam.learn.ui.theme.extendedColors
@@ -65,9 +64,7 @@ fun CodeBlock(
     ) {
         Text(
             text = annotatedText,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
-            lineHeight = 19.sp,
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
             color = MaterialTheme.colorScheme.onSurface
         )
     }

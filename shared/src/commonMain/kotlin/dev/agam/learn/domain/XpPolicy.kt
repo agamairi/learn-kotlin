@@ -17,6 +17,18 @@ interface XpPolicy {
 
     /** XP for one part of a multi-part problem; zero unless the part was passed. */
     fun xpForMultiPartPart(correct: Boolean): Int
+
+    /** XP cost for an AI hint level (1 = nudge, 2 = approach, 3 = near-solution). */
+    fun hintCost(level: Int): Int = when (level) {
+        1 -> DefaultXpPolicy.HINT_LEVEL_ONE_COST
+        2 -> DefaultXpPolicy.HINT_LEVEL_TWO_COST
+        3 -> DefaultXpPolicy.HINT_LEVEL_THREE_COST
+        else -> error("Hint level must be between 1 and 3")
+    }
+
+    /** Deducts a hint cost without allowing the exercise's XP balance below zero. */
+    fun xpAfterHint(currentExerciseXp: Int, level: Int): Int =
+        maxOf(0, currentExerciseXp - hintCost(level))
 }
 
 /**
@@ -51,7 +63,7 @@ class DefaultXpPolicy : XpPolicy {
     override fun xpForMultiPartPart(correct: Boolean): Int = if (correct) MULTI_PART_XP else 0
 
     /** XP cost for an AI hint level (1 = nudge, 2 = approach, 3 = near-solution). */
-    fun hintCost(level: Int): Int = when (level) {
+    override fun hintCost(level: Int): Int = when (level) {
         1 -> HINT_LEVEL_ONE_COST
         2 -> HINT_LEVEL_TWO_COST
         3 -> HINT_LEVEL_THREE_COST
@@ -59,7 +71,7 @@ class DefaultXpPolicy : XpPolicy {
     }
 
     /** Deducts a hint cost without allowing the exercise's XP balance below zero. */
-    fun xpAfterHint(currentExerciseXp: Int, level: Int): Int =
+    override fun xpAfterHint(currentExerciseXp: Int, level: Int): Int =
         maxOf(0, currentExerciseXp - hintCost(level))
 
     companion object {

@@ -8,15 +8,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -35,7 +40,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.ui.code.MarkdownText
 
@@ -85,8 +89,7 @@ fun MultipleChoiceCard(
                 ) {
                     Text(
                         text = exercise.code!!,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp
+                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
                     )
                 }
             }
@@ -114,6 +117,7 @@ fun MultipleChoiceCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .defaultMinSize(minHeight = 48.dp)
                         .padding(vertical = 4.dp)
                         .border(1.dp, borderColor, RoundedCornerShape(8.dp))
                         .background(bgColor, RoundedCornerShape(8.dp))
@@ -133,6 +137,23 @@ fun MultipleChoiceCard(
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                         modifier = Modifier.weight(1f)
                     )
+                    if (isAnswerChecked) {
+                        if (isCorrect) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Correct",
+                                tint = Color(0xFF2E7D32),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        } else if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Incorrect",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -188,8 +209,7 @@ fun ClozeCard(
             ) {
                 Text(
                     text = exercise.template,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 13.sp
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
                 )
             }
 
@@ -211,9 +231,10 @@ fun ClozeCard(
                 ) {
                     Text(
                         text = "${blank.placeholder}:",
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        ),
                         modifier = Modifier.width(60.dp)
                     )
 

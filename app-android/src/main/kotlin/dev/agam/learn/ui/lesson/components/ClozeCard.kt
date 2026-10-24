@@ -25,7 +25,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.runner.LanguageSupport
 import dev.agam.learn.ui.components.CodeBlock
@@ -158,13 +157,11 @@ fun ClozeCard(
                         placeholder = {
                             Text(
                                 text = "Enter code fragment...",
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 14.sp
+                                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
                             )
                         },
-                        textStyle = TextStyle(
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
                             fontFamily = FontFamily.Monospace,
-                            fontSize = 14.sp,
                             fontWeight = FontWeight.Medium
                         ),
                         singleLine = true,

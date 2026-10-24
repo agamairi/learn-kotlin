@@ -26,7 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 /**
  * An individual day item for the streak calendar grid.
@@ -50,8 +51,13 @@ fun StreakCalendar(
     modifier: Modifier = Modifier,
     heldFreezes: Int = 0
 ) {
+    val activeCount = days.count { it.isActive }
+    val summaryText = "Streak calendar: $currentStreak day streak, longest streak $longestStreak days. $activeCount active days this month."
+
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = summaryText },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
@@ -97,7 +103,7 @@ fun StreakCalendar(
                 daysOfWeek.forEach { dayName ->
                     Text(
                         text = dayName,
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center,
@@ -142,17 +148,20 @@ private fun DayCircle(day: CalendarDay) {
         else -> Modifier.background(Color.Transparent, CircleShape)
     }
 
+    val dayDescription = "Day ${day.dayOfMonth}, ${if (day.isActive) "active" else if (day.isFrozen) "frozen" else "inactive"}${if (day.isToday) ", today" else ""}"
+
     Box(
         modifier = Modifier
             .size(32.dp)
             .border(width = if (day.isToday) 2.dp else 1.dp, color = if (day.isToday) todayBorder else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), shape = CircleShape)
             .clip(CircleShape)
-            .then(backgroundModifier),
+            .then(backgroundModifier)
+            .semantics { contentDescription = dayDescription },
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = "${day.dayOfMonth}",
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = if (day.isActive || day.isToday) FontWeight.Bold else FontWeight.Normal,
             color = if (day.isActive) Color.White else MaterialTheme.colorScheme.onSurface
         )

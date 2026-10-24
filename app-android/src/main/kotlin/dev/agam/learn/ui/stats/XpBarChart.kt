@@ -28,7 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 /**
  * Data item representing XP earned on a specific day for the chart.
@@ -55,8 +56,14 @@ fun XpBarChart(
     val axisColor = MaterialTheme.colorScheme.outlineVariant
     val goalLineColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f)
 
+    val totalXp = history.sumOf { it.xp }
+    val daysMet = history.count { it.goalMet || it.xp >= dailyGoal }
+    val chartSummary = "XP history: $totalXp XP earned across ${history.size} days. Daily goal of $dailyGoal XP met on $daysMet days."
+
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = chartSummary },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
@@ -151,13 +158,13 @@ fun XpBarChart(
                     ) {
                         Text(
                             text = "${item.xp}",
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = if (item.xp >= dailyGoal) goalMetColor else MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = item.dayLabel,
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

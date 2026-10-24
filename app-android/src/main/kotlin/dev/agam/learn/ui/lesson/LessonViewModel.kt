@@ -3,6 +3,8 @@ package dev.agam.learn.ui.lesson
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import dev.agam.learn.ai.AiResult
+import dev.agam.learn.ai.AiTutor
 import dev.agam.learn.content.CourseRepository
 import dev.agam.learn.data.ExerciseAttempt
 import dev.agam.learn.data.ProgressRecorder
@@ -33,18 +35,34 @@ class LessonViewModel(
     private val progressRepository: ProgressRepository,
     private val progressRecorder: ProgressRecorder,
     private val answerGrader: AnswerGrader,
-    val languageSupport: LanguageSupport
+    val languageSupport: LanguageSupport,
+    private val aiTutor: AiTutor? = null,
+    val isInterviewMode: Boolean = false,
+    val hasApiKey: Boolean = false
 ) : ViewModel() {
 
-    constructor(appContainer: AppContainer) : this(
+    constructor(
+        appContainer: AppContainer,
+        isInterviewMode: Boolean = false,
+        hasApiKey: Boolean = false
+    ) : this(
         courseRepository = appContainer.courseRepository,
         progressRepository = appContainer.progressRepository,
         progressRecorder = appContainer.progressRecorder,
         answerGrader = appContainer.answerGrader,
-        languageSupport = appContainer.languageSupport
+        languageSupport = appContainer.languageSupport,
+        aiTutor = appContainer.aiTutor,
+        isInterviewMode = isInterviewMode,
+        hasApiKey = hasApiKey
     )
 
-    private val _uiState = MutableStateFlow(LessonUiState())
+    private val _uiState = MutableStateFlow(
+        LessonUiState(
+            isAiAvailable = aiTutor != null,
+            isInterviewMode = isInterviewMode,
+            hasApiKey = hasApiKey
+        )
+    )
     val uiState: StateFlow<LessonUiState> = _uiState.asStateFlow()
 
     private var activeLesson: Lesson? = null
@@ -328,12 +346,159 @@ class LessonViewModel(
         }
     }
 
+    /**
+     * Triggers AI generation of 3 practice cards on the active lesson's topic.
+     * Cards are shown in a practice sheet, labeled "AI-generated, unverified",
+     * award no XP, never enter review, and are never saved to course content.
+     */
+    fun requestMoreLikeThis() {
+        if (isInterviewMode) return
+        if (!hasApiKey) {
+            _uiState.update {
+                it.copy(
+                    aiPracticeState = it.aiPracticeState.copy(
+                        isVisible = true,
+                        errorMessage = "Add your API key in Settings"
+                    )
+                )
+            }
+            return
+        }
+        val tutor = aiTutor ?: return
+        val currentTopic = activeLesson?.title ?: _uiState.value.lessonTitle.ifBlank { "Kotlin" }
+
+        _uiState.update {
+            it.copy(
+                aiPracticeState = it.aiPracticeState.copy(
+                    isVisible = true,
+                    isLoading = true,
+                    errorMessage = null,
+                    cards = emptyList(),
+                    currentCardIndex = 0
+                )
+            )
+        }
+
+        viewModelScope.launch {
+            when (val result = tutor.generateCards(topic = currentTopic, count = 3)) {
+                is AiResult.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            aiPracticeState = it.aiPracticeState.copy(
+                                isLoading = false,
+                                cards = result.data,
+                                currentCardIndex = 0,
+                                selectedOptionIndex = null,
+                                clozeAnswers = emptyMap(),
+                                isAnswerChecked = false,
+                                isAnswerCorrect = null,
+                                explanation = ""
+                            )
+                        )
+                    }
+                }
+                is AiResult.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            aiPracticeState = it.aiPracticeState.copy(
+                                isLoading = false,
+                                errorMessage = result.message
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun onAiPracticeOptionSelected(index: Int) {
+        if (_uiState.value.aiPracticeState.isAnswerChecked) return
+        _uiState.update {
+            it.copy(aiPracticeState = it.aiPracticeState.copy(selectedOptionIndex = index))
+        }
+    }
+
+    fun onAiPracticeClozeAnswerChanged(placeholder: String, value: String) {
+        if (_uiState.value.aiPracticeState.isAnswerChecked) return
+        _uiState.update {
+            val updated = it.aiPracticeState.clozeAnswers.toMutableMap()
+            updated[placeholder] = value
+            it.copy(aiPracticeState = it.aiPracticeState.copy(clozeAnswers = updated))
+        }
+    }
+
+    fun checkAiPracticeAnswer() {
+        val practice = _uiState.value.aiPracticeState
+        val card = practice.currentCard ?: return
+        if (practice.isAnswerChecked) return
+
+        val (isCorrect, explanation) = when (card) {
+            is Exercise.MultipleChoice -> {
+                val selected = practice.selectedOptionIndex ?: -1
+                val correct = answerGrader.gradeMultipleChoice(card, selected)
+                correct to card.explanation
+            }
+            is Exercise.Cloze -> {
+                val correct = answerGrader.gradeCloze(card, practice.clozeAnswers)
+                correct to card.explanation
+            }
+            is Exercise.PredictOutput -> false to card.explanation
+            is Exercise.WriteFunction, is Exercise.MultiPartProblem -> return
+        }
+
+        // AI practice cards award no XP, never enter review, and are not saved in course progress.
+        _uiState.update {
+            it.copy(
+                aiPracticeState = it.aiPracticeState.copy(
+                    isAnswerChecked = true,
+                    isAnswerCorrect = isCorrect,
+                    explanation = explanation
+                )
+            )
+        }
+    }
+
+    fun nextAiPracticeCard() {
+        val practice = _uiState.value.aiPracticeState
+        val nextIndex = practice.currentCardIndex + 1
+        if (nextIndex < practice.cards.size) {
+            _uiState.update {
+                it.copy(
+                    aiPracticeState = it.aiPracticeState.copy(
+                        currentCardIndex = nextIndex,
+                        selectedOptionIndex = null,
+                        clozeAnswers = emptyMap(),
+                        isAnswerChecked = false,
+                        isAnswerCorrect = null,
+                        explanation = ""
+                    )
+                )
+            }
+        } else {
+            dismissAiPractice()
+        }
+    }
+
+    fun dismissAiPractice() {
+        _uiState.update {
+            it.copy(aiPracticeState = it.aiPracticeState.copy(isVisible = false))
+        }
+    }
+
     companion object {
-        fun provideFactory(appContainer: AppContainer): ViewModelProvider.Factory =
+        fun provideFactory(
+            appContainer: AppContainer,
+            isInterviewMode: Boolean = false,
+            hasApiKey: Boolean = false
+        ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return LessonViewModel(appContainer) as T
+                    return LessonViewModel(
+                        appContainer = appContainer,
+                        isInterviewMode = isInterviewMode,
+                        hasApiKey = hasApiKey
+                    ) as T
                 }
             }
     }

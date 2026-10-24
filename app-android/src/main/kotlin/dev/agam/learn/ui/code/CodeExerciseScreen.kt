@@ -59,7 +59,8 @@ data class CodeExerciseUiState(
     val hasApiKey: Boolean = false,
     val aiDialogState: AiDialogState? = null,
     /** The source that last passed a check. Null after any edit. */
-    val passedSource: String? = null
+    val passedSource: String? = null,
+    val aiHintsUsed: Set<Int> = emptySet()
 ) {
     /** "Complete" is offered only when the source on screen is the one that passed a check. */
     val canComplete: Boolean
@@ -78,13 +79,14 @@ fun CodeExerciseScreen(
     onCheckClick: () -> Unit,
     onRevealHintClick: () -> Unit,
     onExplainMistakeClick: () -> Unit,
-    onAskHintClick: () -> Unit,
+    onAskHintClick: () -> Unit = {},
     onReviewCodeClick: () -> Unit,
     onDismissOutcome: () -> Unit,
     onDismissAiDialog: () -> Unit,
     onNavigateBack: (() -> Unit)? = null,
     onFinish: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onAskHintLevelClick: ((Int) -> Unit)? = null
 ) {
     val scrollState = rememberScrollState()
 
@@ -248,7 +250,8 @@ fun CodeExerciseScreen(
                         onExplainMistake = onExplainMistakeClick,
                         onAskHint = onAskHintClick,
                         onReviewCode = onReviewCodeClick,
-                        enabled = !state.isRunning && !state.isChecking && state.hasApiKey
+                        enabled = !state.isRunning && !state.isChecking && state.hasApiKey,
+                        onAskHintLevel = onAskHintLevelClick ?: { level -> onAskHintClick() }
                     )
                 }
             }

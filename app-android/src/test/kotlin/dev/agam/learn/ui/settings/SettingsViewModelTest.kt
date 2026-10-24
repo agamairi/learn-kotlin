@@ -176,7 +176,7 @@ class SettingsViewModelTest {
 
     @Test
     fun testConnectionTestWithValidKeySucceeds() {
-        fakeAiTutor.hintResult = AiResult.Success("OK")
+        fakeAiTutor.testConnectionResult = AiResult.Success(Unit)
         val viewModel = SettingsViewModel(
             settingsRepository = fakeRepo,
             secretStore = fakeSecretStore,
@@ -191,11 +191,35 @@ class SettingsViewModelTest {
         val result = viewModel.uiState.value.aiConnectionTestResult
         assertNotNull(result)
         assertTrue(result!!.isSuccess)
+        assertEquals(1, fakeAiTutor.testConnectionCalls)
+        assertEquals(0, fakeAiTutor.hintCalls)
+    }
+
+    @Test
+    fun testConnectionTestWithProviderErrorFails() {
+        fakeAiTutor.testConnectionResult = AiResult.Error("Invalid API key")
+        val viewModel = SettingsViewModel(
+            settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
+            aiTutor = fakeAiTutor,
+            coroutineScope = testScope
+        )
+
+        viewModel.onApiKeyChange("sk-ant-test-key-long-enough")
+        viewModel.saveAiSettings()
+        viewModel.testAiConnection()
+
+        val result = viewModel.uiState.value.aiConnectionTestResult
+        assertNotNull(result)
+        assertFalse(result!!.isSuccess)
+        assertTrue(result.message.contains("Invalid API key"))
+        assertEquals(1, fakeAiTutor.testConnectionCalls)
+        assertEquals(0, fakeAiTutor.hintCalls)
     }
 
     @Test
     fun testConnectionOnlyChecksSavedSettings() {
-        fakeAiTutor.hintResult = AiResult.Success("OK")
+        fakeAiTutor.testConnectionResult = AiResult.Success(Unit)
         val viewModel = SettingsViewModel(
             settingsRepository = fakeRepo,
             secretStore = fakeSecretStore,
@@ -210,13 +234,14 @@ class SettingsViewModelTest {
         val result = viewModel.uiState.value.aiConnectionTestResult
         assertNotNull(result)
         assertFalse(result!!.isSuccess)
+        assertEquals(0, fakeAiTutor.testConnectionCalls)
         assertEquals(0, fakeAiTutor.hintCalls)
     }
 
     @Test
     fun testConnectionIsRefusedInInterviewModeWithoutCallingTheTutor() {
         fakeRepo = FakeSharedSettingsRepository(AppSettings(interviewMode = true))
-        fakeAiTutor.hintResult = AiResult.Success("OK")
+        fakeAiTutor.testConnectionResult = AiResult.Success(Unit)
         val viewModel = SettingsViewModel(
             settingsRepository = fakeRepo,
             secretStore = fakeSecretStore,
@@ -230,6 +255,7 @@ class SettingsViewModelTest {
         val result = viewModel.uiState.value.aiConnectionTestResult
         assertNotNull(result)
         assertFalse(result!!.isSuccess)
+        assertEquals(0, fakeAiTutor.testConnectionCalls)
         assertEquals(0, fakeAiTutor.hintCalls)
     }
 
@@ -279,8 +305,15 @@ class SettingsViewModelTest {
     }
 
     private class FakeAiTutor : AiTutor {
+        var testConnectionResult: AiResult<Unit> = AiResult.Success(Unit)
+        var testConnectionCalls = 0
         var hintResult: AiResult<String> = AiResult.Success("OK")
         var hintCalls = 0
+
+        override suspend fun testConnection(): AiResult<Unit> {
+            testConnectionCalls++
+            return testConnectionResult
+        }
 
         override suspend fun explainMistake(
             exercise: Exercise,

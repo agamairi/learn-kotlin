@@ -171,8 +171,19 @@ fun LearnAppNavHost(
                 )
             ) { backStackEntry ->
                 val lessonId = backStackEntry.arguments?.getString("lessonId") ?: ""
+                val appContainer = LocalAppContainer.current
+                var aiAccess by remember { mutableStateOf<AiAccess?>(null) }
+                LaunchedEffect(Unit) {
+                    aiAccess = loadAiAccess(appContainer.settingsRepository, appContainer.secretStore)
+                }
+                val access = aiAccess
                 val lessonViewModel: LessonViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
-                    factory = LessonViewModel.provideFactory(LocalAppContainer.current)
+                    key = lessonId,
+                    factory = LessonViewModel.provideFactory(
+                        appContainer = appContainer,
+                        isInterviewMode = access?.interviewMode ?: false,
+                        hasApiKey = access?.hasApiKey ?: false
+                    )
                 )
 
                 // Set by a studio screen when the learner returns from a passed drill or problem.
@@ -244,7 +255,8 @@ fun LearnAppNavHost(
                         onCheckClick = viewModel::checkCode,
                         onRevealHintClick = viewModel::revealNextHint,
                         onExplainMistakeClick = viewModel::askAiExplainMistake,
-                        onAskHintClick = viewModel::askAiHint,
+                        onAskHintClick = { viewModel.askAiHint() },
+                        onAskHintLevelClick = viewModel::askAiHint,
                         onReviewCodeClick = viewModel::askAiReview,
                         onDismissOutcome = viewModel::dismissOutcome,
                         onDismissAiDialog = viewModel::dismissAiDialog,

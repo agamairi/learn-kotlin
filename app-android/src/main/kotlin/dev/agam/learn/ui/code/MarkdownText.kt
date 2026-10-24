@@ -19,7 +19,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 /**
  * Renders simple Markdown formatting including headings, paragraphs, bullet points,
@@ -90,8 +89,7 @@ fun MarkdownText(
                     ) {
                         Text(
                             text = block.code,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 13.sp,
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
