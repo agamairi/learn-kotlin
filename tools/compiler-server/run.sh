@@ -12,9 +12,10 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLONE="${KCS_CLONE:?Set KCS_CLONE to the path of your kotlin-compiler-server clone}"
-KOTLIN_VERSION="2.5.0-Beta2"
+KCS_COMMIT="325cdb872475891da66fc4c9b05763de8f011e16"
+KOTLIN_VERSION="2.4.21"
 IMAGE="kotlin-compiler-server:${KOTLIN_VERSION}-host"
-NAME="kotlin-compiler-server"
+NAME="${KCS_NAME:-kotlin-compiler-server}"
 HOST_PORT="${KCS_PORT:-8080}"
 
 log() { printf '%s\n' "$*" >&2; }
@@ -23,6 +24,16 @@ command -v docker >/dev/null 2>&1 || { log "docker is not installed or not on PA
 docker info >/dev/null 2>&1 || { log "Docker is not running; start Docker Desktop first"; exit 1; }
 
 build_image() {
+  local actual_commit
+  actual_commit="$(git -C "$CLONE" rev-parse HEAD)"
+  if [[ "$actual_commit" != "$KCS_COMMIT" ]]; then
+    log "Expected compiler-server commit $KCS_COMMIT, found $actual_commit. See README.md."
+    exit 1
+  fi
+  if ! grep -Fqx "kotlin = \"$KOTLIN_VERSION\"" "$CLONE/gradle/libs.versions.toml"; then
+    log "Expected Kotlin $KOTLIN_VERSION in $CLONE/gradle/libs.versions.toml. Apply $HERE/kotlin-2.4.21.patch and build first (see README.md)."
+    exit 1
+  fi
   local jar="$CLONE/build/libs/kotlin-compiler-server-${KOTLIN_VERSION}-SNAPSHOT.jar"
   if [[ ! -f "$jar" ]]; then
     log "Missing $jar. Build the clone on the host first (see README.md)."
@@ -46,7 +57,7 @@ build_image() {
   done
   cp "$HERE/Dockerfile" "$ctx/Dockerfile"
   log "Building image $IMAGE from $CLONE ..."
-  docker build -t "$IMAGE" "$ctx" >&2
+  docker build --build-arg "KOTLIN_VERSION=$KOTLIN_VERSION" -t "$IMAGE" "$ctx" >&2
 }
 
 if [[ "${1:-}" == "--rebuild" ]] || ! docker image inspect "$IMAGE" >/dev/null 2>&1; then

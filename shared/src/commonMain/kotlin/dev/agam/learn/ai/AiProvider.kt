@@ -9,5 +9,6 @@ import kotlinx.serialization.Serializable
 enum class AiProvider {
     ANTHROPIC,
     OPENAI,
-    GEMINI
+    GEMINI,
+    OPENROUTER
 }

@@ -101,6 +101,26 @@ class RepositoryTest {
     }
 
     @Test
+    fun openRouterProviderAndCustomModelPersist() = runTest {
+        val driver = createInMemoryTestDriver()
+        try {
+            val repository = SqlDelightSettingsRepository(LearnDatabase(driver))
+            repository.setAiProvider(AiProvider.OPENROUTER, "anthropic/claude-sonnet-4.5")
+
+            assertEquals(
+                AppSettings(
+                    selectedAiProvider = AiProvider.OPENROUTER,
+                    selectedAiModel = "anthropic/claude-sonnet-4.5"
+                ),
+                repository.getSettings()
+            )
+            assertEquals(repository.getSettings(), repository.observeSettings().first())
+        } finally {
+            driver.close()
+        }
+    }
+
+    @Test
     fun progressRepositoryRejectsSecretApiKeySetting() = runTest {
         val driver = createInMemoryTestDriver()
         try {

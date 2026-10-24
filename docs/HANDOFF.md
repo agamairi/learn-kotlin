@@ -1,20 +1,21 @@
 # Handoff: learn-kotlin
 
-State as of 2026-10-24, main at the v0.1.0-alpha.3 tag plus this file. Written for whoever picks the project up next, for example Codex working in this checkout.
+State as of 2026-10-24, updated for v0.1.0. Written for whoever picks the project up next, for example Codex working in this checkout.
 
 ## What it is
 
 An Android app for learning Kotlin, Duolingo-style, aimed at the Stripe Android Terminal interview. It has 12 chapters and 222 exercises: multiple choice, fill in the blank (cloze), predict the output, write a function, and 17 multi-part Stripe-style problems. Code exercises run on a real Kotlin compiler server. It also has XP, a daily goal, a streak with a 4 am rollover and freezes, Leitner review, stats, and an optional bring-your-own-key AI tutor.
 
 - Repo: https://github.com/agamairi/learn-kotlin (public). Local checkout: `/Users/agamairi/development/learn-kotlin`, branch `main`.
-- Releases: v0.1.0-alpha.1, alpha.2 and alpha.3 on GitHub Releases. All are debug-signed pre-releases. alpha.3 is feature-complete for v1.
+- Releases: v0.1.0-alpha.1, alpha.2 and alpha.3 are debug-signed pre-releases. v0.1.0 is the first stable release for personal use, adds OpenRouter, and uses a non-debuggable release APK signed with the existing development certificate so alpha installs can update without losing progress.
+- Device validation: Agam confirmed on 2026-10-24 that the app works on a physical Android device. Physical-device smoke testing is complete; this does not claim a seven-day soak test or emulator coverage.
 - Plan and rules: `docs/PLAN.md`. Content contract: `docs/CONTENT_SCHEMA.md`. Compiler server findings: `docs/spike-report.md`. AI API facts: `docs/AI_PROVIDERS.md`. Setup for users: `README.md`.
 
 ## Modules
 
 | Module | What lives there |
 |---|---|
-| `:shared` (KMP: android + jvm) | `model/` (course, exercise and progress types), `content/` (CourseLoader), `domain/` (StreakCalculator with freezes, XpPolicy, DailyGoalTracker, ReviewScheduler, AnswerGrader, LessonCompletion), `data/` (SQLDelight repos, **ProgressRecorder**, SettingsRepository, SecretStore with an Android Keystore actual), `ai/` (AiTutor, AiTutorImpl, Anthropic/OpenAI/Gemini clients, Prompts), `runner/` (CodeRunner and LanguageSupport contracts) |
+| `:shared` (KMP: android + jvm) | `model/` (course, exercise and progress types), `content/` (CourseLoader), `domain/` (StreakCalculator with freezes, XpPolicy, DailyGoalTracker, ReviewScheduler, AnswerGrader, LessonCompletion), `data/` (SQLDelight repos, **ProgressRecorder**, SettingsRepository, SecretStore with an Android Keystore actual), `ai/` (AiTutor, AiTutorImpl, Anthropic/OpenAI/Gemini/OpenRouter clients, Prompts), `runner/` (CodeRunner and LanguageSupport contracts) |
 | `:runtime-kotlin` (KMP) | `KotlinCompilerServerRunner` (Ktor client for kotlin-compiler-server) and `KotlinTestFileBuilder` |
 | `:content` (JVM) | YAML-to-JSON content compiler, validator, and the live verifier (`ContentVerifier`, `HttpCompilerServerClient`) |
 | `:app-android` | Compose UI, `di/DefaultAppContainer.kt` (wires the real implementations), `ai/DynamicAiTutor.kt` and `AiAccess.kt`, `runner/SettingsAwareKotlinCodeRunner.kt`, screens under `ui/` (home, path, lesson, code, problem, review, stats, settings) |
@@ -34,23 +35,26 @@ Run from the repo root. JDK 21 is needed, and `local.properties` must have `sdk.
 ./gradlew :shared:verifySqlDelightMigration
 ```
 
-The last full run passed: 107 app, 69 shared JVM, 66 shared Android host, 14 runtime and 35 content tests, and 82 of 82 exercises verified live (21 cloze warnings that only need surrounding context).
+The v0.1.0 full build passed: 111 app, 74 shared JVM, 71 shared Android host, 14 runtime JVM, 14 runtime Android host and 35 content tests (319 test executions, no failures). SQLDelight migration verification also passed. All 82 live content checks passed on stable Kotlin 2.4.21 (21 cloze warnings that only need surrounding context).
 
 ## Compiler server (needed for code exercises)
 
-- A Docker container named `kotlin-compiler-server` runs on `127.0.0.1:8080`, loopback only on purpose. It is Kotlin 2.5.0-Beta2, built from JetBrains/kotlin-compiler-server at commit `325cdb872475891da66fc4c9b05763de8f011e16`.
+- A Docker container named `kotlin-compiler-server` runs on `127.0.0.1:8080`, loopback only on purpose. It uses stable Kotlin 2.4.21, built from JetBrains/kotlin-compiler-server at commit `325cdb872475891da66fc4c9b05763de8f011e16` plus the committed `tools/compiler-server/kotlin-2.4.21.patch`. Follow the tool README to apply the patch before the host build.
+- The stopped `kotlin-compiler-server-beta` container and its `kotlin-compiler-server:2.5.0-Beta2-host` image are retained locally for rollback. Do not run both on port 8080.
 - The clone is at `/Users/agamairi/development/tools/kotlin-compiler-server`. Start or rebuild it with `KCS_CLONE=/Users/agamairi/development/tools/kotlin-compiler-server tools/compiler-server/run.sh`. `KCS_CLONE` is required.
 - Building it needs JDK 17, which an agent installed with Homebrew (`openjdk@17`). Remove it with `brew uninstall openjdk@17` if you never rebuild the server.
 - A stopped container, `dreamairi-cloud-server-api-1`, also maps port 8080. Don't start both.
 - The emulator reaches the server at `http://10.0.2.2:8080` (the app's default). A USB phone needs `adb reverse tcp:8080 tcp:8080` and `http://localhost:8080` in Settings. Cleartext HTTP is allowed only to those hosts (`res/xml/network_security_config.xml`).
 - Security: there is no auth, learner code runs as root with internet access, and learner code can forge a JUnit result. Keep it single-user and loopback-only. The runner fails closed: missing testResults is a failure, and it requires the exact expected (class, method) pairs with status OK, plain file names, a 200 KB cap and a 30 s timeout.
 
-## Release flow (as done for alpha.1 to alpha.3)
+## Release flow
 
 1. Bump `versionCode` and `versionName` in `app-android/build.gradle.kts`.
-2. Run `./gradlew build`, then `./gradlew :app-android:assembleDebug`. Check the version with `$ANDROID_SDK/build-tools/<latest>/aapt2 dump badging <apk>`.
-3. Commit, then `git push origin main`, `git tag -a v0.1.0-alpha.N -m "..."` and `git push origin v0.1.0-alpha.N`.
-4. Copy the APK to `learn-kotlin-<version>-debug.apk` and run `gh release create <tag> <apk> --prerelease --notes-file <notes>`.
+2. Run `./gradlew build :shared:verifySqlDelightMigration :app-android:assembleRelease` and `./gradlew :content:verifyContent` against the local compiler server.
+3. Sign `app-android/build/outputs/apk/release/app-android-release-unsigned.apk` using Android SDK `apksigner` and the existing local `~/.android/debug.keystore` (`androiddebugkey`, standard Android development-keystore password). Keep the keystore out of Git. Retaining that certificate allows alpha users to update in place; the release variant itself is non-debuggable. A different production key would require a fresh installation.
+4. Verify the signature with `apksigner verify --print-certs`, inspect version and `debuggable=false` with `aapt2`, and generate a SHA-256 checksum.
+5. Commit and push `main`; check GitHub CI. Tag the verified commit (for the first stable release, `v0.1.0`) and push the tag.
+6. Publish `learn-kotlin-<version>.apk` and its checksum with `gh release create <tag> <apk> <checksum> --latest --notes-file <notes>`. Stable releases omit `--prerelease`.
 
 ## Rules that must keep holding
 
@@ -74,12 +78,12 @@ The last full run passed: 107 app, 69 shared JVM, 66 shared Android host, 14 run
   - The server's child JVM has a 32 MB heap, so references must not build huge collections.
   - Predict-output comparison ignores trailing whitespace and newlines.
   - Cloze accepted answers must not repeat punctuation that's already in the template.
-- antigravity (Gemini Flash) jobs often end "interrupted" or without a final message. Check the files and build yourself. The Codex sandbox can't run Gradle here.
+- antigravity (Gemini Flash) jobs can end "interrupted" or without a final message. Check the files and build yourself. Gradle can run from this checkout when the agent environment has the normal local filesystem/process permissions.
 
 ## Not done / next steps
 
-1. **Never run on a device or emulator.** No Android system image is installed (`system-images/android-36/google_apis_playstore` is empty, about 1.5 GB to download). Agam is testing the alpha APKs; expect UI issues to come back from him.
-2. **Move the compiler server to a stable Kotlin release** (it's 2.5.0-Beta2 now), rebuild, and re-run `:content:verifyContent`.
+1. **Physical-device smoke test complete.** Agam reports the app works fine on his physical device. Continue fixing issues reported during real use; emulator coverage and the plan's seven-day soak test have not been recorded.
+2. **Stable compiler migration complete.** The server runs Kotlin 2.4.21. Re-run `:content:verifyContent` whenever content or the compiler version changes.
 3. **Optional:** a hosted runner (the plan mentions Cloud Run with a token). It needs real isolation first; see the security bullet above.
 4. **Optional:** swap Leitner for FSRS behind `ReviewScheduler`, or add a second language pack (`docs/PLAN.md`, "Adding a language later").
 5. **Housekeeping:** the merged `feat/*` local branches still exist; delete them with `git branch -d` if you like. `allowBackup` is on by design (progress backs up; the key doesn't survive a restore).

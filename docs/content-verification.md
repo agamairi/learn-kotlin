@@ -1,6 +1,6 @@
 # Content Verification Report
 
-Kotlin Compiler Server Version: 2.5.0-Beta2
+Kotlin Compiler Server Version: 2.4.21
 
 ## Summary
 

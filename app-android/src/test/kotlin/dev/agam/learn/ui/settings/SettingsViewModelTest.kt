@@ -96,6 +96,76 @@ class SettingsViewModelTest {
         // Custom model selection
         viewModel.onAiModelSelected("gemini-4-argon")
         assertEquals("gemini-4-argon", viewModel.uiState.value.aiModel)
+
+        // Existing providers keep their defaults, and OpenRouter selects its own default.
+        viewModel.onAiProviderSelected(AiProvider.OPENROUTER)
+        assertEquals(AiProvider.OPENROUTER, viewModel.uiState.value.aiProvider)
+        assertEquals(AiProviderConfig.OPENROUTER_DEFAULT_MODEL, viewModel.uiState.value.aiModel)
+    }
+
+    @Test
+    fun openRouterCustomModelIsTrimmedAndReloadedFromSavedSettings() {
+        val viewModel = SettingsViewModel(
+            settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
+            coroutineScope = testScope
+        )
+        viewModel.onAiProviderSelected(AiProvider.OPENROUTER)
+        viewModel.onAiModelSelected("  openai/gpt-4o-mini  ")
+
+        viewModel.saveAiSettings()
+
+        assertEquals("openai/gpt-4o-mini", viewModel.uiState.value.aiModel)
+        assertEquals("openai/gpt-4o-mini", runBlocking { fakeRepo.getSettings().selectedAiModel })
+
+        val reloadedViewModel = SettingsViewModel(
+            settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
+            coroutineScope = testScope
+        )
+        assertEquals(AiProvider.OPENROUTER, reloadedViewModel.uiState.value.aiProvider)
+        assertEquals("openai/gpt-4o-mini", reloadedViewModel.uiState.value.aiModel)
+    }
+
+    @Test
+    fun blankOpenRouterModelFallsBackToDefaultInUiAndPersistence() {
+        val viewModel = SettingsViewModel(
+            settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
+            coroutineScope = testScope
+        )
+        viewModel.onAiProviderSelected(AiProvider.OPENROUTER)
+        viewModel.onAiModelSelected("   ")
+
+        viewModel.saveAiSettings()
+
+        assertEquals(AiProviderConfig.OPENROUTER_DEFAULT_MODEL, viewModel.uiState.value.aiModel)
+        assertEquals(
+            AiProviderConfig.OPENROUTER_DEFAULT_MODEL,
+            runBlocking { fakeRepo.getSettings().selectedAiModel }
+        )
+    }
+
+    @Test
+    fun unsavedOpenRouterCustomModelCannotBeConnectionTested() {
+        val viewModel = SettingsViewModel(
+            settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
+            aiTutor = fakeAiTutor,
+            coroutineScope = testScope
+        )
+        viewModel.onAiProviderSelected(AiProvider.OPENROUTER)
+        viewModel.onApiKeyChange("sk-or-test-key-long-enough")
+        viewModel.saveAiSettings()
+        viewModel.onAiModelSelected("openai/gpt-4o-mini")
+
+        viewModel.testAiConnection()
+
+        val result = viewModel.uiState.value.aiConnectionTestResult
+        assertNotNull(result)
+        assertFalse(result!!.isSuccess)
+        assertEquals("Save your AI settings first, then test the connection.", result.message)
+        assertEquals(0, fakeAiTutor.testConnectionCalls)
     }
 
     @Test

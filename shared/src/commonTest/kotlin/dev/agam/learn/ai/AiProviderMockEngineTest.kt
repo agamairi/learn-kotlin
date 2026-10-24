@@ -111,11 +111,95 @@ class AiProviderMockEngineTest {
     }
 
     @Test
-    fun eachProviderUsesModelsEndpointForConnectionTest() = runTest {
+    fun openRouterUsesChatCompletionsShapeAndParsesSuccess() = runTest {
+        var request: HttpRequestData? = null
+        val client = mockClient { data ->
+            request = data
+            respondJson(
+                """
+                {"id":"gen_test","choices":[{"message":{"role":"assistant","content":"Use an Elvis operator."},"finish_reason":"stop"}]}
+                """
+            )
+        }
+
+        val result = OpenRouterAiClient(client, "provider/example-model").chat(
+            "test-openrouter-secret",
+            "Be a patient tutor.",
+            "How do I handle a nullable value?",
+            58
+        )
+        val body = requestBody(request!!).jsonObject
+        val messages = body["messages"]!!.toString()
+
+        assertEquals(HttpMethod.Post, request!!.method)
+        assertEquals(AiProviderConfig.OPENROUTER_CHAT_COMPLETIONS_URL, request!!.url.toString())
+        assertEquals("Bearer test-openrouter-secret", request!!.headers["Authorization"])
+        assertFalse(request!!.url.toString().contains("test-openrouter-secret"))
+        assertEquals("provider/example-model", body["model"]?.toString()?.trim('"'))
+        assertEquals("58", body["max_completion_tokens"]?.toString())
+        assertEquals("0.2", body["temperature"]?.toString())
+        assertTrue(messages.contains("system"))
+        assertTrue(messages.contains("Be a patient tutor."))
+        assertTrue(messages.contains("user"))
+        assertTrue(messages.contains("How do I handle a nullable value?"))
+        assertEquals(AiClientResult.Text("Use an Elvis operator."), result)
+        client.close()
+    }
+
+    @Test
+    fun openRouterTutorUsesDefaultAndConfiguredModel() = runTest {
+        assertEquals("openrouter/auto", AiProviderConfig.defaultModel(AiProvider.OPENROUTER))
+
+        for ((configuredModel, expectedModel) in listOf(
+            null to AiProviderConfig.OPENROUTER_DEFAULT_MODEL,
+            "provider/custom-model" to "provider/custom-model"
+        )) {
+            var request: HttpRequestData? = null
+            val client = mockClient { data ->
+                request = data
+                respondJson(
+                    """{"id":"gen_test","model":"provider/served-model","choices":[{"index":0,"message":{"role":"assistant","content":"A hint."},"finish_reason":"stop"}],"usage":{"total_tokens":4}}"""
+                )
+            }
+            val tutor = AiTutorImpl(
+                settings = AiSettings(provider = AiProvider.OPENROUTER, model = configuredModel),
+                secretStore = StaticSecretStore("test-key"),
+                httpClient = client
+            )
+
+            assertEquals(AiResult.Success("A hint."), tutor.hint(sampleExercise(), 1))
+            assertEquals(expectedModel, requestBody(request!!).jsonObject["model"]?.toString()?.trim('"'))
+            client.close()
+        }
+    }
+
+    @Test
+    fun openRouterRejectsErrorObjectsAndMissingOrEmptyChoicesOnSuccessStatus() = runTest {
+        val invalidBodies = listOf(
+            """{"error":{"message":"request could not be routed"}}""",
+            """{"id":"gen_test","model":"provider/model"}""",
+            """{"id":"gen_test","choices":[]}""",
+            """{"id":"gen_test","choices":[{"message":{"role":"assistant","content":"  "}}]}"""
+        )
+
+        for (body in invalidBodies) {
+            val client = mockClient { respondJson(body) }
+            assertEquals(
+                AiClientResult.Failure(),
+                OpenRouterAiClient(client).chat("test-key", "system", "user", 32),
+                body
+            )
+            client.close()
+        }
+    }
+
+    @Test
+    fun eachProviderUsesAuthenticatedEndpointForConnectionTest() = runTest {
         val cases = listOf(
             Triple(AiProvider.ANTHROPIC, AiProviderConfig.ANTHROPIC_MODELS_URL, "anthropic-version"),
             Triple(AiProvider.OPENAI, AiProviderConfig.OPENAI_MODELS_URL, "Authorization"),
-            Triple(AiProvider.GEMINI, AiProviderConfig.GEMINI_MODELS_URL, "x-goog-api-key")
+            Triple(AiProvider.GEMINI, AiProviderConfig.GEMINI_MODELS_URL, "x-goog-api-key"),
+            Triple(AiProvider.OPENROUTER, AiProviderConfig.OPENROUTER_KEY_URL, "Authorization")
         )
 
         for ((provider, expectedUrl, expectedHeader) in cases) {
@@ -128,12 +212,17 @@ class AiProviderMockEngineTest {
                 AiProvider.ANTHROPIC -> AnthropicAiClient(client)
                 AiProvider.OPENAI -> OpenAiClient(client)
                 AiProvider.GEMINI -> GeminiClient(client)
+                AiProvider.OPENROUTER -> OpenRouterAiClient(client)
             }
 
             assertIs<AiClientResult.Text>(providerClient.testConnection("test-key"))
             assertEquals(HttpMethod.Get, request!!.method)
             assertEquals(expectedUrl, request!!.url.toString())
             assertTrue(request!!.headers[expectedHeader] != null)
+            if (provider == AiProvider.OPENROUTER) {
+                assertEquals("Bearer test-key", request!!.headers["Authorization"])
+                assertFalse(request!!.url.toString().contains("test-key"))
+            }
             client.close()
         }
     }
@@ -160,15 +249,17 @@ class AiProviderMockEngineTest {
 
     @Test
     fun tutorConnectionTestMapsBadKey() = runTest {
-        val client = mockClient { respondJson("{}", status = 401) }
-        val tutor = AiTutorImpl(
-            settings = AiSettings(provider = AiProvider.OPENAI),
-            secretStore = StaticSecretStore("bad-key"),
-            httpClient = client
-        )
+        for (provider in AiProvider.entries) {
+            val client = mockClient { respondJson("{}", status = 401) }
+            val tutor = AiTutorImpl(
+                settings = AiSettings(provider = provider),
+                secretStore = StaticSecretStore("bad-key"),
+                httpClient = client
+            )
 
-        assertEquals(AiResult.Error("API key rejected"), tutor.testConnection())
-        client.close()
+            assertEquals(AiResult.Error("API key rejected"), tutor.testConnection(), "$provider")
+            client.close()
+        }
     }
 
     @Test
@@ -258,6 +349,22 @@ class AiProviderMockEngineTest {
     }
 
     @Test
+    fun tutorMapsOpenRouterInsufficientCredits() = runTest {
+        val client = mockClient { respondJson("{}", status = 402) }
+        val tutor = AiTutorImpl(
+            settings = AiSettings(provider = AiProvider.OPENROUTER),
+            secretStore = StaticSecretStore("test-key"),
+            httpClient = client
+        )
+
+        assertEquals(
+            AiResult.Error("OpenRouter credits or spending limit reached"),
+            tutor.hint(sampleExercise(), 1)
+        )
+        client.close()
+    }
+
+    @Test
     fun networkFailureMapsToNoConnection() = runTest {
         val engine = MockEngine(MockEngineConfig().apply {
             addHandler { error("offline") }
@@ -299,24 +406,23 @@ class AiProviderMockEngineTest {
 
     @Test
     fun interviewModeBlocksWithoutMakingARequest() = runTest {
-        var requestCount = 0
-        val client = mockClient {
-            requestCount++
-            respondJson("{}")
-        }
-        val tutor = AiTutorImpl(
-            settings = AiSettings(
-                provider = AiProvider.OPENAI,
-                interviewMode = true
-            ),
-            secretStore = StaticSecretStore("test-key"),
-            httpClient = client
-        )
+        for (provider in AiProvider.entries) {
+            var requestCount = 0
+            val client = mockClient {
+                requestCount++
+                respondJson("{}")
+            }
+            val tutor = AiTutorImpl(
+                settings = AiSettings(provider = provider, interviewMode = true),
+                secretStore = StaticSecretStore("test-key"),
+                httpClient = client
+            )
 
-        val result = tutor.explainMistake(sampleExercise(), "wrong", "right")
-        assertEquals(AiResult.Error("AI tutor is unavailable in interview mode"), result)
-        assertEquals(0, requestCount)
-        client.close()
+            val result = tutor.explainMistake(sampleExercise(), "wrong", "right")
+            assertEquals(AiResult.Error("AI tutor is unavailable in interview mode"), result, "$provider")
+            assertEquals(0, requestCount, "$provider")
+            client.close()
+        }
     }
 
     @Test

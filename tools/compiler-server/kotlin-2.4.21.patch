@@ -1,0 +1,11 @@
+diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
+index 15d8933e..a3d4a68e 100644
+--- a/gradle/libs.versions.toml
++++ b/gradle/libs.versions.toml
+@@ -1,5 +1,5 @@
+ [versions]
+-kotlin = "2.5.0-Beta2"
++kotlin = "2.4.21"
+ spring-boot = "3.5.7"
+ spring-dependency-managment = "1.1.7"
+ springdoc = "2.8.14"

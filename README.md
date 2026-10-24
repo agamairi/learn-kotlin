@@ -8,6 +8,8 @@ learn-kotlin is an Android app for learning Kotlin. Lessons are grouped into cha
 
 Download the APK from the newest release on the GitHub Releases page: https://github.com/agamairi/learn-kotlin/releases
 
+v0.1.0 is the first stable release for personal use. Its release APK is non-debuggable and keeps the alpha builds' signing certificate, so you can install it over an alpha without uninstalling or losing progress. Physical-device smoke testing was confirmed by Agam on 2026-10-24.
+
 The app needs Android 8.0 (API 26) or newer. Install the APK by sideloading it. When Android asks, allow installs from the app you opened the file with, such as your browser or file manager.
 
 Lessons and review work offline. Code exercises need the compiler server, and the AI tutor needs internet access and your own API key. Sections 3 and 4 explain both.
@@ -39,7 +41,7 @@ The container restarts with Docker Desktop, unless you stop it. Stop it with `do
 
 The server listens on 127.0.0.1 only. Docker publishes the port on the loopback address, so other devices on your network cannot reach it. Keep it that way. The server has no authentication. Learner code runs as root in the container and can reach the internet. Learner code can also forge a passing result. `docs/spike-report.md` has the details. Use this setup for one person's practice only.
 
-The server is built from Kotlin 2.5.0-Beta2, which is a beta compiler. The app is built with Kotlin 2.2.10, so compiler messages can differ a little between the two.
+The server uses stable Kotlin 2.4.21. Apply the pinned version patch and build it as described in `tools/compiler-server/README.md`. The Android app uses Kotlin 2.2.10, so compiler messages can differ between the two.
 
 To point the app at the server:
 
@@ -52,13 +54,15 @@ The **Bearer Token (optional)** field in Settings is optional. The local server 
 
 ## AI tutor
 
-The AI tutor is optional. It needs an API key from Anthropic, OpenAI or Google Gemini. Without a key, the AI controls show a message that asks you to add one.
+The AI tutor is optional. It needs an API key from Anthropic, OpenAI, Google Gemini or OpenRouter. Without a key, the AI controls show a message that asks you to add one.
 
-Open **Settings**, then **AI Tutor (Bring Your Own Key)**. Choose a provider and a model, paste your key, and tap **Save AI Settings**. **Test connection** checks the key against the provider's model list. **Remove key** deletes the saved key.
+Open **Settings**, then **AI Tutor (Bring Your Own Key)**. Choose a provider and a model, paste your key, and tap **Save AI Settings**. **Test connection** checks the saved key without generating a paid completion: it uses the provider's model list, or OpenRouter's authenticated key endpoint. **Remove key** deletes the saved key.
+
+For **OpenRouter**, the default model is `openrouter/auto`. You can enter any model slug from the OpenRouter catalog, such as `openai/gpt-6-luna`. Save after changing the model, provider or key before testing the connection. A successful key test does not guarantee model access or sufficient credits for a completion.
 
 The key is encrypted with an AES-256-GCM key in the Android Keystore. The encrypted copy is stored in the app's database. The Keystore key never leaves the device. Android backup is on in the app manifest, so a backup can include the encrypted copy. A restored backup cannot decrypt it, so you add the key again on a new device.
 
-Requests go only to the provider you chose, and they use your key. Each request includes this text:
+Requests use your key and go to the provider you chose. When you choose OpenRouter, it also routes requests to the model providers it selects. OpenRouter's and those providers' data policies apply. Each request includes this text:
 
 - **Explain my mistake:** the exercise text, its starter code, your code, and the reference solution.
 - **Hint:** the exercise text and its starter code.
@@ -138,5 +142,5 @@ This is not built yet. The steps are in `docs/PLAN.md`, section 4 ("Adding a lan
 - The compiler server is for personal practice only. It has no authentication, learner code runs as root with internet access, and learner code can forge a pass. Learner code can also stop the server from answering until you restart it with `tools/compiler-server/run.sh`. The server handles one request at a time.
 - The hidden tests for code exercises ship inside the app. Anyone with the APK can read them. That is fine for one person. A public release needs server-side tests.
 - AI answers are not verified. Only the course exercises are checked against the compiler.
-- The current release is a debug build, marked as a pre-release.
+- The stable APK is a non-debuggable release build signed with the same development certificate as the alpha builds for update compatibility. A separate private production signing key would require a new installation; this release remains for personal use.
 - Provider model names and API details can change. Check `docs/AI_PROVIDERS.md` before a wider release.

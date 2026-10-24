@@ -56,6 +56,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.agam.learn.ai.AiProvider
+import dev.agam.learn.ai.AiProviderConfig
 import dev.agam.learn.di.LocalAppContainer
 
 /**
@@ -89,7 +90,8 @@ data class ConnectionTestResult(
 val PROVIDER_MODELS: Map<AiProvider, List<String>> = mapOf(
     AiProvider.ANTHROPIC to listOf("claude-haiku-5-5", "claude-opus-5-5"),
     AiProvider.OPENAI to listOf("gpt-6-luna", "gpt-6-astra"),
-    AiProvider.GEMINI to listOf("gemini-3.5-flash-lite", "gemini-4-argon")
+    AiProvider.GEMINI to listOf("gemini-3.5-flash-lite", "gemini-4-argon"),
+    AiProvider.OPENROUTER to listOf(AiProviderConfig.OPENROUTER_DEFAULT_MODEL)
 )
 
 /**
@@ -238,9 +240,10 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     AiProvider.entries.forEach { provider ->
                         val isSelected = state.aiProvider == provider
@@ -253,10 +256,11 @@ fun SettingsScreen(
                                         AiProvider.ANTHROPIC -> "Anthropic"
                                         AiProvider.OPENAI -> "OpenAI"
                                         AiProvider.GEMINI -> "Google Gemini"
+                                        AiProvider.OPENROUTER -> "OpenRouter"
                                     }
                                 )
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                         )
                     }
                 }
@@ -290,6 +294,21 @@ fun SettingsScreen(
                             }
                         )
                     }
+                }
+
+                if (state.aiProvider == AiProvider.OPENROUTER) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = state.aiModel,
+                        onValueChange = onAiModelSelected,
+                        label = { Text("OpenRouter model") },
+                        placeholder = { Text("openrouter/auto") },
+                        singleLine = true,
+                        supportingText = {
+                            Text("Use a model slug from OpenRouter, or leave blank for automatic routing.")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -422,7 +441,11 @@ fun SettingsScreen(
                         Text(text = "🔒", fontSize = 16.sp)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Your answers and code are sent to the provider you chose, using your key and your account.",
+                            text = if (state.aiProvider == AiProvider.OPENROUTER) {
+                                "Your answers and code are sent to OpenRouter and its selected model providers, using your key and your account."
+                            } else {
+                                "Your answers and code are sent to the provider you chose, using your key and your account."
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

@@ -198,14 +198,14 @@ All of this lives in `shared/domain`: pure functions with unit tests and no Andr
 
 Added 2026-10-24 at Agam's request. Optional, and off until a key is added.
 
-- **Settings › AI tutor:** choose a provider (Anthropic, OpenAI or Google Gemini), paste your own API key, pick a model from a short list, and run "Test connection". The key is stored on the device only, encrypted with an Android Keystore key, and never logged or included in exports. A "Remove key" button deletes it.
+- **Settings › AI tutor:** choose a provider (Anthropic, OpenAI, Google Gemini or OpenRouter), paste your own API key, pick a model from a short list (or enter an OpenRouter model slug), and run "Test connection". The key is stored on the device only, encrypted with an Android Keystore key, and never logged or included in exports. A "Remove key" button deletes it.
 - **What it does:**
   - **Explain my mistake:** after a wrong answer or failed tests, sends the exercise, your answer and the expected result, and gets a short plain-language explanation.
   - **Hint ladder:** three levels (nudge, approach, near-solution) for code exercises; each level costs some XP.
   - **More like this:** generates 3 extra multiple-choice or cloze cards on the current topic, shown with an "AI-generated, unverified" label and never mixed into verified content or the XP economy.
   - **Review my code:** comments on readability and Kotlin idioms of a passing solution.
 - **Interview mode:** timed mocks and multi-part problems run in "no AI" mode. Tutor buttons are hidden until the mock ends, matching the Stripe screen's rules.
-- **Architecture:** an `AiTutor` interface in `shared` (provider-agnostic: `explainMistake`, `hint`, `generateCards`, `reviewCode`), with one `AiProvider` implementation per vendor in `shared` using Ktor (Anthropic Messages API, OpenAI Chat Completions, Gemini generateContent). Prompts live as templates in one file. Network errors, bad keys and rate limits become friendly messages, never crashes. The current, correct API shapes and model names must be checked against each vendor's official docs at build time; do not invent them.
+- **Architecture:** an `AiTutor` interface in `shared` (provider-agnostic: `explainMistake`, `hint`, `generateCards`, `reviewCode`), with one client per provider in `shared` using Ktor (Anthropic Messages API, OpenAI Responses, Gemini generateContent, OpenRouter Chat Completions). Prompts live as templates in one file. Network errors, bad keys and rate limits become friendly messages, never crashes. The current, correct API shapes and model names must be checked against each vendor's official docs at build time; do not invent them.
 - **Privacy note shown in Settings:** your answers and code are sent to the provider you chose, using your key and your account.
 
 ## 8. Screens (v1)
@@ -230,6 +230,8 @@ Effort estimates from the debate disagree and none were measured: Sol said 30–
 | **2. Real code** | `runtime-kotlin` Ktor client, Code exercise screen, `/test` grading, `/highlight` diagnostics, MultiPartProblem with reveal | 5 write-function exercises and 3 Stripe problems pass end to end | Terra + Luna; Sol reviews the runner and security |
 | **3. Review + polish** | Leitner queue, Review and Stats screens, streak freeze, accessibility, Cloud Run deployment with a token | Seven straight days of real personal use | Flash (UI), Terra (domain), Argon (content QA) |
 | **4. Second language** (only when wanted) | One small pack in another language, with its own runner | No changes needed in `shared/domain` or the UI | Agents |
+
+Validation update, 2026-10-24: Agam tested the alpha on a physical Android device and confirmed it works. The physical-device smoke test is complete. This report does not establish the specific exercise counts above, emulator coverage, or seven consecutive days of use. The first stable release adds OpenRouter alongside the three original AI providers; hosting remains optional and local-only execution remains the supported setup.
 
 ### Phase 0 runner spike checklist
 

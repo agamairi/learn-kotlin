@@ -1,7 +1,12 @@
 package dev.agam.learn.ai
 
+import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import dev.agam.learn.data.AppSettings
+import dev.agam.learn.data.AndroidSecretStore
+import dev.agam.learn.data.LearnDatabase
 import dev.agam.learn.data.SecretStore
+import dev.agam.learn.data.SettingsRepository
+import dev.agam.learn.data.SqlDelightSettingsRepository
 import dev.agam.learn.fake.FakeSettingsRepository
 import dev.agam.learn.model.Exercise
 import io.ktor.client.engine.mock.MockEngine
@@ -10,10 +15,13 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.runBlocking
+import javax.crypto.KeyGenerator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -53,26 +61,34 @@ class DynamicAiTutorWiringTest {
 
     /** Builds the tutor the same way DefaultAppContainer does, with a mock engine recording requests. */
     private fun wiredTutor(
-        settings: AppSettings,
+        settingsRepository: SettingsRepository,
         secretStore: SecretStore,
-        requests: MutableList<HttpRequestData>
+        requests: MutableList<HttpRequestData>,
+        responseBody: String = "{}"
     ): DynamicAiTutor {
         val engine = MockEngine(MockEngineConfig().apply {
             addHandler { request ->
                 requests += request
                 respond(
-                    content = ByteReadChannel("{}"),
+                    content = ByteReadChannel(responseBody),
                     status = HttpStatusCode.OK,
                     headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                 )
             }
         })
         return DynamicAiTutor(
-            settingsRepository = FakeSettingsRepository(settings),
+            settingsRepository = settingsRepository,
             secretStore = secretStore,
             httpClient = createAiHttpClient(engine)
         )
     }
+
+    private fun wiredTutor(
+        settings: AppSettings,
+        secretStore: SecretStore,
+        requests: MutableList<HttpRequestData>,
+        responseBody: String = "{}"
+    ): DynamicAiTutor = wiredTutor(FakeSettingsRepository(settings), secretStore, requests, responseBody)
 
     @Test
     fun providerChosenInSettingsDecidesTheEndpointAndKeyHeader() = runBlocking {
@@ -119,6 +135,52 @@ class DynamicAiTutorWiringTest {
     }
 
     @Test
+    fun savedOpenRouterSettingsAndKeyWireChatAndConnectionAndRemainInterviewBlocked() = runBlocking {
+        val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+        try {
+            LearnDatabase.Schema.create(driver)
+            val database = LearnDatabase(driver)
+            val settings = SqlDelightSettingsRepository(database)
+            val model = "anthropic/claude-sonnet-4.5"
+            val key = "saved-openrouter-key"
+            settings.setAiProvider(AiProvider.OPENROUTER, model)
+            val encryptionKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+            val secretStore = AndroidSecretStore(database, keyProvider = { encryptionKey })
+            secretStore.set(key)
+            val requests = mutableListOf<HttpRequestData>()
+            val tutor = wiredTutor(
+                settings,
+                secretStore,
+                requests,
+                responseBody = """{"choices":[{"message":{"role":"assistant","content":"A hint."}}]}"""
+            )
+
+            assertEquals(AiResult.Success("A hint."), tutor.hint(exercise, level = 1))
+            val chatRequest = requests.single()
+            assertEquals(HttpMethod.Post, chatRequest.method)
+            assertEquals(AiProviderConfig.OPENROUTER_CHAT_COMPLETIONS_URL, chatRequest.url.toString())
+            assertEquals("Bearer $key", chatRequest.headers["Authorization"])
+            assertFalse(chatRequest.url.toString().contains(key))
+            assertTrue((chatRequest.body as TextContent).text.contains("\"model\":\"$model\""))
+
+            assertEquals(AiResult.Success(Unit), tutor.testConnection())
+            val keyRequest = requests.last()
+            assertEquals(HttpMethod.Get, keyRequest.method)
+            assertEquals(AiProviderConfig.OPENROUTER_KEY_URL, keyRequest.url.toString())
+            assertEquals("Bearer $key", keyRequest.headers["Authorization"])
+            assertFalse(keyRequest.url.toString().contains(key))
+
+            settings.setInterviewMode(true)
+            val interviewError = AiResult.Error("AI tutor is unavailable in interview mode")
+            assertEquals(interviewError, tutor.hint(exercise, level = 1))
+            assertEquals(interviewError, tutor.testConnection())
+            assertEquals("Interview mode must block before making a request", 2, requests.size)
+        } finally {
+            driver.close()
+        }
+    }
+
+    @Test
     fun missingKeyFailsWithTheAddKeyMessageAndSendsNothing() = runBlocking {
         val requests = mutableListOf<HttpRequestData>()
         val tutor = wiredTutor(
@@ -137,7 +199,7 @@ class DynamicAiTutorWiringTest {
     fun interviewModeFailsWithoutSendingAnything() = runBlocking {
         val requests = mutableListOf<HttpRequestData>()
         val tutor = wiredTutor(
-            settings = AppSettings(selectedAiProvider = AiProvider.ANTHROPIC, interviewMode = true),
+            settings = AppSettings(selectedAiProvider = AiProvider.OPENROUTER, interviewMode = true),
             secretStore = FixedSecretStore("test-key-123"),
             requests = requests
         )

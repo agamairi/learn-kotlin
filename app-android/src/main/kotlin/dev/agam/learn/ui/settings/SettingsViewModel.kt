@@ -50,7 +50,10 @@ class SettingsViewModel(
             val apiKey = runCatching { secretStore.get() }.getOrNull().orEmpty()
             val provider = appSettings.selectedAiProvider
             // Same default the tutor uses when no model is saved, so the screen never shows a different model.
-            val model = appSettings.selectedAiModel ?: AiProviderConfig.defaultModel(provider)
+            val model = normalizedAiModel(provider, appSettings.selectedAiModel)
+            if (provider == AiProvider.OPENROUTER && appSettings.selectedAiModel != model) {
+                settingsRepository.setAiProvider(provider, model)
+            }
             savedApiKey = apiKey
             savedProvider = provider
             savedModel = model
@@ -96,6 +99,12 @@ class SettingsViewModel(
 
     fun saveAiSettings() {
         val currentState = _uiState.value
+        val modelToSave = normalizedAiModel(currentState.aiProvider, currentState.aiModel)
+        val persistedModel = if (currentState.aiProvider == AiProvider.OPENROUTER) {
+            modelToSave
+        } else {
+            currentState.aiModel.ifBlank { null }
+        }
         scope.launch {
             try {
                 if (currentState.apiKey.isBlank()) {
@@ -105,12 +114,20 @@ class SettingsViewModel(
                 }
                 settingsRepository.setAiProvider(
                     currentState.aiProvider,
-                    currentState.aiModel.ifBlank { null }
+                    persistedModel
                 )
                 savedApiKey = currentState.apiKey
                 savedProvider = currentState.aiProvider
-                savedModel = currentState.aiModel
-                _uiState.update { it.copy(isSavedMessageVisible = true, keystoreErrorMessage = null) }
+                savedModel = modelToSave
+                _uiState.update {
+                    it.copy(
+                        aiModel = if (it.aiProvider == currentState.aiProvider &&
+                            it.aiModel == currentState.aiModel
+                        ) modelToSave else it.aiModel,
+                        isSavedMessageVisible = true,
+                        keystoreErrorMessage = null
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -170,7 +187,9 @@ class SettingsViewModel(
         }
 
         val state = _uiState.value
-        val isSaved = currentKey == savedApiKey && state.aiProvider == savedProvider && state.aiModel == savedModel
+        val isSaved = currentKey == savedApiKey &&
+            state.aiProvider == savedProvider &&
+            normalizedAiModel(state.aiProvider, state.aiModel) == savedModel
         if (!isSaved) {
             _uiState.update {
                 it.copy(
@@ -238,6 +257,13 @@ class SettingsViewModel(
             settingsRepository.setInterviewMode(enabled)
         }
     }
+
+    private fun normalizedAiModel(provider: AiProvider, model: String?): String =
+        if (provider == AiProvider.OPENROUTER) {
+            model?.trim()?.takeIf { it.isNotEmpty() } ?: AiProviderConfig.OPENROUTER_DEFAULT_MODEL
+        } else {
+            model ?: AiProviderConfig.defaultModel(provider)
+        }
 
     companion object {
         fun provideFactory(appContainer: AppContainer): ViewModelProvider.Factory =

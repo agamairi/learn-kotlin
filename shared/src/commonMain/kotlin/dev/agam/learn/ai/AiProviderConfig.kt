@@ -27,6 +27,11 @@ object AiProviderConfig {
     const val GEMINI_DEFAULT_MODEL = "gemini-4-argon"
     const val GEMINI_FAST_MODEL = "gemini-3.5-flash-lite"
 
+    const val OPENROUTER_CHAT_COMPLETIONS_URL = "https://openrouter.ai/api/v1/chat/completions"
+    const val OPENROUTER_KEY_URL = "https://openrouter.ai/api/v1/key"
+    const val OPENROUTER_AUTHORIZATION_HEADER = "Authorization"
+    const val OPENROUTER_DEFAULT_MODEL = "openrouter/auto"
+
     const val CONTENT_TYPE_HEADER = "Content-Type"
     const val CONTENT_TYPE_JSON = "application/json"
 
@@ -37,5 +42,6 @@ object AiProviderConfig {
         AiProvider.ANTHROPIC -> ANTHROPIC_DEFAULT_MODEL
         AiProvider.OPENAI -> OPENAI_DEFAULT_MODEL
         AiProvider.GEMINI -> GEMINI_DEFAULT_MODEL
+        AiProvider.OPENROUTER -> OPENROUTER_DEFAULT_MODEL
     }
 }

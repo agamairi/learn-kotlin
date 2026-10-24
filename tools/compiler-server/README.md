@@ -4,8 +4,9 @@ Runs JetBrains' [kotlin-compiler-server](https://github.com/JetBrains/kotlin-com
 app can compile, grade (`/api/compiler/test`) and highlight learner code. Phase 0 spike results and the API
 notes are in `docs/spike-report.md` (one folder up, in `spike/docs/`).
 
-Current state: container `kotlin-compiler-server`, image `kotlin-compiler-server:2.5.0-Beta2-host`, listening on
-`http://127.0.0.1:8080`.
+Current state: container `kotlin-compiler-server`, image `kotlin-compiler-server:2.4.21-host`, listening on
+`http://127.0.0.1:8080`. The previous `2.5.0-Beta2` container is stopped as `kotlin-compiler-server-beta`; its image
+is kept for rollback.
 
 ## Contents
 
@@ -20,9 +21,17 @@ Current state: container `kotlin-compiler-server`, image `kotlin-compiler-server
 ## Prerequisites
 
 1. **Docker Desktop** running. The Docker VM on this machine has about 1.9 GiB of RAM (`docker info`).
-2. **The clone** at `$KCS_CLONE` (upstream commit
-   `325cdb872475891da66fc4c9b05763de8f011e16`, 2026-10-21). Pin this commit; upstream has no release tags.
-3. **Host build output.** The upstream `/Dockerfile` runs the Gradle build inside Docker, and that build died
+2. **The clone** at `$KCS_CLONE`, checked out at upstream commit
+   `325cdb872475891da66fc4c9b05763de8f011e16`. Upstream has no release tags. `run.sh` checks this commit.
+3. **The stable compiler patch.** Apply the tracked version override from the learn-kotlin repo root:
+
+   ```sh
+   git -C "$KCS_CLONE" apply "$PWD/tools/compiler-server/kotlin-2.4.21.patch"
+   ```
+
+   The current server source uses compiler APIs unavailable in Kotlin 2.2.20. Kotlin 2.4.21 is the stable version
+   used by this image; the app's own Kotlin toolchain remains 2.2.10.
+4. **Host build output.** The upstream `/Dockerfile` runs the Gradle build inside Docker, and that build died
    (Gradle daemon disappeared, consistent with the 1.9 GiB VM limit against the daemon's `-Xmx6048M`). The
    working path is to build on the host:
 
@@ -35,8 +44,8 @@ Current state: container `kotlin-compiler-server`, image `kotlin-compiler-server
      -Dorg.gradle.java.installations.paths=/opt/homebrew/opt/openjdk@17
    ```
 
-   This produces `build/libs/kotlin-compiler-server-2.5.0-Beta2-SNAPSHOT.jar` and the library folders
-   `2.5.0-Beta2*` in the clone root. The build takes about 3 minutes on this Mac.
+   This produces `build/libs/kotlin-compiler-server-2.4.21-SNAPSHOT.jar` and the library folders
+   `2.4.21*` in the clone root.
 
 ## Run
 
@@ -49,20 +58,21 @@ Current state: container `kotlin-compiler-server`, image `kotlin-compiler-server
 
 ```
 docker run -d --name kotlin-compiler-server --restart unless-stopped \
-  --memory=2g --memory-swap=2g -p 127.0.0.1:8080:8080 kotlin-compiler-server:2.5.0-Beta2-host
+  --memory=2g --memory-swap=2g -p 127.0.0.1:8080:8080 kotlin-compiler-server:2.4.21-host
 ```
 
 - `--memory=2g` is the requested cap. `--memory-swap=2g` is added so the container cannot swap beyond it.
 - The port is bound to `127.0.0.1` only. The Android emulator reaches the host at `10.0.2.2`, which maps to the
   host's loopback, so the app still works. The server has no authentication, so it must not listen on a LAN
   address.
-- `KCS_PORT=8090 ./run.sh` uses a different host port.
+- `KCS_PORT=8090 ./run.sh` uses a different host port. Set `KCS_NAME` as well to keep another container alive:
+  `KCS_NAME=kotlin-compiler-server-stable-test KCS_PORT=8090 ./run.sh --rebuild`.
 
 Check it:
 
 ```sh
 curl -s http://127.0.0.1:8080/health          # OK
-curl -s http://127.0.0.1:8080/versions        # [{"version":"2.5.0-Beta2","stdlibVersion":"2.5.0-Beta2"}]
+curl -s http://127.0.0.1:8080/versions        # [{"version":"2.4.21","stdlibVersion":"2.4.21"}]
 docker logs --tail 50 kotlin-compiler-server
 docker stats --no-stream kotlin-compiler-server
 ```
@@ -79,7 +89,7 @@ Stop it with `docker rm -f kotlin-compiler-server`. Restart it (which also kills
    tree. Without it the server crashes at start with `ServiceConfigurationError` while loading Kotlin libraries
    (seen in this spike). The upstream image has the same omission, by inspection. I did not build upstream to
    confirm it.
-2. **The `2.5.0-Beta2-compiler-plugins` folder.** The upstream stage omits it, but `application.properties` points
+2. **The `2.4.21-compiler-plugins` folder.** The upstream stage omits it, but `application.properties` points
    at it, and it contains the kotlinx.serialization compiler plugin. Included here; `@Serializable` compiles with it.
 
 ## Security notes (read before exposing anything)
@@ -103,15 +113,16 @@ These are why code exercises stay local-only (loopback, one user) until isolatio
 
 ## Upgrading the Kotlin version
 
-The image's Kotlin version is whatever the clone builds. To change it:
+To change the compiler version:
 
-1. `git -C "$KCS_CLONE" checkout <commit>`.
-2. Rebuild the host output (see Prerequisites), then `./run.sh --rebuild`.
-3. Update `KOTLIN_VERSION` and the `-host` image tag in `run.sh` and the `ARG` default in `Dockerfile`, and
-   re-check `GET /versions`.
+1. Choose a server commit and compiler version that work together, and record both in `run.sh` and a patch under
+   this directory. `run.sh` rejects an unexpected server commit or version.
+2. Apply the patch and rebuild the host output, then run `./run.sh --rebuild`.
+3. Verify `GET /versions` and the actual compiler jars in the image before replacing the active container.
 
-The clone's HEAD targets Kotlin `2.5.0-Beta2`, which is a beta compiler. The app plan targets Kotlin 2.2, so
-expect small diagnostic and API differences until the server's version is aligned with the app's.
+The server compiler is 2.4.21 while the app toolchain is 2.2.10. The server compiles learner submissions in a
+separate process; content verification checks that the server's diagnostics and execution responses still match the
+app's contract.
 
 ## Troubleshooting
 

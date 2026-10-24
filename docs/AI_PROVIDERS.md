@@ -222,6 +222,21 @@ Cheap key test: `GET https://generativelanguage.googleapis.com/v1beta/models` wi
 
 Suitable models: fast/cheap `gemini-3.5-flash-lite`; strong `gemini-4-argon`. Note that Gemini 4 ignores custom temperature, so omit `temperature` when using Argon. ([models](https://ai.google.dev/gemini-api/docs/models), [Gemini 4 guide](https://ai.google.dev/gemini-api/docs/latest-model))
 
+## OpenRouter Chat Completions API
+
+Added for v0.1.0; checked against official documentation and the live public model catalog on 2026-10-24.
+
+- Endpoint: `POST https://openrouter.ai/api/v1/chat/completions`.
+- Authentication: `Authorization: Bearer YOUR_OPENROUTER_KEY`; JSON content type.
+- Request: `model`, a `messages` list with `system` and `user` roles, `max_completion_tokens`, and `temperature: 0.2`.
+- Response text: `choices[0].message.content`; additional metadata is ignored. Empty or invalid output is a failure.
+- Default: `openrouter/auto`, confirmed in the public catalog. Settings also accepts a custom model slug.
+- Free credential check: `GET https://openrouter.ai/api/v1/key` with the bearer key. The public models endpoint cannot validate a key. This check does not test completion eligibility or available credits.
+- HTTP 402 reports insufficient OpenRouter credits; authentication, rate limits and server failures use the tutor's standard friendly messages. Keys and provider error bodies are never shown or logged.
+- Privacy: OpenRouter forwards prompts to model providers; both OpenRouter and those providers receive the exercise data. Hidden tests remain excluded.
+
+Sources: [OpenRouter quickstart](https://openrouter.ai/docs/quickstart), [authenticated key endpoint](https://openrouter.ai/docs/api/api-reference/api-keys/get-current-api-key), [model catalog](https://openrouter.ai/api/v1/models).
+
 ## Android secret storage
 
 `EncryptedSharedPreferences` and `MasterKey` in `androidx.security:security-crypto` are deprecated as of 1.1.0; Android recommends Android Keystore directly. ([Android API reference](https://developer.android.com/reference/kotlin/androidx/security/crypto/package-summary))
@@ -237,4 +252,4 @@ For one small secret, direct Keystore plus AES-GCM is simpler. Tink is useful if
 
 ### Source list
 
-All sources above are official Anthropic, OpenAI, Google Gemini, Android, or Google Tink documentation.
+All sources above are official Anthropic, OpenAI, Google Gemini, OpenRouter, Android, or Google Tink documentation.

@@ -34,7 +34,7 @@ class AiTutorImpl(
         explicitNulls = false
     }
 
-    /** Tests the configured provider's inexpensive models endpoint. */
+    /** Checks credentials without generating a completion or incurring inference charges. */
     override suspend fun testConnection(): AiResult<Unit> {
         val blocked = blockedResult()
         if (blocked != null) return blocked
@@ -115,6 +115,7 @@ class AiTutorImpl(
             AiProvider.ANTHROPIC -> AnthropicAiClient(httpClient, model)
             AiProvider.OPENAI -> OpenAiClient(httpClient, model)
             AiProvider.GEMINI -> GeminiClient(httpClient, model)
+            AiProvider.OPENROUTER -> OpenRouterAiClient(httpClient, model)
         }
     }
 
@@ -130,6 +131,8 @@ class AiTutorImpl(
             result.networkFailure -> AiResult.Error("No connection")
             result.statusCode == 401 || result.statusCode == 403 -> AiResult.Error("API key rejected")
             result.statusCode == 429 -> AiResult.Error("Rate limit, try again shortly")
+            result.statusCode == 402 && settings.provider == AiProvider.OPENROUTER ->
+                AiResult.Error("OpenRouter credits or spending limit reached")
             result.statusCode == 529 || result.statusCode in 500..599 -> AiResult.Error("Provider busy")
             else -> AiResult.Error("AI provider request failed")
         }
