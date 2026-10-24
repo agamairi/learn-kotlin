@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>Streak Flame — Koda, Kotlin learning companion</title>
+    <path d="M 66,10 C 62,27 47,35 42,48 C 38,58 42,66 47,70 C 44,56 54,49 59,43 C 60,55 70,57 69,69 C 76,63 79,55 77,47 C 92,59 97,70 95,83 C 93,103 80,116 63,118 C 42,120 26,105 27,84 C 28,69 35,56 45,45 C 53,36 64,26 66,10 Z" fill="#FB7185" stroke="#1E1B4B" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 63,70 C 60,80 51,85 52,96 C 53,106 59,111 66,110 C 77,108 81,97 76,88 C 74,84 69,80 68,74 C 67,80 64,83 62,85 C 63,79 65,75 63,70 Z" fill="#FBBF24"/>
+</svg>

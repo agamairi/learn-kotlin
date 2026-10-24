@@ -1,0 +1,9 @@
+<resources>
+    <color name="brand_launcher_background">#4338CA</color>
+    <color name="brand_indigo">#4338CA</color>
+    <color name="brand_teal">#0F766E</color>
+    <color name="brand_mint">#2DD4BF</color>
+    <color name="brand_amber">#FBBF24</color>
+    <color name="brand_ink">#1E1B4B</color>
+    <color name="brand_cream">#F8FAFC</color>
+</resources>

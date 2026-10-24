@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,6 +43,8 @@ import dev.agam.learn.di.LocalAppContainer
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.model.ReviewCard
 import dev.agam.learn.ui.code.MarkdownText
+import dev.agam.learn.ui.components.BrandArtwork
+import dev.agam.learn.ui.components.BrandAsset
 
 /**
  * An item in the active review session, bundling the Leitner card with its corresponding exercise.
@@ -206,6 +209,14 @@ private fun ReviewQueueOverview(
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            if (state.dueCards.isEmpty()) {
+                BrandArtwork(
+                    asset = BrandAsset.ReviewDone,
+                    modifier = Modifier.size(112.dp),
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
             Text(
                 text = "${state.dueCards.size}",
                 style = MaterialTheme.typography.displayMedium,
@@ -544,10 +555,12 @@ private fun ReviewSessionCompleteView(
             .padding(vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "🎉",
-            fontSize = 48.sp
+        BrandArtwork(
+            asset = BrandAsset.LessonTrophy,
+            modifier = Modifier.size(96.dp),
+            contentDescription = null
         )
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = "Review Complete!",
             style = MaterialTheme.typography.headlineMedium,

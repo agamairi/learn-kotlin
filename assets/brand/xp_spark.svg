@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>Xp Spark — Koda, Kotlin learning companion</title>
+    <path d="M 64,8 C 69,37 76,48 104,54 C 76,60 69,71 64,100 C 59,71 52,60 24,54 C 52,48 59,37 64,8 Z" fill="#FBBF24" stroke="#1E1B4B" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 101,79 C 103,89 106,92 116,94 C 106,96 103,100 101,110 C 99,100 96,96 86,94 C 96,92 99,89 101,79 Z" fill="#2DD4BF" stroke="#4338CA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

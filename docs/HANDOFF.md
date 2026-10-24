@@ -1,6 +1,6 @@
 # Handoff: learn-kotlin
 
-State as of 2026-10-24, updated for v0.1.0. Written for whoever picks the project up next, for example Codex working in this checkout.
+State as of 2026-10-24, updated for v0.1.1. Written for whoever picks the project up next, for example Codex working in this checkout.
 
 ## What it is
 
@@ -9,6 +9,7 @@ An Android app for learning Kotlin, Duolingo-style, aimed at the Stripe Android 
 - Repo: https://github.com/agamairi/learn-kotlin (public). Local checkout: `/Users/agamairi/development/learn-kotlin`, branch `main`.
 - Releases: v0.1.0-alpha.1, alpha.2 and alpha.3 are debug-signed pre-releases. v0.1.0 is the first stable release for personal use, adds OpenRouter, and uses a non-debuggable release APK signed with the existing development certificate so alpha installs can update without losing progress.
 - Device validation: Agam confirmed on 2026-10-24 that the app works on a physical Android device. Physical-device smoke testing is complete; this does not claim a seven-day soak test or emulator coverage.
+- v0.1.1 adds Koda, an original teal fox mascot, seven in-app vector illustrations/icons, and adaptive color/monochrome launcher art. Source SVGs and the generator live in `assets/brand`; native vector resources are in `app-android/src/main/res`. `BrandArtwork.kt` draws them in Home, lesson completion and review. The launcher artwork fits the centered 66 dp circular safe area. Source/path parity, rendered light/dark artwork, and circular/themed launcher previews were checked. No phone was connected for a fresh v0.1.1 device test.
 - Plan and rules: `docs/PLAN.md`. Content contract: `docs/CONTENT_SCHEMA.md`. Compiler server findings: `docs/spike-report.md`. AI API facts: `docs/AI_PROVIDERS.md`. Setup for users: `README.md`.
 
 ## Modules
@@ -35,7 +36,7 @@ Run from the repo root. JDK 21 is needed, and `local.properties` must have `sdk.
 ./gradlew :shared:verifySqlDelightMigration
 ```
 
-The v0.1.0 full build passed: 111 app, 74 shared JVM, 71 shared Android host, 14 runtime JVM, 14 runtime Android host and 35 content tests (319 test executions, no failures). SQLDelight migration verification also passed. All 82 live content checks passed on stable Kotlin 2.4.21 (21 cloze warnings that only need surrounding context).
+The v0.1.1 full build and lint passed: 111 app, 74 shared JVM, 71 shared Android host, 14 runtime JVM, 14 runtime Android host and 35 content tests (319 test executions, no failures). SQLDelight migration verification also passed. All 82 live content checks passed on stable Kotlin 2.4.21 for v0.1.0 (21 cloze warnings that only need surrounding context); content and runtime are unchanged in this artwork update.
 
 ## Compiler server (needed for code exercises)
 

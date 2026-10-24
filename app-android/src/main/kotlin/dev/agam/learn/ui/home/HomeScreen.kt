@@ -18,10 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,6 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.agam.learn.di.LocalAppContainer
+import dev.agam.learn.ui.components.BrandArtwork
+import dev.agam.learn.ui.components.BrandAsset
 import dev.agam.learn.ui.theme.extendedColors
 
 /**
@@ -93,11 +92,10 @@ fun HomeScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = "Streak",
-                                tint = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.size(18.dp)
+                            BrandArtwork(
+                                asset = BrandAsset.StreakFlame,
+                                modifier = Modifier.size(20.dp),
+                                contentDescription = null
                             )
                             Text(
                                 text = streakLabel(uiState.streakDays, uiState.heldStreakFreezes),
@@ -172,17 +170,31 @@ fun HomeScreen(
                                     )
                                 }
 
-                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text(
-                                        text = continueInfo.chapterTitle,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                                    )
-                                    Text(
-                                        text = continueInfo.lessonTitle,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = continueInfo.chapterTitle,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                        )
+                                        Text(
+                                            text = continueInfo.lessonTitle,
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                    BrandArtwork(
+                                        asset = if (uiState.isGoalMet) BrandAsset.MascotCelebrate else BrandAsset.MascotWave,
+                                        modifier = Modifier.size(88.dp),
+                                        contentDescription = null
                                     )
                                 }
 
@@ -237,18 +249,29 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
-                                    Text(
-                                        text = "Daily Goal",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    BrandArtwork(
+                                        asset = BrandAsset.XpSpark,
+                                        modifier = Modifier.size(28.dp),
+                                        contentDescription = null
                                     )
-                                    Text(
-                                        text = if (uiState.isGoalMet) "Daily goal achieved! 🎉" else "${(uiState.dailyGoalXp - uiState.todayXp).coerceAtLeast(0)} XP remaining today",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (uiState.isGoalMet) extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    Column {
+                                        Text(
+                                            text = "Daily Goal",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = if (uiState.isGoalMet) "Daily goal achieved! 🎉" else "${(uiState.dailyGoalXp - uiState.todayXp).coerceAtLeast(0)} XP remaining today",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (uiState.isGoalMet) extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
 
                                 Surface(
@@ -304,11 +327,10 @@ fun HomeScreen(
                                     color = MaterialTheme.colorScheme.tertiaryContainer
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.Star,
-                                            contentDescription = "Streak",
-                                            tint = MaterialTheme.colorScheme.tertiary,
-                                            modifier = Modifier.size(20.dp)
+                                        BrandArtwork(
+                                            asset = BrandAsset.StreakFlame,
+                                            modifier = Modifier.size(28.dp),
+                                            contentDescription = null
                                         )
                                     }
                                 }
@@ -356,11 +378,10 @@ fun HomeScreen(
                                     color = MaterialTheme.colorScheme.secondaryContainer
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.Refresh,
-                                            contentDescription = "Review",
-                                            tint = MaterialTheme.colorScheme.secondary,
-                                            modifier = Modifier.size(20.dp)
+                                        BrandArtwork(
+                                            asset = BrandAsset.ReviewCards,
+                                            modifier = Modifier.size(28.dp),
+                                            contentDescription = null
                                         )
                                     }
                                 }
