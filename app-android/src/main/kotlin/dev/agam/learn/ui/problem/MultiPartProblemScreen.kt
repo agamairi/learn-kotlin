@@ -68,6 +68,8 @@ data class MultiPartProblemUiState(
     val isChecking: Boolean = false,
     val currentOutcome: RunOutcome? = null,
     val isCurrentPartPassed: Boolean = false,
+    /** True only when every part passes on the source currently in the editor. */
+    val allPartsPassed: Boolean = false,
     val isInterviewMode: Boolean = false,
     val isAiAvailable: Boolean = false,
     val hasApiKey: Boolean = false,
@@ -156,9 +158,11 @@ fun MultiPartProblemScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.width(6.dp))
+                    // Locked while the mock timer runs: the mode can change only when no timer is running.
                     Switch(
                         checked = state.isInterviewMode,
-                        onCheckedChange = onToggleInterviewMode
+                        onCheckedChange = onToggleInterviewMode,
+                        enabled = !state.isTimerRunning
                     )
                 }
             }
@@ -338,7 +342,7 @@ fun MultiPartProblemScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        if (onFinish != null) {
+                        if (onFinish != null && state.allPartsPassed) {
                             Button(
                                 onClick = onFinish,
                                 shape = RoundedCornerShape(8.dp)
@@ -350,7 +354,7 @@ fun MultiPartProblemScreen(
                 }
 
                 // AI Tutor Menu (hidden in interview mode; disabled with a hint until a key is saved)
-                if (state.isAiAvailable && !state.isInterviewMode) {
+                if (state.isAiAvailable && !state.isInterviewMode && !state.isTimerRunning) {
                     AiTutorMenuButton(
                         onExplainMistake = onExplainMistakeClick,
                         onAskHint = onAskHintClick,
@@ -359,7 +363,7 @@ fun MultiPartProblemScreen(
                     )
                 }
             }
-            if (state.isAiAvailable && !state.isInterviewMode && !state.hasApiKey) {
+            if (state.isAiAvailable && !state.isInterviewMode && !state.isTimerRunning && !state.hasApiKey) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = AI_API_KEY_MISSING_MESSAGE,

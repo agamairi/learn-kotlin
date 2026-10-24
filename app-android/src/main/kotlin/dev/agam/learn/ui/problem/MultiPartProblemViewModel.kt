@@ -6,6 +6,10 @@ import androidx.lifecycle.viewModelScope
 import dev.agam.learn.ai.AiResult
 import dev.agam.learn.ai.AiTutor
 import dev.agam.learn.ai.DynamicAiTutor
+import dev.agam.learn.data.ExerciseAttempt
+import dev.agam.learn.data.ProblemPartAttempt
+import dev.agam.learn.data.ProgressRecorder
+import dev.agam.learn.data.newAttemptId
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.model.ProblemPart
 import dev.agam.learn.runner.CodeRunner
@@ -29,6 +33,7 @@ import kotlinx.coroutines.launch
 class MultiPartProblemViewModel(
     private val problem: Exercise.MultiPartProblem,
     private val codeRunner: CodeRunner,
+    private val progressRecorder: ProgressRecorder,
     aiTutor: AiTutor? = null,
     isInterviewModeDefault: Boolean = false,
     /** False when no API key is saved; the AI controls then show the add-key hint and do nothing. */
@@ -38,8 +43,12 @@ class MultiPartProblemViewModel(
 
     private val scope = coroutineScope ?: viewModelScope
 
+    /** Identifies this visit to the problem; the completion is recorded once per visit. */
+    private val runId: String = newAttemptId()
+
     private val aiTutor: AiTutor? = if (aiTutor is DynamicAiTutor) {
-        aiTutor.forSession { _uiState.value.isInterviewMode }
+        // A running mock refuses AI just like interview mode does.
+        aiTutor.forSession { _uiState.value.isInterviewMode || _uiState.value.isTimerRunning }
     } else {
         aiTutor
     }
@@ -79,11 +88,25 @@ class MultiPartProblemViewModel(
 
     val uiState: StateFlow<MultiPartProblemUiState> = _uiState.asStateFlow()
 
+    /**
+     * Any edit to a part clears that part's pass, so the pass always belongs to the source on screen.
+     */
     fun onCodeChange(newCode: TextFieldValue) {
         val currentIndex = _uiState.value.currentPartIndex
+        val changed = partCodes[currentIndex]?.text != newCode.text
         partCodes[currentIndex] = newCode
-        _uiState.update { it.copy(currentCode = newCode) }
+        if (changed) partPassed.remove(currentIndex)
+        _uiState.update {
+            it.copy(
+                currentCode = newCode,
+                isCurrentPartPassed = partPassed[currentIndex] == true,
+                allPartsPassed = allPartsPassed(),
+                currentOutcome = if (changed && it.currentOutcome is RunOutcome.Passed) null else it.currentOutcome
+            )
+        }
     }
+
+    private fun allPartsPassed(): Boolean = problem.parts.indices.all { partPassed[it] == true }
 
     fun selectPart(index: Int) {
         if (index >= _uiState.value.unlockedPartCount || index >= problem.parts.size) return
@@ -146,17 +169,25 @@ class MultiPartProblemViewModel(
         }
     }
 
+    /**
+     * Runs the hidden tests for the current part. Each graded check is recorded once. A part's pass
+     * counts only while the part still holds the source that was checked. When every part has passed,
+     * the problem completion is recorded once.
+     */
     fun checkPart() {
-        val currentIndex = _uiState.value.currentPartIndex
+        val state = _uiState.value
+        if (state.isChecking) return
+        val currentIndex = state.currentPartIndex
         val currentPart = problem.parts.getOrNull(currentIndex) ?: return
-        val currentCode = _uiState.value.currentCode.text
+        val checkedSource = state.currentCode.text
 
+        // Set before launching, so a second tap while this check runs is ignored.
         _uiState.update { it.copy(isChecking = true, currentOutcome = null) }
 
         scope.launch {
             val outcome = try {
                 codeRunner.test(
-                    files = listOf(SourceFile(name = "Solution.kt", text = currentCode)),
+                    files = listOf(SourceFile(name = "Solution.kt", text = checkedSource)),
                     tests = listOf(SourceFile(name = "Part${currentIndex + 1}Test.kt", text = currentPart.hiddenTests))
                 )
             } catch (e: Exception) {
@@ -164,23 +195,52 @@ class MultiPartProblemViewModel(
             }
 
             val passed = outcome is RunOutcome.Passed
-            if (passed) {
+            if (passed || outcome is RunOutcome.TestsFailed || outcome is RunOutcome.CompileError) {
+                progressRecorder.record(
+                    ProblemPartAttempt(
+                        attemptId = newAttemptId(),
+                        problemId = problem.id,
+                        partId = currentPart.id,
+                        correct = passed
+                    )
+                )
+            }
+            if (passed && partCodes[currentIndex]?.text == checkedSource) {
                 partPassed[currentIndex] = true
+            }
+            if (allPartsPassed()) {
+                progressRecorder.record(
+                    ExerciseAttempt(attemptId = "$runId:complete", exerciseId = problem.id, correct = true)
+                )
             }
 
             _uiState.update {
                 it.copy(
                     isChecking = false,
                     currentOutcome = outcome,
-                    isCurrentPartPassed = passed || (partPassed[currentIndex] == true)
+                    isCurrentPartPassed = if (it.currentPartIndex == currentIndex) {
+                        partPassed[currentIndex] == true
+                    } else {
+                        it.isCurrentPartPassed
+                    },
+                    allPartsPassed = allPartsPassed()
                 )
             }
         }
     }
 
+    /**
+     * The session toggle is free only when no timer is running: a mock cannot be switched
+     * off or on part way through.
+     */
     fun toggleInterviewMode(enabled: Boolean) {
+        if (_uiState.value.isTimerRunning) return
         _uiState.update { it.copy(isInterviewMode = enabled) }
     }
+
+    /** AI is refused in interview mode, while the mock timer runs, and without a saved key. */
+    private fun aiAllowed(state: MultiPartProblemUiState): Boolean =
+        !state.isInterviewMode && !state.isTimerRunning && state.hasApiKey
 
     fun toggleTimer() {
         val currentlyRunning = _uiState.value.isTimerRunning
@@ -214,7 +274,7 @@ class MultiPartProblemViewModel(
 
     fun askAiExplainMistake() {
         val tutor = aiTutor ?: return
-        if (_uiState.value.isInterviewMode || !_uiState.value.hasApiKey) return
+        if (!aiAllowed(_uiState.value)) return
 
         val currentPart = problem.parts.getOrNull(_uiState.value.currentPartIndex) ?: return
         val dummyExercise = Exercise.WriteFunction(
@@ -246,7 +306,7 @@ class MultiPartProblemViewModel(
 
     fun askAiHint() {
         val tutor = aiTutor ?: return
-        if (_uiState.value.isInterviewMode || !_uiState.value.hasApiKey) return
+        if (!aiAllowed(_uiState.value)) return
 
         val currentPart = problem.parts.getOrNull(_uiState.value.currentPartIndex) ?: return
         val dummyExercise = Exercise.WriteFunction(
@@ -274,7 +334,7 @@ class MultiPartProblemViewModel(
 
     fun askAiReview() {
         val tutor = aiTutor ?: return
-        if (_uiState.value.isInterviewMode || !_uiState.value.hasApiKey) return
+        if (!aiAllowed(_uiState.value)) return
 
         val currentPart = problem.parts.getOrNull(_uiState.value.currentPartIndex) ?: return
         val dummyExercise = Exercise.WriteFunction(

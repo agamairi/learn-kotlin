@@ -29,12 +29,23 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
+import dev.agam.learn.data.ProgressRecorder
+import dev.agam.learn.fake.FakeProgressRepository
+import dev.agam.learn.fake.courseOf
+import dev.agam.learn.fake.progressRecorderFor
 
 class MultiPartProblemViewModelTest {
 
     private lateinit var fakeRunner: FakeCodeRunner
     private lateinit var problem: Exercise.MultiPartProblem
+    private lateinit var progress: FakeProgressRepository
+    private lateinit var recorder: ProgressRecorder
+
+    private fun storedResults() = runBlocking { progress.getExerciseResults() }
+
+    private fun storedActivities() = runBlocking { progress.getDailyActivities() }
     private val testScope = CoroutineScope(Dispatchers.Unconfined)
 
     @Before
@@ -64,6 +75,8 @@ class MultiPartProblemViewModelTest {
             ),
             faq = listOf(FaqItem("Are amounts signed?", "Amounts are unsigned cents."))
         )
+        progress = FakeProgressRepository()
+        recorder = progressRecorderFor(progress, listOf(courseOf(problem)))
     }
 
     @Test
@@ -71,6 +84,7 @@ class MultiPartProblemViewModelTest {
         val viewModel = MultiPartProblemViewModel(
             problem = problem,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             isInterviewModeDefault = true,
             coroutineScope = testScope
         )
@@ -88,6 +102,7 @@ class MultiPartProblemViewModelTest {
         val viewModel = MultiPartProblemViewModel(
             problem = problem,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             coroutineScope = testScope
         )
 
@@ -113,6 +128,7 @@ class MultiPartProblemViewModelTest {
         val viewModel = MultiPartProblemViewModel(
             problem = problem,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             isInterviewModeDefault = false,
             coroutineScope = testScope
         )
@@ -129,6 +145,7 @@ class MultiPartProblemViewModelTest {
         val viewModel = MultiPartProblemViewModel(
             problem = problem,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             coroutineScope = testScope
         )
 
@@ -152,6 +169,7 @@ class MultiPartProblemViewModelTest {
         val viewModel = MultiPartProblemViewModel(
             problem = problem,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             aiTutor = tutor,
             isInterviewModeDefault = false,
             hasApiKey = false,
@@ -175,6 +193,7 @@ class MultiPartProblemViewModelTest {
         val viewModel = MultiPartProblemViewModel(
             problem = problem,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             aiTutor = tutor,
             isInterviewModeDefault = true,
             hasApiKey = true,
@@ -193,6 +212,7 @@ class MultiPartProblemViewModelTest {
         val viewModel = MultiPartProblemViewModel(
             problem = problem,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             aiTutor = tutor,
             hasApiKey = true,
             coroutineScope = testScope
@@ -231,6 +251,7 @@ class MultiPartProblemViewModelTest {
         val viewModel = MultiPartProblemViewModel(
             problem = problem,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             aiTutor = dynamicTutor,
             isInterviewModeDefault = true,
             hasApiKey = true,
@@ -257,6 +278,104 @@ class MultiPartProblemViewModelTest {
         assertNotNull(dialogState)
         assertFalse("Tutor must not report an error: ${dialogState.content}", dialogState.isError)
         assertEquals("Session hint text", dialogState.content)
+    }
+
+    @Test
+    fun eachPassedPartPaysFiftyXpOnceAndTheProblemCompletesSeparately() {
+        val viewModel = MultiPartProblemViewModel(
+            problem = problem,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            coroutineScope = testScope
+        )
+        fakeRunner.testOutcome = RunOutcome.Passed(testsRun = 1, stdout = "")
+
+        viewModel.checkPart()
+        viewModel.revealNextPart()
+        viewModel.checkPart()
+
+        val results = storedResults()
+        assertEquals(listOf("part1", "part2", "ledger-system"), results.map { it.exerciseId })
+        assertEquals(listOf(50, 50, 0), results.map { it.xpAwarded })
+        assertTrue(results.all { it.lessonId == "lesson-test" })
+        assertEquals(100, storedActivities().single().xpEarned)
+        assertTrue(viewModel.uiState.value.allPartsPassed)
+    }
+
+    @Test
+    fun aPartIsNotPaidAgainOnARecheck() {
+        val viewModel = MultiPartProblemViewModel(
+            problem = problem,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            coroutineScope = testScope
+        )
+        fakeRunner.testOutcome = RunOutcome.Passed(testsRun = 1, stdout = "")
+
+        viewModel.checkPart()
+        viewModel.checkPart()
+
+        assertEquals(50, storedActivities().single().xpEarned)
+    }
+
+    @Test
+    fun editingAPassedPartClearsItsPassAndTheProblemCompletion() {
+        val viewModel = MultiPartProblemViewModel(
+            problem = problem,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            coroutineScope = testScope
+        )
+        fakeRunner.testOutcome = RunOutcome.Passed(testsRun = 1, stdout = "")
+        viewModel.checkPart()
+        assertTrue(viewModel.uiState.value.isCurrentPartPassed)
+
+        viewModel.onCodeChange(TextFieldValue("fun parse(): List<Int> = emptyList()"))
+
+        assertFalse(viewModel.uiState.value.isCurrentPartPassed)
+        assertFalse(viewModel.uiState.value.allPartsPassed)
+        assertNull(viewModel.uiState.value.currentOutcome)
+    }
+
+    @Test
+    fun aMockTimerRefusesEveryAiActionEvenWithAKeyAndInterviewModeOff() {
+        val tutor = FakeAiTutor()
+        val viewModel = MultiPartProblemViewModel(
+            problem = problem,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            aiTutor = tutor,
+            hasApiKey = true,
+            coroutineScope = testScope
+        )
+        viewModel.toggleTimer()
+        assertTrue(viewModel.uiState.value.isTimerRunning)
+
+        viewModel.askAiHint()
+        viewModel.askAiExplainMistake()
+        viewModel.askAiReview()
+
+        assertEquals(0, tutor.calls)
+        assertNull(viewModel.uiState.value.aiDialogState)
+        viewModel.toggleTimer()
+    }
+
+    @Test
+    fun theInterviewToggleIsLockedWhileTheTimerRunsAndFreeAfterwards() {
+        val viewModel = MultiPartProblemViewModel(
+            problem = problem,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            coroutineScope = testScope
+        )
+        viewModel.toggleTimer()
+
+        viewModel.toggleInterviewMode(true)
+        assertFalse(viewModel.uiState.value.isInterviewMode)
+
+        viewModel.toggleTimer()
+        viewModel.toggleInterviewMode(true)
+        assertTrue(viewModel.uiState.value.isInterviewMode)
     }
 
     private class FakeAiTutor : AiTutor {

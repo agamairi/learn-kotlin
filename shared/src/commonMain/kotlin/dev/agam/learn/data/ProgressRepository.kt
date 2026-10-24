@@ -6,6 +6,24 @@ import dev.agam.learn.model.ReviewCard
 import kotlinx.coroutines.flow.Flow
 
 /**
+ * Everything one learner event writes, applied in a single database transaction by
+ * [ProgressRepository.commitProgress]. Built by [ProgressRecorder]; screens never construct one.
+ */
+data class ProgressCommit(
+    /** Identifies the attempt. A commit whose id was already stored writes nothing. */
+    val attemptId: String,
+    val result: ExerciseResult,
+    /** The full daily activity row for the effective day, after this event. */
+    val dailyActivity: DailyActivity,
+    /** A review card to insert or replace: a seeded card for a missed lesson card, or a rescheduled review. */
+    val reviewCard: ReviewCard? = null,
+    /** Streak freezes spent by this event, stored so the streak stays stable. */
+    val frozenEpochDays: Set<Long> = emptySet(),
+    /** Freezes still held after this event, or null to leave the stored count unchanged. */
+    val heldStreakFreezes: Int? = null
+)
+
+/**
  * Local persistent storage interface for learner progress, spaced repetition cards, and settings.
  */
 interface ProgressRepository {
@@ -13,6 +31,12 @@ interface ProgressRepository {
      * Records an individual exercise attempt.
      */
     suspend fun recordExerciseResult(result: ExerciseResult)
+
+    /**
+     * Writes one learner event atomically. Returns false, and writes nothing, when
+     * [ProgressCommit.attemptId] was already committed.
+     */
+    suspend fun commitProgress(commit: ProgressCommit): Boolean
 
     /**
      * Retrieves all recorded exercise attempts.

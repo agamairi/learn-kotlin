@@ -14,6 +14,9 @@ interface XpPolicy {
      * @return Experience points awarded.
      */
     fun xpForExercise(exercise: Exercise, isFirstAttempt: Boolean): Int
+
+    /** XP for one part of a multi-part problem; zero unless the part was passed. */
+    fun xpForMultiPartPart(correct: Boolean): Int
 }
 
 /**
@@ -45,7 +48,7 @@ class DefaultXpPolicy : XpPolicy {
     }
 
     /** XP awarded for one successfully completed part of a multi-part problem. */
-    fun xpForMultiPartPart(correct: Boolean): Int = if (correct) MULTI_PART_XP else 0
+    override fun xpForMultiPartPart(correct: Boolean): Int = if (correct) MULTI_PART_XP else 0
 
     /** XP cost for an AI hint level (1 = nudge, 2 = approach, 3 = near-solution). */
     fun hintCost(level: Int): Int = when (level) {

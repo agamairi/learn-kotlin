@@ -57,8 +57,14 @@ data class CodeExerciseUiState(
     val isAiAvailable: Boolean = false,
     val isInterviewMode: Boolean = false,
     val hasApiKey: Boolean = false,
-    val aiDialogState: AiDialogState? = null
-)
+    val aiDialogState: AiDialogState? = null,
+    /** The source that last passed a check. Null after any edit. */
+    val passedSource: String? = null
+) {
+    /** "Complete" is offered only when the source on screen is the one that passed a check. */
+    val canComplete: Boolean
+        get() = passedSource != null && passedSource == code.text
+}
 
 /**
  * Stateless composable for the Code Exercise screen.
@@ -262,7 +268,7 @@ fun CodeExerciseScreen(
                     outcome = state.outcome,
                     onDismiss = onDismissOutcome
                 )
-                if (state.outcome is RunOutcome.Passed && onFinish != null) {
+                if (state.canComplete && onFinish != null) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = onFinish,

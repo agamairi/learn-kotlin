@@ -20,4 +20,6 @@ class FakeXpPolicy : XpPolicy {
             is Exercise.MultiPartProblem -> 50
         }
     }
+
+    override fun xpForMultiPartPart(correct: Boolean): Int = if (correct) 50 else 0
 }

@@ -5,6 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.agam.learn.ai.AiResult
 import dev.agam.learn.ai.AiTutor
+import dev.agam.learn.data.ExerciseAttempt
+import dev.agam.learn.data.ProgressRecorder
+import dev.agam.learn.data.newAttemptId
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.runner.CodeRunner
 import dev.agam.learn.runner.RunOutcome
@@ -23,6 +26,7 @@ import kotlinx.coroutines.launch
 class CodeExerciseViewModel(
     private val exercise: Exercise.WriteFunction,
     private val codeRunner: CodeRunner,
+    private val progressRecorder: ProgressRecorder,
     private val aiTutor: AiTutor? = null,
     val isInterviewMode: Boolean = false,
     /** False when no API key is saved; the AI controls then show the add-key hint and do nothing. */
@@ -48,18 +52,33 @@ class CodeExerciseViewModel(
     val uiState: StateFlow<CodeExerciseUiState> = _uiState.asStateFlow()
 
     fun onCodeChange(newCode: TextFieldValue) {
-        _uiState.update { it.copy(code = newCode) }
+        updateCode { newCode }
     }
 
     fun insertSymbol(symbol: String) {
-        _uiState.update { current ->
-            current.copy(code = insertTextAtCursor(current.code, symbol))
-        }
+        updateCode { insertTextAtCursor(it, symbol) }
     }
 
     fun insertTab() {
+        updateCode { insertTextAtCursor(it, "    ") }
+    }
+
+    /**
+     * Applies an edit to the code. Any change to the text clears a pass, so "Complete" only ever
+     * follows a check of the exact source on screen. Cursor-only moves keep it.
+     */
+    private fun updateCode(edit: (TextFieldValue) -> TextFieldValue) {
         _uiState.update { current ->
-            current.copy(code = insertTextAtCursor(current.code, "    "))
+            val newCode = edit(current.code)
+            if (newCode.text == current.code.text) {
+                current.copy(code = newCode)
+            } else {
+                current.copy(
+                    code = newCode,
+                    passedSource = null,
+                    outcome = if (current.outcome is RunOutcome.Passed) null else current.outcome
+                )
+            }
         }
     }
 
@@ -92,22 +111,45 @@ class CodeExerciseViewModel(
         }
     }
 
+    /**
+     * Runs the hidden tests on the current source. Every graded check (a pass, a test failure or a
+     * compile error) is recorded once; a check that could not run (timeout or unavailable runner) is not.
+     */
     fun checkCode() {
-        val currentCode = _uiState.value.code.text
-        _uiState.update { it.copy(isChecking = true, outcome = null) }
+        val state = _uiState.value
+        if (state.isChecking || state.isRunning) return
+        val checkedSource = state.code.text
+        // Set before launching, so a second tap while this check runs is ignored.
+        _uiState.update { it.copy(isChecking = true, outcome = null, passedSource = null) }
 
         scope.launch {
             val outcome = try {
                 codeRunner.test(
-                    files = listOf(SourceFile(name = "Solution.kt", text = currentCode)),
+                    files = listOf(SourceFile(name = "Solution.kt", text = checkedSource)),
                     tests = listOf(SourceFile(name = "SolutionTest.kt", text = exercise.hiddenTests))
                 )
             } catch (e: Exception) {
                 RunOutcome.Unavailable(reason = e.message ?: "Test grading failed")
             }
 
+            val passed = outcome is RunOutcome.Passed
+            if (passed || outcome is RunOutcome.TestsFailed || outcome is RunOutcome.CompileError) {
+                progressRecorder.record(
+                    ExerciseAttempt(
+                        attemptId = newAttemptId(),
+                        exerciseId = exercise.id,
+                        correct = passed
+                    )
+                )
+            }
+
             _uiState.update {
-                it.copy(isChecking = false, outcome = outcome)
+                it.copy(
+                    isChecking = false,
+                    outcome = outcome,
+                    // A pass counts only for the source that was checked; an edit since then clears it.
+                    passedSource = if (passed && it.code.text == checkedSource) checkedSource else null
+                )
             }
         }
     }

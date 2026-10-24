@@ -4,14 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import dev.agam.learn.content.CourseRepository
+import dev.agam.learn.data.ExerciseAttempt
+import dev.agam.learn.data.ProgressRecorder
 import dev.agam.learn.data.ProgressRepository
-import dev.agam.learn.data.SettingsRepository
+import dev.agam.learn.data.newAttemptId
 import dev.agam.learn.di.AppContainer
 import dev.agam.learn.domain.AnswerGrader
-import dev.agam.learn.domain.XpPolicy
-import dev.agam.learn.model.DailyActivity
 import dev.agam.learn.model.Exercise
-import dev.agam.learn.model.ExerciseResult
 import dev.agam.learn.model.Lesson
 import dev.agam.learn.runner.LanguageSupport
 import dev.agam.learn.ui.navigation.Screen
@@ -20,29 +19,28 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 /**
  * ViewModel managing the state machine for lesson explanation, exercise progression,
  * grading, XP accumulation, and results presentation.
+ *
+ * Results are written through [ProgressRecorder]. Code drills and multi-part problems are graded in
+ * their own studio screens, which record their attempts; this screen only advances when it finds a
+ * passing stored result for them.
  */
 class LessonViewModel(
     private val courseRepository: CourseRepository,
     private val progressRepository: ProgressRepository,
-    private val settingsRepository: SettingsRepository,
+    private val progressRecorder: ProgressRecorder,
     private val answerGrader: AnswerGrader,
-    private val xpPolicy: XpPolicy,
     val languageSupport: LanguageSupport
 ) : ViewModel() {
 
     constructor(appContainer: AppContainer) : this(
         courseRepository = appContainer.courseRepository,
         progressRepository = appContainer.progressRepository,
-        settingsRepository = appContainer.settingsRepository,
+        progressRecorder = appContainer.progressRecorder,
         answerGrader = appContainer.answerGrader,
-        xpPolicy = appContainer.xpPolicy,
         languageSupport = appContainer.languageSupport
     )
 
@@ -51,6 +49,12 @@ class LessonViewModel(
 
     private var activeLesson: Lesson? = null
     private var exercises: List<Exercise> = emptyList()
+
+    /** Identifies this visit to the lesson. Attempt ids are built from it, so each attempt is recorded once. */
+    private val runId: String = newAttemptId()
+
+    /** When this visit started. The lesson's XP is the XP recorded for it since then. */
+    private var runStartedAtMillis: Long = 0L
 
     /**
      * Route of the studio screen that completes [exercise], or null for exercises the lesson grades itself.
@@ -65,6 +69,7 @@ class LessonViewModel(
      * Loads the target lesson from the curriculum by identifier.
      */
     fun loadLesson(lessonId: String, courseId: String = "kotlin-stripe") {
+        runStartedAtMillis = progressRecorder.now().toEpochMilliseconds()
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val courses = courseRepository.listCourses()
@@ -200,63 +205,77 @@ class LessonViewModel(
             is Exercise.WriteFunction, is Exercise.MultiPartProblem -> return
         }
 
-        val xp = if (isCorrect) xpPolicy.xpForExercise(exercise, isFirstAttempt = true) else 0
-
-        viewModelScope.launch {
-            progressRepository.recordExerciseResult(
-                ExerciseResult(
-                    exerciseId = exercise.id,
-                    correct = isCorrect,
-                    xpAwarded = xp,
-                    epochMillis = Clock.System.now().toEpochMilliseconds()
-                )
-            )
-        }
-
+        // Mark the answer checked before recording, so a second tap cannot record it again.
         _uiState.update {
             it.copy(
                 isAnswerChecked = true,
                 isAnswerCorrect = isCorrect,
                 currentExplanation = explanation,
-                xpEarnedInLesson = it.xpEarnedInLesson + xp,
                 correctExercisesCount = if (isCorrect) it.correctExercisesCount + 1 else it.correctExercisesCount
             )
+        }
+
+        viewModelScope.launch {
+            progressRecorder.record(
+                ExerciseAttempt(
+                    attemptId = "$runId:${exercise.id}",
+                    exerciseId = exercise.id,
+                    correct = isCorrect
+                )
+            )
+            refreshLessonXp()
         }
     }
 
     /**
-     * Records the outcome of a studio exercise (a code drill or multi-part problem) when the learner
-     * returns from it. This is the only place such a result is recorded.
+     * Called when a studio screen (code drill or multi-part problem) returns after a passing check.
+     * The studio has already recorded the attempt, so this only advances the lesson, and only when
+     * the stored results say the exercise passed.
      */
-    fun recordExternalExerciseResult(exerciseId: String, isCorrect: Boolean) {
+    fun onStudioExerciseCompleted(exerciseId: String) {
         val currentStep = _uiState.value.step as? LessonStep.ExercisePlaying ?: return
-        // A checked exercise already has its result recorded; a repeat call must not record it again.
-        if (currentStep.exercise.id == exerciseId && !_uiState.value.isAnswerChecked) {
-            val xp = if (isCorrect) xpPolicy.xpForExercise(currentStep.exercise, isFirstAttempt = true) else 0
-            viewModelScope.launch {
-                progressRepository.recordExerciseResult(
-                    ExerciseResult(
-                        exerciseId = exerciseId,
-                        correct = isCorrect,
-                        xpAwarded = xp,
-                        epochMillis = Clock.System.now().toEpochMilliseconds(),
-                        lessonId = activeLesson?.id
-                    )
-                )
-            }
-            _uiState.update {
-                it.copy(
+        if (currentStep.exercise.id != exerciseId || _uiState.value.isAnswerChecked) return
+
+        viewModelScope.launch {
+            val passed = progressRepository.getExerciseResultsForExercise(exerciseId).any { it.correct }
+            if (!passed) return@launch
+            val xp = lessonXpThisRun()
+            _uiState.update { state ->
+                val playing = state.step as? LessonStep.ExercisePlaying
+                if (playing == null || playing.exercise.id != exerciseId || state.isAnswerChecked) {
+                    return@update state
+                }
+                state.copy(
                     isAnswerChecked = true,
-                    isAnswerCorrect = isCorrect,
-                    currentExplanation = when (val exercise = currentStep.exercise) {
+                    isAnswerCorrect = true,
+                    currentExplanation = when (val exercise = playing.exercise) {
                         is Exercise.WriteFunction -> exercise.explanation ?: "Completed code function."
                         is Exercise.MultiPartProblem -> "Completed problem."
                         else -> "Exercise completed."
                     },
-                    xpEarnedInLesson = it.xpEarnedInLesson + xp,
-                    correctExercisesCount = if (isCorrect) it.correctExercisesCount + 1 else it.correctExercisesCount
+                    xpEarnedInLesson = xp,
+                    correctExercisesCount = state.correctExercisesCount + 1
                 )
             }
+        }
+    }
+
+    /** XP recorded for this lesson since this visit started, read from the stored results. */
+    private suspend fun lessonXpThisRun(): Int {
+        val lessonId = activeLesson?.id ?: return 0
+        return progressRepository.getExerciseResultsForLesson(lessonId)
+            .filter { it.epochMillis >= runStartedAtMillis }
+            .sumOf { it.xpAwarded }
+    }
+
+    private suspend fun refreshLessonXp() {
+        val xp = lessonXpThisRun()
+        _uiState.update { state ->
+            val step = state.step
+            state.copy(
+                xpEarnedInLesson = xp,
+                step = if (step is LessonStep.Completed) step.copy(totalXp = xp) else step
+            )
         }
     }
 
@@ -284,38 +303,27 @@ class LessonViewModel(
                 )
             }
         } else {
-            // Lesson completed: commit daily activity
-            val finalXp = _uiState.value.xpEarnedInLesson
+            // The last exercise is done: save the lesson as complete, then show the summary.
+            val lessonId = activeLesson?.id
             val correctCount = _uiState.value.correctExercisesCount
             val totalCount = exercises.size
-
-            viewModelScope.launch {
-                val now = Clock.System.now()
-                val todayEpochDay = now.toLocalDateTime(TimeZone.currentSystemDefault()).date.toEpochDays().toLong()
-                val existingActivity = progressRepository.getDailyActivity(todayEpochDay)
-                val newXp = (existingActivity?.xpEarned ?: 0) + finalXp
-                val newCompleted = (existingActivity?.exercisesCompleted ?: 0) + totalCount
-                val target = settingsRepository.getSettings().dailyGoalXp
-
-                progressRepository.recordDailyActivity(
-                    DailyActivity(
-                        epochDay = todayEpochDay,
-                        xpEarned = newXp,
-                        exercisesCompleted = newCompleted,
-                        goalMet = newXp >= target
-                    )
-                )
-            }
 
             _uiState.update {
                 it.copy(
                     step = LessonStep.Completed(
-                        totalXp = finalXp,
+                        totalXp = it.xpEarnedInLesson,
                         correctCount = correctCount,
                         totalCount = totalCount
                     ),
                     isAnswerChecked = false
                 )
+            }
+
+            if (lessonId != null) {
+                viewModelScope.launch {
+                    progressRecorder.completeLesson(lessonId)
+                    refreshLessonXp()
+                }
             }
         }
     }

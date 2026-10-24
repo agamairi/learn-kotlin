@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dev.agam.learn.content.CourseRepository
 import dev.agam.learn.data.ProgressRepository
 import dev.agam.learn.di.AppContainer
+import dev.agam.learn.domain.isLessonComplete
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,6 +48,7 @@ class PathViewModel(
 
             val results = progressRepository.getExerciseResults()
             val passedExerciseIds = results.filter { it.correct }.map { it.exerciseId }.toSet()
+            val savedCompletions = progressRepository.getCompletedLessonIds()
 
             var previousLessonCompleted = true
             var totalLessonsCount = 0
@@ -58,11 +60,10 @@ class PathViewModel(
                 val lessonUiModels = chapter.lessons.map { lesson ->
                     totalLessonsCount++
 
-                    val isLessonComplete = lesson.exercises.isNotEmpty() &&
-                        lesson.exercises.all { passedExerciseIds.contains(it.id) }
+                    val complete = isLessonComplete(lesson, savedCompletions, passedExerciseIds)
 
                     val status = when {
-                        isLessonComplete -> {
+                        complete -> {
                             chapterCompletedCount++
                             completedLessonsCount++
                             previousLessonCompleted = true
