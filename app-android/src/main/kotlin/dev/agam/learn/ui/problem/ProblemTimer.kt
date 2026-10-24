@@ -22,7 +22,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import java.util.Locale
 
 /**
@@ -68,9 +67,10 @@ fun ProblemTimer(
     ) {
         Text(
             text = "⏱ ${formatTime(secondsRemaining)}",
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            ),
             color = timerColor
         )
 
@@ -82,8 +82,7 @@ fun ProblemTimer(
         ) {
             Text(
                 text = if (isRunning) "Pause" else "Start",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
             )
         }
 
@@ -93,7 +92,7 @@ fun ProblemTimer(
         ) {
             Text(
                 text = "Reset",
-                fontSize = 12.sp
+                style = MaterialTheme.typography.labelMedium
             )
         }
     }

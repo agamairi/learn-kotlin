@@ -21,6 +21,41 @@ sealed interface LessonStep {
 }
 
 /**
+ * UI state for AI-generated practice sheet.
+ */
+data class AiPracticeState(
+    val isVisible: Boolean = false,
+    val isLoading: Boolean = false,
+    val label: String = "AI-generated, unverified",
+    val cards: List<Exercise> = emptyList(),
+    val currentCardIndex: Int = 0,
+    val selectedOptionIndex: Int? = null,
+    val clozeAnswers: Map<String, String> = emptyMap(),
+    val isAnswerChecked: Boolean = false,
+    val isAnswerCorrect: Boolean? = null,
+    val explanation: String = "",
+    val errorMessage: String? = null
+) {
+    val currentCard: Exercise?
+        get() = cards.getOrNull(currentCardIndex)
+
+    val canCheckAnswer: Boolean
+        get() {
+            if (isAnswerChecked) return false
+            return when (val card = currentCard) {
+                is Exercise.MultipleChoice -> selectedOptionIndex != null
+                is Exercise.Cloze -> {
+                    card.blanks.all { blank ->
+                        val ans = clozeAnswers[blank.placeholder]?.trim()
+                        !ans.isNullOrEmpty()
+                    }
+                }
+                else -> false
+            }
+        }
+}
+
+/**
  * UI state for the lesson player.
  */
 data class LessonUiState(
@@ -39,7 +74,11 @@ data class LessonUiState(
     val currentExplanation: String = "",
     val xpEarnedInLesson: Int = 0,
     val correctExercisesCount: Int = 0,
-    val totalExercisesCount: Int = 0
+    val totalExercisesCount: Int = 0,
+    val isAiAvailable: Boolean = false,
+    val isInterviewMode: Boolean = false,
+    val hasApiKey: Boolean = false,
+    val aiPracticeState: AiPracticeState = AiPracticeState()
 ) {
     /** True when the current exercise is completed in a studio screen instead of on this screen. */
     val isStudioExercise: Boolean

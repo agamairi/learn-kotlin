@@ -1,5 +1,7 @@
 package dev.agam.learn.ui.lesson
 
+import dev.agam.learn.ai.AiResult
+import dev.agam.learn.ai.AiTutor
 import dev.agam.learn.data.AppSettings
 import dev.agam.learn.data.ExerciseAttempt
 import dev.agam.learn.data.ProgressRecorder
@@ -65,7 +67,10 @@ class LessonViewModelTest {
 
     private fun viewModelFor(
         course: Course,
-        settings: FakeSettingsRepository = FakeSettingsRepository()
+        settings: FakeSettingsRepository = FakeSettingsRepository(),
+        aiTutor: AiTutor? = null,
+        isInterviewMode: Boolean = false,
+        hasApiKey: Boolean = false
     ): LessonViewModel {
         recorder = progressRecorderFor(
             progressRepository,
@@ -79,7 +84,10 @@ class LessonViewModelTest {
             progressRepository = progressRepository,
             progressRecorder = recorder,
             answerGrader = answerGrader,
-            languageSupport = languageSupport
+            languageSupport = languageSupport,
+            aiTutor = aiTutor,
+            isInterviewMode = isInterviewMode,
+            hasApiKey = hasApiKey
         )
     }
 
@@ -404,5 +412,159 @@ class LessonViewModelTest {
             .first { it is Exercise.MultipleChoice }
 
         assertNull(viewModel.routeForExercise(multipleChoice))
+    }
+
+    @Test
+    fun moreLikeThisPracticeSheetIsClearlyLabeledAiGeneratedUnverified() = runTest(testDispatcher) {
+        val fakeTutor = FakeAiTutor()
+        val vm = viewModelFor(
+            course = SampleCourseData.defaultCourse,
+            aiTutor = fakeTutor,
+            isInterviewMode = false,
+            hasApiKey = true
+        )
+        vm.loadLesson("lesson-01-syntax")
+        advanceUntilIdle()
+
+        vm.requestMoreLikeThis()
+        advanceUntilIdle()
+
+        val practice = vm.uiState.value.aiPracticeState
+        assertTrue("Practice sheet should be visible", practice.isVisible)
+        assertEquals(3, practice.cards.size)
+        assertEquals("AI-generated, unverified", practice.label)
+        assertEquals(1, fakeTutor.generateCardsCalls)
+    }
+
+    @Test
+    fun moreLikeThisCardsAwardNoXpAndDoNotRecordProgress() = runTest(testDispatcher) {
+        val fakeTutor = FakeAiTutor()
+        val vm = viewModelFor(
+            course = SampleCourseData.defaultCourse,
+            aiTutor = fakeTutor,
+            isInterviewMode = false,
+            hasApiKey = true
+        )
+        vm.loadLesson("lesson-01-syntax")
+        advanceUntilIdle()
+
+        vm.requestMoreLikeThis()
+        advanceUntilIdle()
+
+        // Card 1: Select correct option (index 0)
+        vm.onAiPracticeOptionSelected(0)
+        vm.checkAiPracticeAnswer()
+
+        assertTrue(vm.uiState.value.aiPracticeState.isAnswerChecked)
+        assertTrue(vm.uiState.value.aiPracticeState.isAnswerCorrect == true)
+
+        // Advance to next card
+        vm.nextAiPracticeCard()
+        assertEquals(1, vm.uiState.value.aiPracticeState.currentCardIndex)
+
+        // Card 2: Select incorrect option (index 0, correct is 1)
+        vm.onAiPracticeOptionSelected(0)
+        vm.checkAiPracticeAnswer()
+
+        assertTrue(vm.uiState.value.aiPracticeState.isAnswerChecked)
+        assertFalse(vm.uiState.value.aiPracticeState.isAnswerCorrect == true)
+
+        // Check XP in lesson - must still be 0!
+        assertEquals("AI practice must award no XP", 0, vm.uiState.value.xpEarnedInLesson)
+
+        // Progress repository must have 0 exercise results
+        assertTrue("AI practice must not record progress results", progressRepository.getExerciseResults().isEmpty())
+
+        // Review card must NOT be seeded for incorrect AI practice card
+        assertNull("AI practice must not seed review cards", progressRepository.getReviewCard("ai-mc-2"))
+    }
+
+    @Test
+    fun moreLikeThisIsRefusedInInterviewMode() = runTest(testDispatcher) {
+        val fakeTutor = FakeAiTutor()
+        val vm = viewModelFor(
+            course = SampleCourseData.defaultCourse,
+            aiTutor = fakeTutor,
+            isInterviewMode = true,
+            hasApiKey = true
+        )
+        vm.loadLesson("lesson-01-syntax")
+        advanceUntilIdle()
+
+        vm.requestMoreLikeThis()
+        advanceUntilIdle()
+
+        assertFalse("Practice sheet must not be shown in interview mode", vm.uiState.value.aiPracticeState.isVisible)
+        assertEquals("Tutor must not be called in interview mode", 0, fakeTutor.generateCardsCalls)
+    }
+
+    @Test
+    fun moreLikeThisShowsAddKeyMessageWhenNoApiKey() = runTest(testDispatcher) {
+        val fakeTutor = FakeAiTutor()
+        val vm = viewModelFor(
+            course = SampleCourseData.defaultCourse,
+            aiTutor = fakeTutor,
+            isInterviewMode = false,
+            hasApiKey = false
+        )
+        vm.loadLesson("lesson-01-syntax")
+        advanceUntilIdle()
+
+        vm.requestMoreLikeThis()
+        advanceUntilIdle()
+
+        val practice = vm.uiState.value.aiPracticeState
+        assertTrue(practice.isVisible)
+        assertEquals("Add your API key in Settings", practice.errorMessage)
+        assertEquals(0, fakeTutor.generateCardsCalls)
+    }
+
+    private class FakeAiTutor : AiTutor {
+        var generateCardsResult: AiResult<List<Exercise>> = AiResult.Success(
+            listOf(
+                Exercise.MultipleChoice(
+                    id = "ai-mc-1",
+                    prompt = "AI prompt 1",
+                    options = listOf("opt1", "opt2"),
+                    correctIndex = 0,
+                    explanation = "Explanation 1",
+                    aiGenerated = true
+                ),
+                Exercise.MultipleChoice(
+                    id = "ai-mc-2",
+                    prompt = "AI prompt 2",
+                    options = listOf("optA", "optB"),
+                    correctIndex = 1,
+                    explanation = "Explanation 2",
+                    aiGenerated = true
+                ),
+                Exercise.Cloze(
+                    id = "ai-cloze-1",
+                    prompt = "AI prompt 3",
+                    template = "val x = ____",
+                    blanks = listOf(dev.agam.learn.model.Blank("____", listOf("10"))),
+                    explanation = "Explanation 3",
+                    aiGenerated = true
+                )
+            )
+        )
+        var generateCardsCalls = 0
+
+        override suspend fun explainMistake(
+            exercise: Exercise,
+            userAnswer: String,
+            expectedResult: String
+        ): AiResult<String> = AiResult.Success("Explanation")
+
+        override suspend fun hint(exercise: Exercise, level: Int): AiResult<String> =
+            AiResult.Success("Hint")
+
+        override suspend fun generateCards(topic: String, count: Int): AiResult<List<Exercise>> {
+            generateCardsCalls++
+            return generateCardsResult
+        }
+
+        override suspend fun reviewCode(exercise: Exercise, code: String): AiResult<String> =
+            AiResult.Success("Review")
     }
 }

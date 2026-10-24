@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
@@ -30,7 +32,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.agam.learn.runner.Diagnostic
 import dev.agam.learn.runner.RunOutcome
 import dev.agam.learn.runner.TestFailure
@@ -97,11 +98,16 @@ fun RunOutcomeView(
                 )
 
                 if (onDismiss != null) {
-                    Text(
-                        text = "✕",
-                        modifier = Modifier.padding(4.dp),
-                        color = contentColor
-                    )
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Dismiss outcome",
+                            tint = contentColor
+                        )
+                    }
                 }
             }
 
@@ -131,8 +137,7 @@ fun RunOutcomeView(
                             if (failure.message.isNotBlank()) {
                                 Text(
                                     text = failure.message,
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 12.sp,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                                     color = contentColor.copy(alpha = 0.9f),
                                     modifier = Modifier.padding(start = 12.dp, top = 2.dp)
                                 )
@@ -163,16 +168,16 @@ fun RunOutcomeView(
                             Row(modifier = Modifier.padding(vertical = 2.dp)) {
                                 Text(
                                     text = "${diag.line}:${diag.column}",
-                                    fontFamily = FontFamily.Monospace,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold
+                                    ),
                                     color = contentColor,
                                     modifier = Modifier.width(50.dp)
                                 )
                                 Text(
                                     text = "[${diag.severity.uppercase()}] ${diag.message}",
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 12.sp,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                                     color = contentColor,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -210,8 +215,7 @@ private fun TerminalOutputBox(output: String) {
     ) {
         Text(
             text = output,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
             color = Color(0xFFE0E0E0)
         )
     }

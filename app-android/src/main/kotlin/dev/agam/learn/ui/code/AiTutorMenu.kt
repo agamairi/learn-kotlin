@@ -56,10 +56,11 @@ data class AiDialogState(
 @Composable
 fun AiTutorMenuButton(
     onExplainMistake: () -> Unit,
-    onAskHint: () -> Unit,
+    onAskHint: () -> Unit = {},
     onReviewCode: () -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    onAskHintLevel: ((Int) -> Unit)? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -83,13 +84,37 @@ fun AiTutorMenuButton(
                     onExplainMistake()
                 }
             )
-            DropdownMenuItem(
-                text = { Text("Hint") },
-                onClick = {
-                    expanded = false
-                    onAskHint()
-                }
-            )
+            if (onAskHintLevel != null) {
+                DropdownMenuItem(
+                    text = { Text("Hint 1: Nudge (-2 XP)") },
+                    onClick = {
+                        expanded = false
+                        onAskHintLevel(1)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Hint 2: Approach (-5 XP)") },
+                    onClick = {
+                        expanded = false
+                        onAskHintLevel(2)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Hint 3: Near-solution (-10 XP)") },
+                    onClick = {
+                        expanded = false
+                        onAskHintLevel(3)
+                    }
+                )
+            } else {
+                DropdownMenuItem(
+                    text = { Text("Hint (-2/5/10 XP)") },
+                    onClick = {
+                        expanded = false
+                        onAskHint()
+                    }
+                )
+            }
             DropdownMenuItem(
                 text = { Text("Review my code") },
                 onClick = {

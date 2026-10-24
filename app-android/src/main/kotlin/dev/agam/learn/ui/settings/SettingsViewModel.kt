@@ -10,7 +10,6 @@ import dev.agam.learn.ai.AiTutor
 import dev.agam.learn.data.SecretStore
 import dev.agam.learn.data.SettingsRepository
 import dev.agam.learn.di.AppContainer
-import dev.agam.learn.model.Exercise
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -188,14 +187,7 @@ class SettingsViewModel(
 
         scope.launch {
             val result = if (aiTutor != null) {
-                val dummyExercise = Exercise.MultipleChoice(
-                    id = "test-conn",
-                    prompt = "Test connection",
-                    options = listOf("A", "B"),
-                    correctIndex = 0,
-                    explanation = ""
-                )
-                when (val res = aiTutor.hint(dummyExercise, level = 1)) {
+                when (val res = aiTutor.testConnection()) {
                     is AiResult.Success -> ConnectionTestResult(
                         isSuccess = true,
                         message = "Connection verified successfully with ${_uiState.value.aiProvider.name}."

@@ -2,21 +2,27 @@ package dev.agam.learn.ui.lesson.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.runner.LanguageSupport
 import dev.agam.learn.ui.components.CodeBlock
@@ -74,13 +80,11 @@ fun PredictOutputCard(
             placeholder = {
                 Text(
                     text = "Type predicted output here...",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
                 )
             },
-            textStyle = TextStyle(
+            textStyle = MaterialTheme.typography.bodyMedium.copy(
                 fontFamily = FontFamily.Monospace,
-                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             ),
             minLines = 2,
@@ -94,6 +98,41 @@ fun PredictOutputCard(
             ),
             modifier = Modifier.fillMaxWidth()
         )
+
+        if (isAnswerChecked && isCorrect != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (isCorrect) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Correct",
+                        tint = extendedColors.success,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "Correct output",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = extendedColors.success
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Incorrect",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "Incorrect output",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
 
         if (isAnswerChecked && isCorrect == false) {
             Column(

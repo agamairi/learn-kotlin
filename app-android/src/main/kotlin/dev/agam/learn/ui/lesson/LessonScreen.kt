@@ -4,21 +4,26 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
@@ -29,6 +34,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.agam.learn.di.LocalAppContainer
@@ -307,7 +316,11 @@ fun LessonScreen(
                             FeedbackBanner(
                                 isCorrect = uiState.isAnswerCorrect == true,
                                 explanation = uiState.currentExplanation,
-                                onContinue = viewModel::onContinueNext
+                                onContinue = viewModel::onContinueNext,
+                                isAiAvailable = uiState.isAiAvailable,
+                                isInterviewMode = uiState.isInterviewMode,
+                                hasApiKey = uiState.hasApiKey,
+                                onMoreLikeThis = viewModel::requestMoreLikeThis
                             )
                         }
                     }
@@ -321,6 +334,239 @@ fun LessonScreen(
                         totalCount = step.totalCount,
                         onFinish = onNavigateBack
                     )
+                }
+            }
+
+            if (uiState.aiPracticeState.isVisible) {
+                AiPracticeSheet(
+                    state = uiState.aiPracticeState,
+                    onOptionSelected = viewModel::onAiPracticeOptionSelected,
+                    onClozeAnswerChange = viewModel::onAiPracticeClozeAnswerChanged,
+                    onCheckAnswer = viewModel::checkAiPracticeAnswer,
+                    onNextCard = viewModel::nextAiPracticeCard,
+                    onDismiss = viewModel::dismissAiPractice
+                )
+            }
+        }
+    }
+}
+
+/**
+ * AI practice bottom sheet displaying generated cards labeled "AI-generated, unverified".
+ * Awards no XP, never enters review, and is never saved to course content.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AiPracticeSheet(
+    state: AiPracticeState,
+    onOptionSelected: (Int) -> Unit,
+    onClozeAnswerChange: (String, String) -> Unit,
+    onCheckAnswer: () -> Unit,
+    onNextCard: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header with unverified label
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.tertiaryContainer
+                ) {
+                    Text(
+                        text = state.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close practice sheet"
+                    )
+                }
+            }
+
+            if (state.isLoading) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Generating practice cards...",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            } else if (state.errorMessage != null) {
+                Text(
+                    text = state.errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else if (state.currentCard != null) {
+                val card = state.currentCard!!
+                Text(
+                    text = "Practice Card ${state.currentCardIndex + 1} of ${state.cards.size}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                when (card) {
+                    is Exercise.MultipleChoice -> {
+                        Text(
+                            text = card.prompt,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        val cardCode = card.code
+                        if (cardCode != null) {
+                            CodeBlock(code = cardCode)
+                        }
+                        card.options.forEachIndexed { index, option ->
+                            val isSelected = state.selectedOptionIndex == index
+                            val isCorrect = index == card.correctIndex
+                            val borderColor = when {
+                                state.isAnswerChecked && isCorrect -> Color(0xFF2E7D32)
+                                state.isAnswerChecked && isSelected && !isCorrect -> MaterialTheme.colorScheme.error
+                                isSelected -> MaterialTheme.colorScheme.primary
+                                else -> MaterialTheme.colorScheme.outlineVariant
+                            }
+                            val bgColor = when {
+                                state.isAnswerChecked && isCorrect -> Color(0xFFE8F5E9)
+                                state.isAnswerChecked && isSelected && !isCorrect -> Color(0xFFFFEBEE)
+                                isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                                else -> MaterialTheme.colorScheme.surface
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .border(1.dp, borderColor, RoundedCornerShape(8.dp))
+                                    .background(bgColor, RoundedCornerShape(8.dp))
+                                    .clickable(enabled = !state.isAnswerChecked) { onOptionSelected(index) }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = { if (!state.isAnswerChecked) onOptionSelected(index) },
+                                    enabled = !state.isAnswerChecked
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = option,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (state.isAnswerChecked && isCorrect) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Correct",
+                                        tint = Color(0xFF2E7D32),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                } else if (state.isAnswerChecked && isSelected && !isCorrect) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Incorrect",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    is Exercise.Cloze -> {
+                        Text(
+                            text = card.prompt,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        CodeBlock(code = card.template)
+                        card.blanks.forEach { blank ->
+                            val currentVal = state.clozeAnswers[blank.placeholder].orEmpty()
+                            val isBlankCorrect = blank.accepted.any {
+                                if (blank.caseSensitive) it == currentVal.trim()
+                                else it.equals(currentVal.trim(), ignoreCase = true)
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${blank.placeholder}:",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    modifier = Modifier.width(60.dp)
+                                )
+                                OutlinedTextField(
+                                    value = currentVal,
+                                    onValueChange = { onClozeAnswerChange(blank.placeholder, it) },
+                                    enabled = !state.isAnswerChecked,
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            if (state.isAnswerChecked) {
+                                Text(
+                                    text = if (isBlankCorrect) "✓ Correct" else "✗ Accepted: ${blank.accepted.joinToString(", ")}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isBlankCorrect) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(start = 64.dp, bottom = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                    else -> {}
+                }
+
+                if (state.isAnswerChecked) {
+                    if (state.explanation.isNotBlank()) {
+                        Text(
+                            text = state.explanation,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Button(
+                        onClick = onNextCard,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = 48.dp)
+                    ) {
+                        Text(if (state.currentCardIndex + 1 < state.cards.size) "Next Card" else "Done")
+                    }
+                } else {
+                    Button(
+                        onClick = onCheckAnswer,
+                        enabled = state.canCheckAnswer,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = 48.dp)
+                    ) {
+                        Text("Check")
+                    }
                 }
             }
         }

@@ -425,6 +425,99 @@ class CodeExerciseViewModelTest {
     }
 
     @Test
+    fun usingAiHintLevelOneReducesRecordedXpToTwentyThree() {
+        fakeAiTutor.hintResponse = AiResult.Success("Nudge hint")
+        fakeRunner.testResult = RunOutcome.Passed(testsRun = 1, stdout = "")
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            aiTutor = fakeAiTutor,
+            isInterviewMode = false,
+            hasApiKey = true,
+            coroutineScope = testScope
+        )
+
+        viewModel.askAiHint(1)
+        viewModel.checkCode()
+
+        assertEquals(23, storedResults().single().xpAwarded)
+    }
+
+    @Test
+    fun usingAiHintLevelTwoReducesRecordedXpToTwenty() {
+        fakeAiTutor.hintResponse = AiResult.Success("Approach hint")
+        fakeRunner.testResult = RunOutcome.Passed(testsRun = 1, stdout = "")
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            aiTutor = fakeAiTutor,
+            isInterviewMode = false,
+            hasApiKey = true,
+            coroutineScope = testScope
+        )
+
+        viewModel.askAiHint(2)
+        viewModel.checkCode()
+
+        assertEquals(20, storedResults().single().xpAwarded)
+    }
+
+    @Test
+    fun usingMultipleAiHintsReducesRecordedXpSequentially() {
+        fakeAiTutor.hintResponse = AiResult.Success("Hint")
+        fakeRunner.testResult = RunOutcome.Passed(testsRun = 1, stdout = "")
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            aiTutor = fakeAiTutor,
+            isInterviewMode = false,
+            hasApiKey = true,
+            coroutineScope = testScope
+        )
+
+        viewModel.askAiHint(1) // -2 XP
+        viewModel.askAiHint(2) // -5 XP
+        viewModel.askAiHint(3) // -10 XP
+        viewModel.checkCode()
+
+        // 25 - 2 - 5 - 10 = 8 XP
+        assertEquals(8, storedResults().single().xpAwarded)
+    }
+
+    @Test
+    fun retryWithAllHintsNeverReducesRecordedXpBelowZero() {
+        fakeAiTutor.hintResponse = AiResult.Success("Hint")
+        fakeRunner.testResult = RunOutcome.TestsFailed(
+            failures = listOf(TestFailure("testSum", "expected 3 but was 0")),
+            stdout = ""
+        )
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            aiTutor = fakeAiTutor,
+            isInterviewMode = false,
+            hasApiKey = true,
+            coroutineScope = testScope
+        )
+
+        viewModel.checkCode() // Fails first try (0 XP)
+        viewModel.askAiHint(1) // -2 XP
+        viewModel.askAiHint(2) // -5 XP
+        viewModel.askAiHint(3) // -10 XP
+
+        fakeRunner.testResult = RunOutcome.Passed(testsRun = 1, stdout = "")
+        viewModel.checkCode() // Passes on retry (base 15 - 17 -> 0 XP)
+
+        val results = storedResults()
+        assertEquals(listOf(false, true), results.map { it.correct })
+        assertEquals(listOf(0, 0), results.map { it.xpAwarded })
+    }
+
+    @Test
     fun aCheckThatCannotRunIsNotRecorded() {
         fakeRunner.testResult = RunOutcome.Timeout(seconds = 10)
         val viewModel = CodeExerciseViewModel(

@@ -36,7 +36,8 @@ data class ExerciseAttempt(
     val attemptId: String,
     val exerciseId: String,
     val correct: Boolean,
-    val review: Boolean = false
+    val review: Boolean = false,
+    val aiHintsUsed: List<Int> = emptyList()
 )
 
 /** One checked part of a multi-part problem. Each part pays its XP once, on its first pass. */
@@ -136,7 +137,14 @@ class ProgressRecorder(
             isCard -> recordLessonCard(attempt, placed, now, day)
             exercise is Exercise.WriteFunction && !attempt.review -> {
                 val firstPass = attempt.correct && !alreadyPassed
-                val xp = if (firstPass) xpPolicy.xpForExercise(exercise, isFirstAttempt = prior.isEmpty()) else 0
+                val baseXp = if (firstPass) xpPolicy.xpForExercise(exercise, isFirstAttempt = prior.isEmpty()) else 0
+                val xp = if (firstPass) {
+                    attempt.aiHintsUsed.fold(baseXp) { currentXp, level ->
+                        xpPolicy.xpAfterHint(currentXp, level)
+                    }
+                } else {
+                    0
+                }
                 commit(
                     attemptId = attempt.attemptId,
                     result = placed.result(exercise.id, attempt.correct, xp, now),

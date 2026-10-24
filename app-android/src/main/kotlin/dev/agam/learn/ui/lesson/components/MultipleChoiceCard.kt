@@ -31,7 +31,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.runner.LanguageSupport
 import dev.agam.learn.ui.components.CodeBlock
@@ -154,8 +153,8 @@ fun MultipleChoiceCard(
                                 } else {
                                     Text(
                                         text = letter,
+                                        style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
                                         color = badgeTextColor
                                     )
                                 }
