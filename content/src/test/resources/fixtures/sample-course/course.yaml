@@ -1,0 +1,6 @@
+id: test-kotlin
+language: kotlin
+title: Test Kotlin Course
+description: A sample course for content compiler unit testing
+chapters:
+  - ch01-basics

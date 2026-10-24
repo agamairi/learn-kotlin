@@ -1,0 +1,96 @@
+{
+    "id": "kotlin-foundations",
+    "language": "kotlin",
+    "title": "Kotlin Foundations",
+    "description": "Master Kotlin from syntax essentials to idioms and interview problem solving.",
+    "chapters": [
+        {
+            "id": "ch01-intro",
+            "title": "Introduction to Kotlin",
+            "summary": "Variables, basic types, functions, and string templates.",
+            "lessons": [
+                {
+                    "id": "lesson-01-syntax",
+                    "title": "Kotlin Syntax Essentials",
+                    "explanation": "Kotlin is a modern, statically typed language that runs on the JVM, Android, and other platforms.\nVariables are declared using `val` (read-only reference) or `var` (mutable variable).\nAlways prefer `val` for immutability and thread safety.\n",
+                    "exercises": [
+                        {
+                            "type": "multiple_choice",
+                            "id": "mc-val-immutability",
+                            "prompt": "Which keyword declares a read-only local variable in Kotlin?",
+                            "code": "val message = \"Hello\"\n// message = \"World\" // Compile error!\n",
+                            "options": [
+                                "val",
+                                "var",
+                                "let",
+                                "const"
+                            ],
+                            "correct_index": 0,
+                            "explanation": "In Kotlin, `val` is used to declare read-only properties and variables."
+                        },
+                        {
+                            "type": "cloze",
+                            "id": "cloze-string-template",
+                            "prompt": "Complete the string template to print the name.",
+                            "template": "println(\"Hello, ____1!\")",
+                            "blanks": [
+                                {
+                                    "placeholder": "____1",
+                                    "accepted": [
+                                        "$name",
+                                        "${name}"
+                                    ]
+                                }
+                            ],
+                            "explanation": "Kotlin string templates use the `$` symbol to interpolate variables."
+                        },
+                        {
+                            "type": "predict_output",
+                            "id": "po-string-interpolation",
+                            "prompt": "What will this program print to stdout?",
+                            "code": "fun main() {\n    val a = 5\n    val b = 10\n    println(\"Sum is ${a + b}\")\n}\n",
+                            "expected_output": "Sum is 15",
+                            "explanation": "Expressions inside string templates are enclosed with `${}`."
+                        },
+                        {
+                            "type": "write_function",
+                            "id": "wf-greet",
+                            "prompt": "Write a function `greet(name: String): String` that returns `\"Hello, <name>!\"`.",
+                            "starter_code": "fun greet(name: String): String = TODO()\n",
+                            "hidden_tests": "import org.junit.Test\nimport org.junit.Assert.assertEquals\n\nclass GreetTest {\n    @Test\n    fun testGreet() {\n        assertEquals(\"Hello, Agam!\", greet(\"Agam\"))\n        assertEquals(\"Hello, Kotlin!\", greet(\"Kotlin\"))\n    }\n}\n",
+                            "reference_solution": "fun greet(name: String): String = \"Hello, $name!\"\n",
+                            "hints": [
+                                "Use string interpolation with $name"
+                            ],
+                            "explanation": "Expression body syntax makes one-line functions concise."
+                        },
+                        {
+                            "type": "multi_part_problem",
+                            "id": "mp-ledger-intro",
+                            "prompt": "Build an in-memory payment ledger.",
+                            "story": "You are building a lightweight in-memory transaction balance tracker.\n",
+                            "parts": [
+                                {
+                                    "id": "mp-ledger-part-1",
+                                    "prompt": "Implement `calculateBalance(credits: List<Long>, debits: List<Long>): Long`.",
+                                    "starter_code": "fun calculateBalance(credits: List<Long>, debits: List<Long>): Long = TODO()\n",
+                                    "hidden_tests": "import org.junit.Test\nimport org.junit.Assert.assertEquals\n\nclass BalanceTest {\n    @Test\n    fun testBalance() {\n        assertEquals(70L, calculateBalance(listOf(100L), listOf(30L)))\n    }\n}\n",
+                                    "reference_solution": "fun calculateBalance(credits: List<Long>, debits: List<Long>): Long {\n    return credits.sum() - debits.sum()\n}\n",
+                                    "expected": "Returns credits sum minus debits sum."
+                                }
+                            ],
+                            "faq": [
+                                {
+                                    "question": "Can lists be empty?",
+                                    "answer": "Yes, empty lists evaluate to zero sum."
+                                }
+                            ],
+                            "discussion": "In later parts, transaction IDs and fee calculations will be added.",
+                            "source_note": "Stripe terminal drill."
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
