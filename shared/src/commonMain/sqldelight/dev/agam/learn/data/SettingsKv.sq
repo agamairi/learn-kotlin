@@ -1,0 +1,17 @@
+CREATE TABLE settings_kv (
+    key TEXT PRIMARY KEY NOT NULL,
+    value TEXT NOT NULL
+);
+
+selectAllSettings:
+SELECT * FROM settings_kv ORDER BY key ASC;
+
+insertSetting:
+INSERT OR REPLACE INTO settings_kv (key, value)
+VALUES (?, ?);
+
+selectSettingByKey:
+SELECT value FROM settings_kv WHERE key = ?;
+
+deleteSetting:
+DELETE FROM settings_kv WHERE key = ?;

@@ -1,0 +1,18 @@
+CREATE TABLE review_card (
+    item_id TEXT PRIMARY KEY NOT NULL,
+    box INTEGER NOT NULL,
+    due_epoch_day INTEGER NOT NULL
+);
+
+insertReviewCard:
+INSERT OR REPLACE INTO review_card (item_id, box, due_epoch_day)
+VALUES (?, ?, ?);
+
+selectAllReviewCards:
+SELECT * FROM review_card ORDER BY due_epoch_day ASC, item_id ASC;
+
+selectDueReviewCards:
+SELECT * FROM review_card WHERE due_epoch_day <= ? ORDER BY due_epoch_day ASC, item_id ASC;
+
+selectReviewCardById:
+SELECT * FROM review_card WHERE item_id = ?;
