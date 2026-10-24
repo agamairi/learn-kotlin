@@ -2,7 +2,7 @@
 
 ## What it is
 
-learn-kotlin is an Android app for learning Kotlin. Lessons are grouped into chapters. Lessons use these exercise types: multiple choice, fill in the blank, predict the output, write a function, and multi-part problems. Code exercises run on a real Kotlin compiler, so your code is compiled and tested. You earn XP for correct answers and work toward a daily XP goal, 50 XP by default. A streak counts each day you answer at least one exercise. The streak day changes at 4 am local time, so early-morning practice counts toward the day before. Review uses a five-box Leitner schedule. A correct answer moves a card to a longer gap of 1, 2, 4, 8 or 16 days. A wrong answer sends the card back to the first box. An optional AI tutor can explain mistakes and give hints, using your own API key. The first course, Kotlin for the Stripe Android screen, is built for interview prep.
+learn-kotlin is an Android app for learning Kotlin. Lessons are grouped into chapters. Lessons use these exercise types: multiple choice, fill in the blank, predict the output, write a function, and multi-part problems. Code exercises run on a real Kotlin compiler, so your code is compiled and tested. You earn XP for correct answers and work toward a daily XP goal, 50 XP by default. A streak counts a day when that day's goal is met. The effective day rolls over at 4 am local time, so early-morning practice counts toward the day before. You earn one streak freeze for every 7 consecutive goal days, hold at most 2, and a freeze is spent automatically on a missed day. Review uses a five-box Leitner schedule. A correct answer moves a card to a longer gap of 1, 2, 4, 8 or 16 days. A wrong answer sends the card back to the first box. An optional AI tutor can explain mistakes and give hints, using your own API key. The first course, Kotlin for the Stripe Android screen, is built for interview prep.
 
 ## Install a release
 
@@ -70,6 +70,8 @@ The AI menu appears on code exercises and multi-part problems. Card lessons have
 
 - **Explain my mistake** asks for an explanation in three sentences or fewer.
 - **Hint** asks for a hint at level 1, 2 or 3. Level 1 is a nudge. Level 2 is an approach. Level 3 is close to the solution. On code exercises, the level is one more than the number of hint cards you have opened, up to 3.
+- AI hints on code exercises cost 2, 5 and 10 XP for levels 1, 2 and 3.
+- **More like this** makes 3 extra AI-generated practice cards labeled unverified. They award no XP and do not enter review.
 - **Review my code** asks for up to three short bullets on readability and idiomatic Kotlin.
 
 Interview Mode turns off every AI action. Turn it on in Settings under **Interview Mode Default**, or with the **Interview Mode** switch on a multi-part problem.
@@ -136,9 +138,5 @@ This is not built yet. The steps are in `docs/PLAN.md`, section 4 ("Adding a lan
 - The compiler server is for personal practice only. It has no authentication, learner code runs as root with internet access, and learner code can forge a pass. Learner code can also stop the server from answering until you restart it with `tools/compiler-server/run.sh`. The server handles one request at a time.
 - The hidden tests for code exercises ship inside the app. Anyone with the APK can read them. That is fine for one person. A public release needs server-side tests.
 - AI answers are not verified. Only the course exercises are checked against the compiler.
-- The AI code can generate practice cards, but no screen uses that yet.
-- AI hints do not cost XP yet. The XP rules define the costs, but the app does not apply them.
-- The Home screen always shows a 50 XP goal. The goal you set in Settings controls goal-met tracking, but Home does not read it yet.
-- The streak code covers a missed day with a streak freeze. One freeze is earned for every 7 active days in a row, up to 2 held. No screen shows freezes yet.
 - The current release is a debug build, marked as a pre-release.
 - Provider model names and API details can change. Check `docs/AI_PROVIDERS.md` before a wider release.

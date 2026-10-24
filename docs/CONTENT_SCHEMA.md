@@ -59,4 +59,4 @@ Every exercise has `type`, `id` and `prompt` (Markdown). Other fields by type:
 
 ## Source material for the Kotlin course
 
-The existing study page at `/Users/agamairi/development/stripe-android-terminal/stripe-screen-sprint.html` holds the verified content: 8 lessons with code and drills, 17 multi-part problems with verified expected outputs and clarifying answers, the playbook and the mock rubric. All expected outputs there were checked by running code; copy them exactly.
+The existing study page at `/path/to/stripe-android-terminal/stripe-screen-sprint.html` holds the verified content: 8 lessons with code and drills, 17 multi-part problems with verified expected outputs and clarifying answers, the playbook and the mock rubric. All expected outputs there were checked by running code; copy them exactly.
