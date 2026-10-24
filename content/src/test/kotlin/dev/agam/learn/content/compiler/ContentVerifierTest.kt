@@ -446,6 +446,90 @@ class ContentVerifierTest {
         assertTrue(markdown.contains("| cloze | 1 | 1 | 0 | 1 |"))
     }
 
+    @Test
+    fun snippetsWithoutTopLevelDeclarationsAreWrappedInAFunction() {
+        assertEquals("fun snippet() {\nprintln(\"hi\")\n}", ContentVerifier.wrapSnippetIfNeeded("println(\"hi\")"))
+        assertEquals(
+            "fun snippet() {\nlistOf(1, 2).forEach {\n    println(it)\n}\n}",
+            ContentVerifier.wrapSnippetIfNeeded("listOf(1, 2).forEach {\n    println(it)\n}")
+        )
+        // Identifiers that merely start with a keyword are statements, not declarations.
+        assertEquals("fun snippet() {\nvalidCount = 1\n}", ContentVerifier.wrapSnippetIfNeeded("validCount = 1"))
+        assertEquals("fun snippet() {\ndataset.add(1)\n}", ContentVerifier.wrapSnippetIfNeeded("dataset.add(1)"))
+    }
+
+    @Test
+    fun snippetsWithTopLevelDeclarationsAreLeftAlone() {
+        val declarations = listOf(
+            "data class Payment(val id: String)",
+            "private fun helper() = 1",
+            "val x = 1",
+            "fun main() { println(1) }",
+            "import java.util.PriorityQueue\nprintln(1)",
+            "@Test fun checks() {}",
+            "enum class Level { LOW }",
+            "sealed interface Result",
+            "const val LIMIT = 3"
+        )
+        for (code in declarations) {
+            assertEquals(code, ContentVerifier.wrapSnippetIfNeeded(code))
+        }
+    }
+
+    @Test
+    fun clozeAndMultipleChoiceSnippetsAreWrappedBeforeHighlighting() {
+        val fakeClient = FakeCompilerServerClient(
+            highlightHandler = {
+                mapOf(
+                    "Snippet.kt" to listOf(
+                        Diagnostic(
+                            interval = TextInterval(start = TextPosition(line = 0, ch = 0)),
+                            message = "Unresolved reference 'x'",
+                            severity = "ERROR"
+                        )
+                    )
+                )
+            }
+        )
+
+        val statementCloze = Exercise.Cloze(
+            id = "cloze-statement",
+            prompt = "P",
+            template = "repeat(____1) { println(\"hi\") }",
+            blanks = listOf(Blank(placeholder = "____1", accepted = listOf("3"))),
+            explanation = "E"
+        )
+        val declarationCloze = Exercise.Cloze(
+            id = "cloze-declaration",
+            prompt = "P",
+            template = "val answer = ____1",
+            blanks = listOf(Blank(placeholder = "____1", accepted = listOf("42"))),
+            explanation = "E"
+        )
+        val statementMc = Exercise.MultipleChoice(
+            id = "mc-statement",
+            prompt = "P",
+            code = "println(\"hi\")",
+            options = listOf("a", "b"),
+            correctIndex = 0,
+            explanation = "E"
+        )
+
+        val report = ContentVerifier(fakeClient).verifyCourse(createCourse(statementCloze, declarationCloze, statementMc))
+
+        assertEquals(
+            listOf(
+                "fun snippet() {\nrepeat(3) { println(\"hi\") }\n}",
+                "val answer = 42",
+                "fun snippet() {\nprintln(\"hi\")\n}"
+            ),
+            fakeClient.highlightRequests.map { files -> files.single().text }
+        )
+        // Snippet problems stay warnings even after wrapping.
+        assertEquals(0, report.totalFailures)
+        assertEquals(3, report.totalWarnings)
+    }
+
     private fun createCourse(vararg exercises: Exercise): Course {
         val chapter = Chapter(
             id = "ch01",

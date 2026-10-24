@@ -504,7 +504,7 @@ class ContentVerifier(private val client: CompilerServerClient) {
         if (code.isBlank()) return
 
         val hasMain = Regex("""\bfun\s+main\b""").containsMatchIn(code)
-        val response = client.highlight(listOf(ServerFile("Snippet.kt", code)))
+        val response = client.highlight(listOf(ServerFile("Snippet.kt", wrapSnippetIfNeeded(code))))
         val errors = response.flatMap { (file, diags) ->
             diags.filter { it.severity.equals("ERROR", ignoreCase = true) }.map { file to it }
         }
@@ -534,7 +534,7 @@ class ContentVerifier(private val client: CompilerServerClient) {
         }
 
         val hasMain = Regex("""\bfun\s+main\b""").containsMatchIn(filled)
-        val response = client.highlight(listOf(ServerFile("Snippet.kt", filled)))
+        val response = client.highlight(listOf(ServerFile("Snippet.kt", wrapSnippetIfNeeded(filled))))
         val errors = response.flatMap { (file, diags) ->
             diags.filter { it.severity.equals("ERROR", ignoreCase = true) }.map { file to it }
         }
@@ -571,6 +571,21 @@ class ContentVerifier(private val client: CompilerServerClient) {
         fun extractTestMethods(hiddenTests: String): Set<String> {
             val matches = Regex("""@Test\s+(?:suspend\s+)?fun\s+([A-Za-z0-9_`]+)""").findAll(hiddenTests)
             return matches.map { it.groupValues[1].removeSurrounding("`") }.toSet()
+        }
+
+        private val topLevelDeclaration = Regex(
+            """^(?:(?:private|internal|public|const|data|enum|sealed|abstract|open|inline|suspend|operator|infix|tailrec|annotation)\s+)*(?:fun|class|object|interface|val|var|typealias)\b|^import\s|^@"""
+        )
+
+        /**
+         * Cloze and multiple-choice snippets are often statements, which the compiler reads as a file
+         * and rejects with "Expecting a top level declaration". A snippet with no top-level declaration
+         * is wrapped in a function so it highlights as the statements it is. Wrapping adds one line
+         * before the snippet, so diagnostic line numbers for wrapped snippets are one higher than the YAML.
+         */
+        fun wrapSnippetIfNeeded(code: String): String {
+            val hasTopLevelDeclaration = code.lineSequence().any { topLevelDeclaration.containsMatchIn(it) }
+            return if (hasTopLevelDeclaration) code else "fun snippet() {\n$code\n}"
         }
 
         fun normalizeOutput(text: String): String {
