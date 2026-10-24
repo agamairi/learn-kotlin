@@ -12,5 +12,8 @@ data class AiSettings(
     @SerialName("api_key")
     val apiKey: String,
     val model: String? = null,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    /** When true, all tutor requests are blocked for interview practice. */
+    @SerialName("interview_mode")
+    val interviewMode: Boolean = false
 )

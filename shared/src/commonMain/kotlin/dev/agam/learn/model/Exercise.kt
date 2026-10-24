@@ -25,7 +25,9 @@ sealed interface Exercise {
         val options: List<String>,
         @SerialName("correct_index")
         val correctIndex: Int,
-        val explanation: String
+        val explanation: String,
+        @SerialName("ai_generated")
+        val aiGenerated: Boolean = false
     ) : Exercise
 
     @Serializable
@@ -35,7 +37,9 @@ sealed interface Exercise {
         override val prompt: String,
         val template: String,
         val blanks: List<Blank>,
-        val explanation: String
+        val explanation: String,
+        @SerialName("ai_generated")
+        val aiGenerated: Boolean = false
     ) : Exercise
 
     @Serializable
