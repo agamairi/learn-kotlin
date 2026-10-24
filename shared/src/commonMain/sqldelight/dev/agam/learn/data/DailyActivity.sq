@@ -1,0 +1,22 @@
+CREATE TABLE daily_activity (
+    epoch_day INTEGER PRIMARY KEY NOT NULL,
+    xp_earned INTEGER NOT NULL,
+    exercises_completed INTEGER NOT NULL,
+    goal_met INTEGER NOT NULL
+);
+
+selectXpTotalsByDay:
+SELECT epoch_day, xp_earned FROM daily_activity ORDER BY epoch_day ASC;
+
+selectXpTotalForDay:
+SELECT COALESCE(SUM(xp_earned), 0) FROM daily_activity WHERE epoch_day = ?;
+
+insertDailyActivity:
+INSERT OR REPLACE INTO daily_activity (epoch_day, xp_earned, exercises_completed, goal_met)
+VALUES (?, ?, ?, ?);
+
+selectAllDailyActivities:
+SELECT * FROM daily_activity ORDER BY epoch_day ASC;
+
+selectDailyActivityByDay:
+SELECT * FROM daily_activity WHERE epoch_day = ?;

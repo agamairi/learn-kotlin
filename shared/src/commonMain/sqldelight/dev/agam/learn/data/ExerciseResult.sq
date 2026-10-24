@@ -1,0 +1,25 @@
+CREATE TABLE exercise_result (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exercise_id TEXT NOT NULL,
+    lesson_id TEXT,
+    chapter_id TEXT,
+    correct INTEGER NOT NULL,
+    xp_awarded INTEGER NOT NULL,
+    epoch_millis INTEGER NOT NULL
+);
+
+insertExerciseResult:
+INSERT INTO exercise_result (exercise_id, lesson_id, chapter_id, correct, xp_awarded, epoch_millis)
+VALUES (?, ?, ?, ?, ?, ?);
+
+selectAllExerciseResults:
+SELECT * FROM exercise_result ORDER BY epoch_millis ASC, id ASC;
+
+selectExerciseResultsForExercise:
+SELECT * FROM exercise_result WHERE exercise_id = ? ORDER BY epoch_millis ASC, id ASC;
+
+selectExerciseResultsForLesson:
+SELECT * FROM exercise_result WHERE lesson_id = ? ORDER BY epoch_millis ASC, id ASC;
+
+selectExerciseResultsForChapter:
+SELECT * FROM exercise_result WHERE chapter_id = ? ORDER BY epoch_millis ASC, id ASC;

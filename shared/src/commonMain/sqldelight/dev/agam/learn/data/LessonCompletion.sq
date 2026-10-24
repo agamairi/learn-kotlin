@@ -1,0 +1,14 @@
+CREATE TABLE lesson_completion (
+    lesson_id TEXT PRIMARY KEY NOT NULL,
+    completed_at_epoch_millis INTEGER NOT NULL
+);
+
+insertLessonCompletion:
+INSERT OR REPLACE INTO lesson_completion (lesson_id, completed_at_epoch_millis)
+VALUES (?, ?);
+
+selectLessonCompletionById:
+SELECT * FROM lesson_completion WHERE lesson_id = ?;
+
+selectAllLessonCompletions:
+SELECT * FROM lesson_completion ORDER BY lesson_id ASC;

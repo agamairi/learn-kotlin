@@ -14,7 +14,11 @@ data class ExerciseResult(
     @SerialName("xp_awarded")
     val xpAwarded: Int,
     @SerialName("epoch_millis")
-    val epochMillis: Long
+    val epochMillis: Long,
+    @SerialName("lesson_id")
+    val lessonId: String? = null,
+    @SerialName("chapter_id")
+    val chapterId: String? = null
 )
 
 /**
