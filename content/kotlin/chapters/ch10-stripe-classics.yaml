@@ -1,0 +1,1256 @@
+id: ch10-stripe-classics
+title: Stripe classics
+summary: Practice Stripe-flavoured Kotlin problems involving money, ledgers, matching, cards, balancing and rate limits.
+lessons:
+  - id: ch10-card-fee-report
+    title: Card fee report
+    explanation: |
+      Work with CSV text and integer cents. The important details are to validate each row, round the percentage part half-up for each transaction, and keep the fixed fee separate from the percentage fee when refunds are introduced.
+    exercises:
+      - type: multi_part_problem
+        id: ch10-card-fee-report-problem
+        prompt: Build the fee report in four steps, keeping money in whole cents.
+        story: |
+          Stripe takes a fee on every card payment. You get a day's transactions as CSV text, with amounts in integer cents. The examples below use the same rows as the interview exercise.
+        parts:
+          - id: ch10-card-fee-report-part-1
+            prompt: |
+              The input is:
+
+                  id,merchant,amount_cents,card
+                  tx1,acme,1000,visa
+                  tx2,acme,2550,amex
+                  tx3,bolt,99,visa
+
+              The fee is 2.9% of the amount, rounded half-up to a whole cent, plus 30¢. Return each transaction's fee.
+            starter_code: |
+              data class TransactionFee(val id: String, val feeCents: Long)
+
+              fun transactionFees(csv: String): List<TransactionFee> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CardFeeReportPart1Test {
+                  @Test fun examples() {
+                      val csv = """id,merchant,amount_cents,card
+              tx1,acme,1000,visa
+              tx2,acme,2550,amex
+              tx3,bolt,99,visa"""
+                      assertEquals(
+                          listOf(TransactionFee("tx1", 59), TransactionFee("tx2", 104), TransactionFee("tx3", 33)),
+                          transactionFees(csv)
+                      )
+                  }
+              }
+            reference_solution: |
+              data class TransactionFee(val id: String, val feeCents: Long)
+
+              private fun percentageFee(amount: Long, basisPoints: Long): Long = (amount * basisPoints + 500) / 1000
+
+              fun transactionFees(csv: String): List<TransactionFee> = csv.lineSequence()
+                  .drop(1)
+                  .filter { it.isNotBlank() }
+                  .map { line ->
+                      val fields = line.split(',')
+                      TransactionFee(fields[0], percentageFee(fields[2].toLong(), 29) + 30)
+                  }
+                  .toList()
+            hints:
+              - Split the header off first and keep the transaction id with the calculated fee.
+              - 2.9% is 29/1000; add 500 before integer division to round half-up.
+            expected: "Expected: tx1 → 59, tx2 → 104, tx3 → 33"
+          - id: ch10-card-fee-report-part-2
+            prompt: |
+              Build a per-merchant report: volume (sum of amounts), fees, and net (volume − fees). Sort by net, highest first, breaking ties by merchant name.
+            starter_code: |
+              data class MerchantFeeReport(val merchant: String, val volumeCents: Long, val feesCents: Long, val netCents: Long)
+
+              fun merchantFeeReport(csv: String): List<MerchantFeeReport> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CardFeeReportPart2Test {
+                  @Test fun example() {
+                      val csv = """id,merchant,amount_cents,card
+              tx1,acme,1000,visa
+              tx2,acme,2550,amex
+              tx3,bolt,99,visa"""
+                      assertEquals(
+                          listOf(
+                              MerchantFeeReport("acme", 3550, 163, 3387),
+                              MerchantFeeReport("bolt", 99, 33, 66)
+                          ),
+                          merchantFeeReport(csv)
+                      )
+                  }
+              }
+            reference_solution: |
+              data class TransactionFee(val id: String, val feeCents: Long)
+              data class MerchantFeeReport(val merchant: String, val volumeCents: Long, val feesCents: Long, val netCents: Long)
+
+              private fun percentageFee(amount: Long, basisPoints: Long): Long = (amount * basisPoints + 500) / 1000
+
+              fun transactionFees(csv: String): List<TransactionFee> = csv.lineSequence()
+                  .drop(1).filter { it.isNotBlank() }.map { line ->
+                      val fields = line.split(',')
+                      TransactionFee(fields[0], percentageFee(fields[2].toLong(), 29) + 30)
+                  }.toList()
+
+              fun merchantFeeReport(csv: String): List<MerchantFeeReport> = csv.lineSequence()
+                  .drop(1)
+                  .filter { it.isNotBlank() }
+                  .map { it.split(',') }
+                  .groupBy { it[1] }
+                  .map { (merchant, rows) ->
+                      val volume = rows.sumOf { it[2].toLong() }
+                      val fees = rows.sumOf { percentageFee(it[2].toLong(), 29) + 30 }
+                      MerchantFeeReport(merchant, volume, fees, volume - fees)
+                  }
+                  .sortedWith(compareByDescending<MerchantFeeReport> { it.netCents }.thenBy { it.merchant })
+            hints:
+              - Group parsed rows by merchant, then calculate volume and fees from each group.
+              - Sort with a descending net comparator followed by the merchant name.
+            expected: "Expected: acme: volume 3550, fees 163, net 3387 · bolt: 99, 33, 66"
+          - id: ch10-card-fee-report-part-3
+            prompt: |
+              Amex now costs 3.5% + 30¢; Visa stays 2.9% + 30¢. Some rows are bad. Skip them and return a list of (line number, reason), counting the header as line 1. Append these rows to the Part 1 input:
+
+                  tx4,bolt,abc,visa
+                  tx5,,500,visa
+
+              Use the reasons `amount is not a number` and `missing merchant` for these examples. From this part on, negative amounts are `negative amount` and an unsupported card is `unknown card`.
+            starter_code: |
+              data class FeeError(val lineNumber: Int, val reason: String)
+              data class FeeReportWithErrors(val reports: List<MerchantFeeReport>, val errors: List<FeeError>)
+
+              fun merchantFeeReportWithErrors(csv: String): FeeReportWithErrors = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CardFeeReportPart3Test {
+                  @Test fun examples() {
+                      val csv = """id,merchant,amount_cents,card
+              tx1,acme,1000,visa
+              tx2,acme,2550,amex
+              tx3,bolt,99,visa
+              tx4,bolt,abc,visa
+              tx5,,500,visa"""
+                      val result = merchantFeeReportWithErrors(csv)
+                      assertEquals(listOf(MerchantFeeReport("acme", 3550, 178, 3372), MerchantFeeReport("bolt", 99, 33, 66)), result.reports)
+                      assertEquals(listOf(FeeError(5, "amount is not a number"), FeeError(6, "missing merchant")), result.errors)
+                  }
+              }
+            reference_solution: |
+              data class MerchantFeeReport(val merchant: String, val volumeCents: Long, val feesCents: Long, val netCents: Long)
+              data class FeeError(val lineNumber: Int, val reason: String)
+              data class FeeReportWithErrors(val reports: List<MerchantFeeReport>, val errors: List<FeeError>)
+
+              private fun percentageFee(amount: Long, basisPoints: Long): Long = (amount * basisPoints + 500) / 1000
+
+              fun merchantFeeReportWithErrors(csv: String): FeeReportWithErrors {
+                  val totals = mutableMapOf<String, Pair<Long, Long>>()
+                  val errors = mutableListOf<FeeError>()
+                  csv.lineSequence().drop(1).forEachIndexed { index, line ->
+                      if (line.isBlank()) return@forEachIndexed
+                      val lineNumber = index + 2
+                      val fields = line.split(',')
+                      val merchant = fields.getOrNull(1).orEmpty()
+                      val amount = fields.getOrNull(2)?.toLongOrNull()
+                      val card = fields.getOrNull(3)?.lowercase()
+                      when {
+                          amount == null -> errors += FeeError(lineNumber, "amount is not a number")
+                          merchant.isBlank() -> errors += FeeError(lineNumber, "missing merchant")
+                          amount < 0 -> errors += FeeError(lineNumber, "negative amount")
+                          card != "visa" && card != "amex" -> errors += FeeError(lineNumber, "unknown card")
+                          else -> {
+                              val percentage = if (card == "amex") 35L else 29L
+                              val fee = percentageFee(amount, percentage) + 30
+                              val old = totals[merchant] ?: (0L to 0L)
+                              totals[merchant] = (old.first + amount) to (old.second + fee)
+                          }
+                      }
+                  }
+                  val reports = totals.map { (merchant, values) ->
+                      MerchantFeeReport(merchant, values.first, values.second, values.first - values.second)
+                  }.sortedWith(compareByDescending<MerchantFeeReport> { it.netCents }.thenBy { it.merchant })
+                  return FeeReportWithErrors(reports, errors)
+              }
+            hints:
+              - Validate and convert the amount before doing arithmetic, and remember that the header makes the first data row line 2.
+              - Keep totals only for valid rows; choose the percentage from the normalized card name.
+            expected: "Expected: tx2 fee 119 · acme fees 178, net 3372 · errors: line 5 \"amount is not a number\", line 6 \"missing merchant\""
+          - id: ch10-card-fee-report-part-4
+            prompt: |
+              The CSV gains a fifth column, `type`: `charge` or `refund`. A refund subtracts from volume and gives back the percentage part of its fee but not the 30¢ (that is this exercise's rule).
+
+                  id,merchant,amount_cents,card,type
+                  tx1,acme,1000,visa,charge
+                  tx2,acme,2550,amex,charge
+                  tx3,bolt,99,visa,charge
+                  tx6,acme,1000,visa,refund
+            starter_code: |
+              fun merchantFeeReportWithRefunds(csv: String): List<MerchantFeeReport> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CardFeeReportPart4Test {
+                  @Test fun example() {
+                      val csv = """id,merchant,amount_cents,card,type
+              tx1,acme,1000,visa,charge
+              tx2,acme,2550,amex,charge
+              tx3,bolt,99,visa,charge
+              tx6,acme,1000,visa,refund"""
+                      assertEquals(
+                          listOf(
+                              MerchantFeeReport("acme", 2550, 149, 2401),
+                              MerchantFeeReport("bolt", 99, 33, 66)
+                          ),
+                          merchantFeeReportWithRefunds(csv)
+                      )
+                  }
+              }
+            reference_solution: |
+              data class MerchantFeeReport(val merchant: String, val volumeCents: Long, val feesCents: Long, val netCents: Long)
+
+              private fun percentageFee(amount: Long, basisPoints: Long): Long = (amount * basisPoints + 500) / 1000
+
+              fun merchantFeeReportWithRefunds(csv: String): List<MerchantFeeReport> {
+                  val totals = mutableMapOf<String, Pair<Long, Long>>()
+                  csv.lineSequence().drop(1).filter { it.isNotBlank() }.forEach { line ->
+                      val fields = line.split(',')
+                      val merchant = fields[1]
+                      val amount = fields[2].toLong()
+                      val percentage = if (fields[3].lowercase() == "amex") 35L else 29L
+                      val sign = if (fields[4].lowercase() == "refund") -1 else 1
+                      val old = totals[merchant] ?: (0L to 0L)
+                      totals[merchant] = (old.first + sign * amount) to
+                          (old.second + sign * percentageFee(amount, percentage) + if (sign > 0) 30 else 0)
+                  }
+                  return totals.map { (merchant, values) ->
+                      MerchantFeeReport(merchant, values.first, values.second, values.first - values.second)
+                  }.sortedWith(compareByDescending<MerchantFeeReport> { it.netCents }.thenBy { it.merchant })
+              }
+            hints:
+              - A charge adds both the amount and the full fee; a refund subtracts the amount and only the percentage fee.
+              - Keep the fixed 30¢ out of the refund calculation.
+            expected: "Expected: acme: volume 2550, fees 149, net 2401 · bolt: 99, 33, 66"
+        faq:
+          - question: Does Amex cost more in Part 1?
+            answer: No. Use one price for every card until Part 3.
+          - question: When do I round?
+            answer: Round half-up on the percentage part, per transaction, before summing.
+          - question: What is the output format?
+            answer: Any clear structure is fine. A printed table is fine too.
+          - question: What about negative or unknown-card rows?
+            answer: "From Part 3 on, they are bad rows: use `negative amount` or `unknown card`."
+          - question: What about duplicate ids?
+            answer: There are none in the data. Say how you would handle them anyway.
+
+  - id: ch10-merchant-ledger
+    title: Merchant ledger
+    explanation: |
+      A ledger is a sequence of events whose order matters. First apply simple signed changes, then add rejection rules for negative balances, settlement delays, and finally stable sorting by day.
+    exercises:
+      - type: multi_part_problem
+        id: ch10-merchant-ledger-problem
+        prompt: Process merchant charges, refunds and payouts while preserving the ledger rules.
+        story: |
+          Each line is `day,type,merchant,amount_cents`, where type is `charge`, `refund` or `payout`. Lines are numbered from 1, with no header. Amounts are positive integers.
+        parts:
+          - id: ch10-merchant-ledger-part-1
+            prompt: |
+              For these lines, charges add and refunds and payouts subtract. Return each merchant's final balance, sorted by merchant.
+
+                  1,charge,acme,5000
+                  1,charge,bolt,2000
+                  2,refund,acme,1500
+                  3,payout,acme,3000
+            starter_code: |
+              fun ledgerBalances(lines: String): List<Pair<String, Long>> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class MerchantLedgerPart1Test {
+                  @Test fun example() {
+                      val lines = """1,charge,acme,5000
+              1,charge,bolt,2000
+              2,refund,acme,1500
+              3,payout,acme,3000"""
+                      assertEquals(listOf("acme" to 500L, "bolt" to 2000L), ledgerBalances(lines))
+                  }
+              }
+            reference_solution: |
+              fun ledgerBalances(lines: String): List<Pair<String, Long>> {
+                  val balances = mutableMapOf<String, Long>()
+                  lines.lineSequence().filter { it.isNotBlank() }.forEach { line ->
+                      val fields = line.split(',')
+                      val merchant = fields[2]
+                      val amount = fields[3].toLong()
+                      val delta = if (fields[1] == "charge") amount else -amount
+                      balances[merchant] = (balances[merchant] ?: 0L) + delta
+                  }
+                  return balances.toSortedMap().toList()
+              }
+            hints:
+              - Parse each line into a merchant, type and amount, then use a signed delta.
+              - A sorted map gives the required merchant order.
+            expected: "Expected: acme 500 · bolt 2000"
+          - id: ch10-merchant-ledger-part-2
+            prompt: |
+              A refund or payout that would make a balance negative is rejected and not applied. Return the balances and the rejected line numbers. Add line 5: `4,payout,bolt,2500`.
+            starter_code: |
+              data class LedgerResult(val balances: List<Pair<String, Long>>, val rejectedLines: List<Int>)
+
+              fun ledgerWithRejections(lines: String): LedgerResult = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class MerchantLedgerPart2Test {
+                  @Test fun example() {
+                      val lines = """1,charge,acme,5000
+              1,charge,bolt,2000
+              2,refund,acme,1500
+              3,payout,acme,3000
+              4,payout,bolt,2500"""
+                      assertEquals(LedgerResult(listOf("acme" to 500L, "bolt" to 2000L), listOf(5)), ledgerWithRejections(lines))
+                  }
+
+                  @Test fun unknownTypeIsRejected() {
+                      assertEquals(LedgerResult(emptyList(), listOf(1)), ledgerWithRejections("1,chargeback,acme,10"))
+                  }
+              }
+            reference_solution: |
+              data class LedgerResult(val balances: List<Pair<String, Long>>, val rejectedLines: List<Int>)
+
+              fun ledgerWithRejections(lines: String): LedgerResult {
+                  val balances = mutableMapOf<String, Long>()
+                  val rejected = mutableListOf<Int>()
+                  lines.lineSequence().filter { it.isNotBlank() }.forEachIndexed { index, line ->
+                      val fields = line.split(',')
+                      val merchant = fields[2]
+                      val type = fields[1]
+                      val amount = fields[3].toLong()
+                      val current = balances[merchant] ?: 0L
+                      if (type !in setOf("charge", "refund", "payout") || (type != "charge" && current < amount)) rejected += index + 1
+                      else balances[merchant] = current + if (type == "charge") amount else -amount
+                  }
+                  return LedgerResult(balances.toSortedMap().toList(), rejected)
+              }
+            hints:
+              - Check the current balance before applying a refund or payout.
+              - Rejected lines still consume their original line number and do not change the balance.
+            expected: "Expected: rejected [5] · acme 500 · bolt 2000"
+          - id: ch10-merchant-ledger-part-3
+            prompt: |
+              Charges settle after two days: a charge on day d becomes available on day d + 2. Payouts can use only available funds, meaning settled charges minus all refunds and payouts so far. Refunds can still use the whole balance.
+
+                  1,charge,acme,5000
+                  1,charge,bolt,2000
+                  2,refund,acme,1500
+                  3,payout,acme,3000
+                  3,charge,acme,4000
+                  4,payout,bolt,2500
+                  4,payout,acme,2000
+            starter_code: |
+              fun settledLedger(lines: String): LedgerResult = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class MerchantLedgerPart3Test {
+                  @Test fun example() {
+                      val lines = """1,charge,acme,5000
+              1,charge,bolt,2000
+              2,refund,acme,1500
+              3,payout,acme,3000
+              3,charge,acme,4000
+              4,payout,bolt,2500
+              4,payout,acme,2000"""
+                      assertEquals(LedgerResult(listOf("acme" to 4500L, "bolt" to 2000L), listOf(6, 7)), settledLedger(lines))
+                  }
+              }
+            reference_solution: |
+              data class LedgerResult(val balances: List<Pair<String, Long>>, val rejectedLines: List<Int>)
+
+              private data class Entry(val day: Int, val type: String, val merchant: String, val amount: Long, val line: Int)
+
+              fun settledLedger(lines: String): LedgerResult {
+                  val entries = lines.lineSequence().filter { it.isNotBlank() }.mapIndexed { index, line ->
+                      val fields = line.split(',')
+                      Entry(fields[0].toInt(), fields[1], fields[2], fields[3].toLong(), index + 1)
+                  }.toList()
+                  val balances = mutableMapOf<String, Long>()
+                  val settledCharges = mutableMapOf<String, Long>()
+                  val refunds = mutableMapOf<String, Long>()
+                  val payouts = mutableMapOf<String, Long>()
+                  val rejected = mutableListOf<Int>()
+                  entries.forEach { entry ->
+                      entries.filter { it.type == "charge" && it.merchant == entry.merchant && it.day + 2 <= entry.day }
+                          .sumOf { it.amount }.also { settledCharges[entry.merchant] = it }
+                      val balance = balances[entry.merchant] ?: 0L
+                      when (entry.type) {
+                          "charge" -> balances[entry.merchant] = balance + entry.amount
+                          "refund" -> if (balance < entry.amount) rejected += entry.line else {
+                              balances[entry.merchant] = balance - entry.amount
+                              refunds[entry.merchant] = (refunds[entry.merchant] ?: 0L) + entry.amount
+                          }
+                          "payout" -> {
+                              val available = (settledCharges[entry.merchant] ?: 0L) -
+                                  (refunds[entry.merchant] ?: 0L) - (payouts[entry.merchant] ?: 0L)
+                              if (available < entry.amount) rejected += entry.line else {
+                                  balances[entry.merchant] = balance - entry.amount
+                                  payouts[entry.merchant] = (payouts[entry.merchant] ?: 0L) + entry.amount
+                              }
+                          }
+                          else -> rejected += entry.line
+                      }
+                  }
+                  return LedgerResult(balances.toSortedMap().toList(), rejected)
+              }
+            hints:
+              - Track total balance separately from settled charges and deductions used by payouts.
+              - A charge is settled when its day plus two is no later than the event's day.
+            expected: "Expected: rejected [6, 7] · acme 4500 · bolt 2000. On line 7, acme holds 4500 but only 500 is available."
+          - id: ch10-merchant-ledger-part-4
+            prompt: |
+              Lines can arrive out of order. Process them by day; lines on the same day keep their original order. Report rejections by original line number.
+
+                  3,payout,acme,3000
+                  1,charge,acme,5000
+                  4,payout,acme,2000
+                  2,refund,acme,1500
+                  1,charge,bolt,2000
+                  3,charge,acme,4000
+                  4,payout,bolt,2500
+            starter_code: |
+              fun settledLedgerOutOfOrder(lines: String): LedgerResult = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class MerchantLedgerPart4Test {
+                  @Test fun example() {
+                      val lines = """3,payout,acme,3000
+              1,charge,acme,5000
+              4,payout,acme,2000
+              2,refund,acme,1500
+              1,charge,bolt,2000
+              3,charge,acme,4000
+              4,payout,bolt,2500"""
+                      assertEquals(LedgerResult(listOf("acme" to 4500L, "bolt" to 2000L), listOf(3, 7)), settledLedgerOutOfOrder(lines))
+                  }
+              }
+            reference_solution: |
+              data class LedgerResult(val balances: List<Pair<String, Long>>, val rejectedLines: List<Int>)
+              private data class Entry(val day: Int, val type: String, val merchant: String, val amount: Long, val line: Int)
+
+              fun settledLedgerOutOfOrder(lines: String): LedgerResult {
+                  val sorted = lines.lineSequence().filter { it.isNotBlank() }.mapIndexed { index, line ->
+                      val fields = line.split(',')
+                      Entry(fields[0].toInt(), fields[1], fields[2], fields[3].toLong(), index + 1)
+                  }.sortedWith(compareBy<Entry> { it.day }.thenBy { it.line }).toList()
+                  val balances = mutableMapOf<String, Long>()
+                  val settled = mutableMapOf<String, Long>()
+                  val refunds = mutableMapOf<String, Long>()
+                  val payouts = mutableMapOf<String, Long>()
+                  val rejected = mutableListOf<Int>()
+                  sorted.forEach { entry ->
+                      val settledNow = sorted.filter { it.type == "charge" && it.merchant == entry.merchant && it.day + 2 <= entry.day }.sumOf { it.amount }
+                      settled[entry.merchant] = settledNow
+                      val balance = balances[entry.merchant] ?: 0L
+                      when (entry.type) {
+                          "charge" -> balances[entry.merchant] = balance + entry.amount
+                          "refund" -> if (balance < entry.amount) rejected += entry.line else {
+                              balances[entry.merchant] = balance - entry.amount
+                              refunds[entry.merchant] = (refunds[entry.merchant] ?: 0L) + entry.amount
+                          }
+                          "payout" -> {
+                              val available = (settled[entry.merchant] ?: 0L) - (refunds[entry.merchant] ?: 0L) - (payouts[entry.merchant] ?: 0L)
+                              if (available < entry.amount) rejected += entry.line else {
+                                  balances[entry.merchant] = balance - entry.amount
+                                  payouts[entry.merchant] = (payouts[entry.merchant] ?: 0L) + entry.amount
+                              }
+                          }
+                          else -> rejected += entry.line
+                      }
+                  }
+                  return LedgerResult(balances.toSortedMap().toList(), rejected.sorted())
+              }
+            hints:
+              - Parse and retain each original line number, then sort by day and that number.
+              - Reuse the settled-funds rules, but return rejection numbers in original-line order.
+            expected: "Expected: rejected [3, 7] · acme 4500 · bolt 2000"
+        faq:
+          - question: Are amounts always positive integers?
+            answer: Yes.
+          - question: What is the same-day order?
+            answer: Use input order.
+          - question: What happens for an unknown type?
+            answer: Treat it as an invalid line and report it.
+          - question: Is a charge available on the day it lands?
+            answer: No. It becomes available on day d + 2.
+
+  - id: ch10-accept-language-matcher
+    title: Accept-Language matcher
+    explanation: |
+      Parse a header into preferences, normalize only for comparison, and return the spelling from the server's supported list. Quality values affect priority, while a language-only tag expands in supported-list order.
+    exercises:
+      - type: multi_part_problem
+        id: ch10-accept-language-matcher-problem
+        prompt: Match a browser's Accept-Language header against a fixed supported list.
+        story: |
+          A browser sends an `Accept-Language` header, and your server supports a fixed list of tags. Return the supported tags the client wants, in preference order.
+        parts:
+          - id: ch10-accept-language-matcher-part-1
+            prompt: Exact matches, in header order.
+            starter_code: |
+              fun matchLanguages(header: String, supported: List<String>): List<String> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class AcceptLanguagePart1Test {
+                  @Test fun example() {
+                      assertEquals(listOf("en-US", "fr-FR"), matchLanguages("en-US, fr-CA, fr-FR", listOf("fr-FR", "en-US")))
+                  }
+              }
+            reference_solution: |
+              fun matchLanguages(header: String, supported: List<String>): List<String> {
+                  val result = mutableListOf<String>()
+                  header.split(',').map { it.trim() }.filter { it.isNotEmpty() }.forEach { wanted ->
+                      supported.firstOrNull { it.equals(wanted, ignoreCase = true) }?.let { match ->
+                          if (result.none { it.equals(match, ignoreCase = true) }) result += match
+                      }
+                  }
+                  return result
+              }
+            hints:
+              - Split on commas, trim each tag, and compare tags ignoring case.
+              - Append the supported spelling only when it has not already been returned.
+            expected: "(\"en-US, fr-CA, fr-FR\", [fr-FR, en-US]) → [en-US, fr-FR]"
+          - id: ch10-accept-language-matcher-part-2
+            prompt: A tag with no region, like `en`, matches every supported tag for that language, in the supported list's order. Never return a tag twice.
+            starter_code: |
+              fun matchLanguages(header: String, supported: List<String>): List<String> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class AcceptLanguagePart2Test {
+                  @Test fun example() {
+                      assertEquals(
+                          listOf("fr-FR", "en-US", "en-GB"),
+                          matchLanguages("fr-FR, en", listOf("en-US", "fr-CA", "fr-FR", "en-GB"))
+                      )
+                  }
+
+                  @Test fun caseAndEmptyHeader() {
+                      assertEquals(listOf("en-US"), matchLanguages(" EN-us, ,bad", listOf("en-US")))
+                      assertEquals(emptyList<String>(), matchLanguages("", listOf("en-US")))
+                  }
+              }
+            reference_solution: |
+              fun matchLanguages(header: String, supported: List<String>): List<String> {
+                  val result = mutableListOf<String>()
+                  header.split(',').map { it.trim() }.filter { it.isNotEmpty() }.forEach { wanted ->
+                      supported.forEach { candidate ->
+                          val language = wanted.substringBefore('-')
+                          if ((wanted.equals(candidate, true) || (wanted.length == language.length && candidate.substringBefore('-').equals(wanted, true))) &&
+                              result.none { it.equals(candidate, true) }) result += candidate
+                      }
+                  }
+                  return result
+              }
+            hints:
+              - An entry without `-` is a language-only preference; scan supported tags to expand it.
+              - Keep one result list and check it before every append.
+            expected: "(\"fr-FR, en\", [en-US, fr-CA, fr-FR, en-GB]) → [fr-FR, en-US, en-GB]"
+          - id: ch10-accept-language-matcher-part-3
+            prompt: "`*` matches every supported tag not already returned, in supported-list order."
+            starter_code: |
+              fun matchLanguages(header: String, supported: List<String>): List<String> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class AcceptLanguagePart3Test {
+                  @Test fun example() {
+                      assertEquals(listOf("en-US", "fr-FR", "de-DE"), matchLanguages("en-US, *", listOf("fr-FR", "en-US", "de-DE")))
+                  }
+              }
+            reference_solution: |
+              fun matchLanguages(header: String, supported: List<String>): List<String> {
+                  val result = mutableListOf<String>()
+                  header.split(',').map { it.trim() }.filter { it.isNotEmpty() }.forEach { wanted ->
+                      if (wanted == "*") supported.forEach { candidate ->
+                          if (result.none { it.equals(candidate, true) }) result += candidate
+                      } else supported.forEach { candidate ->
+                          val languageOnly = !wanted.contains('-')
+                          val matches = wanted.equals(candidate, true) || (languageOnly && candidate.substringBefore('-').equals(wanted, true))
+                          if (matches && result.none { it.equals(candidate, true) }) result += candidate
+                      }
+                  }
+                  return result
+              }
+            hints:
+              - Handle the wildcard as a second pass over the supported list.
+              - The same duplicate check works for exact, language-only and wildcard matches.
+            expected: "(\"en-US, *\", [fr-FR, en-US, de-DE]) → [en-US, fr-FR, de-DE]"
+          - id: ch10-accept-language-matcher-part-4
+            prompt: |
+              Quality values like `;q=0.4` are allowed; no q means 1. Order by q, highest first; equal q keeps header order. `q=0` means never return that tag.
+
+              Examples: `(\"fr-FR;q=0.4, en-US, de-DE;q=0.9\", [de-DE, en-US, fr-FR]) → [en-US, de-DE, fr-FR]`; `(\"en-US, fr-FR;q=0\", [fr-FR, en-US]) → [en-US]`; `(\"en;q=0.5, en-GB\", [en-US, en-GB]) → [en-GB, en-US]`.
+            starter_code: |
+              fun matchLanguages(header: String, supported: List<String>): List<String> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class AcceptLanguagePart4Test {
+                  @Test fun examples() {
+                      assertEquals(listOf("en-US", "de-DE", "fr-FR"), matchLanguages("fr-FR;q=0.4, en-US, de-DE;q=0.9", listOf("de-DE", "en-US", "fr-FR")))
+                      assertEquals(listOf("en-US"), matchLanguages("en-US, fr-FR;q=0", listOf("fr-FR", "en-US")))
+                      assertEquals(listOf("en-GB", "en-US"), matchLanguages("en;q=0.5, en-GB", listOf("en-US", "en-GB")))
+                  }
+              }
+            reference_solution: |
+              private data class Preference(val tag: String, val quality: Double, val order: Int)
+
+              fun matchLanguages(header: String, supported: List<String>): List<String> {
+                  val preferences = header.split(',').mapIndexedNotNull { index, raw ->
+                      val fields = raw.split(';').map { it.trim() }.filter { it.isNotEmpty() }
+                      val tag = fields.firstOrNull() ?: return@mapIndexedNotNull null
+                      val qField = fields.drop(1).firstOrNull { it.startsWith("q=", true) }
+                      val quality = if (qField == null) 1.0 else qField.substringAfter('=').toDoubleOrNull()
+                          ?: return@mapIndexedNotNull null
+                      if (quality !in 0.0..1.0) null else Preference(tag, quality, index)
+                  }.sortedWith(compareByDescending<Preference> { it.quality }.thenBy { it.order })
+                  val excluded = preferences.filter { it.quality == 0.0 }.map { it.tag }.toSet()
+                  val result = mutableListOf<String>()
+                  preferences.filter { it.quality > 0.0 }.forEach { preference ->
+                      if (preference.tag == "*") supported.forEach { candidate ->
+                          if (result.none { it.equals(candidate, true) } && excluded.none { it.equals(candidate, true) }) result += candidate
+                      } else supported.forEach { candidate ->
+                          val languageOnly = !preference.tag.contains('-')
+                          val matches = preference.tag.equals(candidate, true) || (languageOnly && candidate.substringBefore('-').equals(preference.tag, true))
+                          if (matches && excluded.none { it.equals(candidate, true) } && result.none { it.equals(candidate, true) }) result += candidate
+                      }
+                  }
+                  return result
+              }
+            hints:
+              - Parse q into a number, then stable-sort preferences by descending q and original position.
+              - Expand each positive preference and skip exact tags listed with q=0; `en;q=0` excludes only the exact `en` tag.
+            expected: "Expected: [en-US, de-DE, fr-FR]; [en-US]; [en-GB, en-US]"
+        faq:
+          - question: Does case matter?
+            answer: Comparison is case-insensitive. Return the spelling from the supported list.
+          - question: What about whitespace?
+            answer: Trim around commas and semicolons.
+          - question: What happens to empty or malformed entries?
+            answer: Skip them. An empty header gives an empty list.
+          - question: Does `en;q=0` exclude `en-US`?
+            answer: Assume it excludes only the exact tag. Say that assumption out loud.
+
+  - id: ch10-card-number-check
+    title: Card number check
+    explanation: |
+      Validate in a deliberate order: normalize separators, check characters, identify the brand, check the brand-specific length, then run Luhn. Keeping the first failure makes the result predictable and easy to test.
+    exercises:
+      - type: multi_part_problem
+        id: ch10-card-number-check-problem
+        prompt: Identify, validate and safely mask payment card numbers.
+        story: |
+          Before a card reaches the network, identify its brand and validate the number. Several examples are Stripe's public test card numbers.
+        parts:
+          - id: ch10-card-number-check-part-1
+            prompt: |
+              Brand rules arrive as text: `4:VISA,51-55:MASTERCARD,34:AMEX,37:AMEX`. `51-55` means the first two digits are 51 to 55. Return the brand, or `UNKNOWN`.
+            starter_code: |
+              fun cardBrand(number: String, rules: String): String = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CardNumberCheckPart1Test {
+                  @Test fun examples() {
+                      val rules = "4:VISA,51-55:MASTERCARD,34:AMEX,37:AMEX"
+                      assertEquals("VISA", cardBrand("4242424242424242", rules))
+                      assertEquals("MASTERCARD", cardBrand("5555555555554444", rules))
+                      assertEquals("AMEX", cardBrand("378282246310005", rules))
+                      assertEquals("UNKNOWN", cardBrand("6011111111111117", rules))
+                  }
+              }
+            reference_solution: |
+              private data class CardRule(val start: Int, val end: Int, val length: Int, val brand: String)
+
+              private fun parseCardRules(rules: String): List<CardRule> = rules.split(',').map { raw ->
+                  val parts = raw.split(':')
+                  val prefix = parts[0]
+                  val range = prefix.split('-')
+                  CardRule(range[0].toInt(), range.last().toInt(), range[0].length, parts[1])
+              }
+
+              fun cardBrand(number: String, rules: String): String {
+                  val digits = number.trim().filterNot { it == ' ' || it == '-' }
+                  return parseCardRules(rules).firstOrNull { rule ->
+                      digits.length >= rule.length && digits.take(rule.length).toIntOrNull()?.let { it in rule.start..rule.end } == true
+                  }?.brand ?: "UNKNOWN"
+              }
+            hints:
+              - Parse a prefix as either one number or a two-number range.
+              - Compare the same number of leading digits with the numeric range.
+            expected: "4242424242424242 → VISA · 5555555555554444 → MASTERCARD · 378282246310005 → AMEX · 6011111111111117 → UNKNOWN"
+          - id: ch10-card-number-check-part-2
+            prompt: |
+              Strip spaces and dashes, then check in this order: characters (digits only), brand (`UNKNOWN_BRAND` if none), length (VISA 13, 16 or 19; MASTERCARD 16; AMEX 15), Luhn checksum. Return `VALID` or the first failure.
+
+              Luhn: starting from the rightmost digit, double every second digit and subtract 9 from any result over 9. The number is valid if the total is divisible by 10.
+            starter_code: |
+              fun validateCard(number: String, rules: String): String = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CardNumberCheckPart2Test {
+                  @Test fun examples() {
+                      val rules = "4:VISA,51-55:MASTERCARD,34:AMEX,37:AMEX"
+                      assertEquals("VALID", validateCard("4242 4242 4242 4242", rules))
+                      assertEquals("INVALID_CHECKSUM", validateCard("4242424242424241", rules))
+                      assertEquals("INVALID_LENGTH", validateCard("37828224631000", rules))
+                      assertEquals("INVALID_CHARACTERS", validateCard("4242-4242-4242-424x", rules))
+                  }
+              }
+            reference_solution: |
+              private data class CardRule(val start: Int, val end: Int, val length: Int, val brand: String)
+
+              private fun parseCardRules(rules: String): List<CardRule> = rules.split(',').map { raw ->
+                  val parts = raw.split(':')
+                  val range = parts[0].split('-')
+                  CardRule(range[0].toInt(), range.last().toInt(), range[0].length, parts[1])
+              }
+
+              private fun normalized(number: String): String = number.trim().filterNot { it == ' ' || it == '-' }
+
+              private fun brand(digits: String, rules: List<CardRule>): String = rules.firstOrNull { rule ->
+                  digits.length >= rule.length && digits.take(rule.length).toIntOrNull()?.let { it in rule.start..rule.end } == true
+              }?.brand ?: "UNKNOWN_BRAND"
+
+              private fun luhn(digits: String): Boolean {
+                  var sum = 0
+                  var double = false
+                  for (index in digits.lastIndex downTo 0) {
+                      var value = digits[index] - '0'
+                      if (double) { value *= 2; if (value > 9) value -= 9 }
+                      sum += value
+                      double = !double
+                  }
+                  return sum % 10 == 0
+              }
+
+              fun validateCard(number: String, rules: String): String {
+                  val digits = normalized(number)
+                  if (digits.any { it !in '0'..'9' }) return "INVALID_CHARACTERS"
+                  val cardBrand = brand(digits, parseCardRules(rules))
+                  if (cardBrand == "UNKNOWN_BRAND") return cardBrand
+                  val validLength = when (cardBrand) {
+                      "VISA" -> digits.length in listOf(13, 16, 19)
+                      "MASTERCARD" -> digits.length == 16
+                      "AMEX" -> digits.length == 15
+                      else -> true
+                  }
+                  if (!validLength) return "INVALID_LENGTH"
+                  return if (luhn(digits)) "VALID" else "INVALID_CHECKSUM"
+              }
+            hints:
+              - Normalize separators before checking characters; do not let a bad character reach `toInt`.
+              - Luhn doubles from the right, starting with the digit immediately left of the check digit.
+            expected: "4242 4242 4242 4242 → VALID · 4242424242424241 → INVALID_CHECKSUM · 37828224631000 → INVALID_LENGTH · 4242-4242-4242-424x → INVALID_CHARACTERS"
+          - id: ch10-card-number-check-part-3
+            prompt: |
+              Rules can overlap, and the longest matching prefix wins. Add `2221-2720:MASTERCARD,4026:VISA_ELECTRON` (`VISA_ELECTRON` length is 16).
+            starter_code: |
+              fun cardBrandWithOverlaps(number: String, rules: String): String = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CardNumberCheckPart3Test {
+                  @Test fun examples() {
+                      val rules = "4:VISA,51-55:MASTERCARD,34:AMEX,37:AMEX,2221-2720:MASTERCARD,4026:VISA_ELECTRON"
+                      assertEquals("VISA_ELECTRON", cardBrandWithOverlaps("4026000000000002", rules))
+                      assertEquals("MASTERCARD", cardBrandWithOverlaps("2223003122003222", rules))
+                      assertEquals("VISA", cardBrandWithOverlaps("4242424242424242", rules))
+                  }
+              }
+            reference_solution: |
+              private data class CardRule(val start: Int, val end: Int, val length: Int, val brand: String)
+
+              private fun parseCardRules(rules: String): List<CardRule> = rules.split(',').map { raw ->
+                  val parts = raw.split(':')
+                  val range = parts[0].split('-')
+                  CardRule(range[0].toInt(), range.last().toInt(), range[0].length, parts[1])
+              }
+
+              private fun normalized(number: String): String = number.trim().filterNot { it == ' ' || it == '-' }
+
+              private fun selectedBrand(digits: String, rules: List<CardRule>): String = rules.filter { rule ->
+                  digits.length >= rule.length && digits.take(rule.length).toIntOrNull()?.let { it in rule.start..rule.end } == true
+              }.maxByOrNull { it.length }?.brand ?: "UNKNOWN_BRAND"
+
+              private fun luhn(digits: String): Boolean {
+                  var sum = 0
+                  var double = false
+                  for (index in digits.lastIndex downTo 0) {
+                      var value = digits[index] - '0'
+                      if (double) { value *= 2; if (value > 9) value -= 9 }
+                      sum += value
+                      double = !double
+                  }
+                  return sum % 10 == 0
+              }
+
+              fun cardBrandWithOverlaps(number: String, rules: String): String {
+                  val digits = normalized(number)
+                  if (digits.any { it !in '0'..'9' }) return "UNKNOWN"
+                  return selectedBrand(digits, parseCardRules(rules)).removeSuffix("_BRAND")
+              }
+            hints:
+              - Keep every matching rule, then choose the one with the greatest prefix length.
+              - The new 4026 rule must beat the one-digit 4 rule.
+            expected: "4026000000000002 → VISA_ELECTRON · 2223003122003222 → MASTERCARD · 4242424242424242 → VISA"
+          - id: ch10-card-number-check-part-4
+            prompt: |
+              Write `mask(number)` that keeps only the last four digits: `"4242 4242 4242 4242"` → `"•••• 4242"`. Then explain what else must never reach logs, and why.
+            starter_code: |
+              fun mask(number: String): String = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CardNumberCheckPart4Test {
+                  @Test fun example() {
+                      assertEquals("•••• 4242", mask("4242 4242 4242 4242"))
+                  }
+              }
+            reference_solution: |
+              fun mask(number: String): String {
+                  val digits = number.filter { it.isDigit() }
+                  return "•••• ${digits.takeLast(4)}"
+              }
+            hints:
+              - Remove presentation separators before taking the last four digits.
+              - The full number, security code, PIN and authentication data must not be logged.
+            expected: "Expected: \"4242 4242 4242 4242\" → \"•••• 4242\". Never log the full PAN, CVV/CVC, PIN or authentication data."
+        faq:
+          - question: How do I compare a 4-digit range like 2221-2720?
+            answer: Take the same number of leading digits and compare them as numbers.
+          - question: Are there overlaps in Part 1?
+            answer: No overlaps occur until Part 3.
+          - question: What about leading or trailing spaces?
+            answer: Strip them.
+
+  - id: ch10-balance-the-accounts
+    title: Balance the accounts
+    explanation: |
+      Separate finding a workable transfer plan from verifying it. A plan is valid only if every account reaches the threshold, money is conserved, and no sender spends more than its balance.
+    exercises:
+      - type: multi_part_problem
+        id: ch10-balance-the-accounts-problem
+        prompt: Keep a group of accounts above a minimum balance using transfers.
+        source_note: Stripe's published team-screen sample, paraphrased with new numbers
+        story: |
+          This is Stripe's own published sample from the team-screen guide, paraphrased with new numbers. Stripe holds money in many bank accounts and must keep each one at or above a minimum for operational and regulatory reasons. Any working answer is fine; optimal is not required until Part 3.
+        parts:
+          - id: ch10-balance-the-accounts-part-1
+            prompt: "Balances: CA 50, US 180, GB 95, JP 130. Threshold: 100. Output transfers (from, to, amount) so every account ends at 100 or more."
+            starter_code: |
+              data class Transfer(val from: String, val to: String, val amount: Long)
+
+              fun balanceTransfers(balances: Map<String, Long>, threshold: Long): List<Transfer> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertTrue
+              import org.junit.Test
+
+              class BalanceAccountsPart1Test {
+                  @Test fun exampleIsValid() {
+                      val initial = mapOf("CA" to 50L, "US" to 180L, "GB" to 95L, "JP" to 130L)
+                      val transfers = balanceTransfers(initial, 100)
+                      val result = initial.toMutableMap()
+                      transfers.forEach {
+                          assertTrue(it.amount > 0)
+                          assertTrue(result.getValue(it.from) >= it.amount)
+                          result[it.from] = result.getValue(it.from) - it.amount
+                          result[it.to] = result.getValue(it.to) + it.amount
+                      }
+                      assertTrue(result.values.all { it >= 100 })
+                  }
+              }
+            reference_solution: |
+              data class Transfer(val from: String, val to: String, val amount: Long)
+
+              fun balanceTransfers(balances: Map<String, Long>, threshold: Long): List<Transfer> {
+                  val deficits = balances.filterValues { it < threshold }.map { it.key to threshold - it.value }.toMutableList()
+                  val surpluses = balances.filterValues { it > threshold }.map { it.key to it.value - threshold }.toMutableList()
+                  val transfers = mutableListOf<Transfer>()
+                  var deficitIndex = 0
+                  var surplusIndex = 0
+                  while (deficitIndex < deficits.size && surplusIndex < surpluses.size) {
+                      val (to, need) = deficits[deficitIndex]
+                      val (from, available) = surpluses[surplusIndex]
+                      val amount = minOf(need, available)
+                      transfers += Transfer(from, to, amount)
+                      deficits[deficitIndex] = to to (need - amount)
+                      surpluses[surplusIndex] = from to (available - amount)
+                      if (need == amount) deficitIndex++
+                      if (available == amount) surplusIndex++
+                  }
+                  return transfers
+              }
+            hints:
+              - Make a deficit list for accounts below the threshold and a surplus list for accounts above it.
+              - Transfer the smaller of the current need and current surplus, then advance whichever reaches zero.
+            expected: "One valid answer: US → CA 50 · US → GB 5"
+          - id: ch10-balance-the-accounts-part-2
+            prompt: |
+              We only eyeballed Part 1. Write `verify(balances, transfers)`: apply the transfers and check that every account meets the threshold, the total is unchanged, and no account sends more than it has. If balancing is impossible (total below threshold × accounts), return an error instead of transfers.
+            starter_code: |
+              data class BalanceCheck(val valid: Boolean, val error: String?)
+
+              fun verify(balances: Map<String, Long>, transfers: List<Transfer>, threshold: Long): BalanceCheck = TODO()
+              fun balanceAccounts(balances: Map<String, Long>, threshold: Long): Result<List<Transfer>> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Assert.assertTrue
+              import org.junit.Test
+
+              class BalanceAccountsPart2Test {
+                  @Test fun impossibleExampleReturnsError() {
+                      val result = balanceAccounts(mapOf("CA" to 50L, "US" to 120L), 100)
+                      assertTrue(result.isFailure)
+                      assertEquals("error", result.exceptionOrNull()?.message)
+                  }
+
+                  @Test fun validTransfersVerify() {
+                      val initial = mapOf("CA" to 50L, "US" to 180L, "GB" to 95L, "JP" to 130L)
+                      assertTrue(verify(initial, balanceTransfers(initial, 100), 100).valid)
+                  }
+              }
+            reference_solution: |
+              data class Transfer(val from: String, val to: String, val amount: Long)
+              data class BalanceCheck(val valid: Boolean, val error: String?)
+
+              fun balanceTransfers(balances: Map<String, Long>, threshold: Long): List<Transfer> {
+                  val deficits = balances.filterValues { it < threshold }.map { it.key to threshold - it.value }.toMutableList()
+                  val surpluses = balances.filterValues { it > threshold }.map { it.key to it.value - threshold }.toMutableList()
+                  val result = mutableListOf<Transfer>()
+                  var d = 0
+                  var s = 0
+                  while (d < deficits.size && s < surpluses.size) {
+                      val amount = minOf(deficits[d].second, surpluses[s].second)
+                      result += Transfer(surpluses[s].first, deficits[d].first, amount)
+                      deficits[d] = deficits[d].first to deficits[d].second - amount
+                      surpluses[s] = surpluses[s].first to surpluses[s].second - amount
+                      if (deficits[d].second == 0L) d++
+                      if (surpluses[s].second == 0L) s++
+                  }
+                  return result
+              }
+
+              fun verify(balances: Map<String, Long>, transfers: List<Transfer>, threshold: Long): BalanceCheck {
+                  val after = balances.toMutableMap()
+                  val originalTotal = balances.values.sum()
+                  transfers.forEach { transfer ->
+                      if (transfer.amount <= 0) return BalanceCheck(false, "invalid amount")
+                      val from = after[transfer.from] ?: return BalanceCheck(false, "unknown sender")
+                      if (from < transfer.amount) return BalanceCheck(false, "insufficient funds")
+                      if (transfer.to !in after) return BalanceCheck(false, "unknown recipient")
+                      after[transfer.from] = from - transfer.amount
+                      after[transfer.to] = after.getValue(transfer.to) + transfer.amount
+                  }
+                  return when {
+                      after.values.any { it < threshold } -> BalanceCheck(false, "below threshold")
+                      after.values.sum() != originalTotal -> BalanceCheck(false, "total changed")
+                      else -> BalanceCheck(true, null)
+                  }
+              }
+
+              fun balanceAccounts(balances: Map<String, Long>, threshold: Long): Result<List<Transfer>> {
+                  if (balances.values.sum() < threshold * balances.size) return Result.failure(IllegalStateException("error"))
+                  val transfers = balanceTransfers(balances, threshold)
+                  val check = verify(balances, transfers, threshold)
+                  return if (check.valid) Result.success(transfers) else Result.failure(IllegalStateException(check.error ?: "error"))
+              }
+
+            hints:
+              - Apply transfers to a copy, rejecting unknown accounts, non-positive amounts and insufficient funds.
+              - Check the total after all transfers and reject early when the total is below threshold times account count.
+            expected: "CA 50, US 120 → error (total 170 < 200)"
+          - id: ch10-balance-the-accounts-part-3
+            prompt: |
+              Use as few transfers as possible. Explain your heuristic and when it can fail.
+
+              Example: A 70, B 80, X 120, Y 130. Going account by account takes 3 transfers (X→A 20, Y→A 10, Y→B 20), but 2 are enough (Y→A 30, X→B 20).
+            starter_code: |
+              fun minimalTransfers(balances: Map<String, Long>, threshold: Long): List<Transfer> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Assert.assertTrue
+              import org.junit.Test
+
+              class BalanceAccountsPart3Test {
+                  @Test fun exampleUsesTwoValidTransfers() {
+                      val initial = mapOf("A" to 70L, "B" to 80L, "X" to 120L, "Y" to 130L)
+                      val transfers = minimalTransfers(initial, 100)
+                      assertEquals(2, transfers.size)
+                      val result = initial.toMutableMap()
+                      transfers.forEach {
+                          assertTrue(it.amount > 0)
+                          assertTrue(result.getValue(it.from) >= it.amount)
+                          result[it.from] = result.getValue(it.from) - it.amount
+                          result[it.to] = result.getValue(it.to) + it.amount
+                      }
+                      assertTrue(result.values.all { it >= 100 })
+                  }
+              }
+            reference_solution: |
+              data class Transfer(val from: String, val to: String, val amount: Long)
+
+              data class BalanceCheck(val valid: Boolean, val error: String?)
+
+              fun balanceTransfers(balances: Map<String, Long>, threshold: Long): List<Transfer> {
+                  val deficits = balances.filterValues { it < threshold }.map { it.key to threshold - it.value }.toMutableList()
+                  val surpluses = balances.filterValues { it > threshold }.map { it.key to it.value - threshold }.toMutableList()
+                  val result = mutableListOf<Transfer>()
+                  var d = 0
+                  var s = 0
+                  while (d < deficits.size && s < surpluses.size) {
+                      val amount = minOf(deficits[d].second, surpluses[s].second)
+                      result += Transfer(surpluses[s].first, deficits[d].first, amount)
+                      deficits[d] = deficits[d].first to deficits[d].second - amount
+                      surpluses[s] = surpluses[s].first to surpluses[s].second - amount
+                      if (deficits[d].second == 0L) d++
+                      if (surpluses[s].second == 0L) s++
+                  }
+                  return result
+              }
+
+              fun verify(balances: Map<String, Long>, transfers: List<Transfer>, threshold: Long): BalanceCheck {
+                  val after = balances.toMutableMap()
+                  val originalTotal = balances.values.sum()
+                  transfers.forEach { transfer ->
+                      if (transfer.amount <= 0) return BalanceCheck(false, "invalid amount")
+                      val from = after[transfer.from] ?: return BalanceCheck(false, "unknown sender")
+                      if (from < transfer.amount) return BalanceCheck(false, "insufficient funds")
+                      if (transfer.to !in after) return BalanceCheck(false, "unknown recipient")
+                      after[transfer.from] = from - transfer.amount
+                      after[transfer.to] = after.getValue(transfer.to) + transfer.amount
+                  }
+                  return when {
+                      after.values.any { it < threshold } -> BalanceCheck(false, "below threshold")
+                      after.values.sum() != originalTotal -> BalanceCheck(false, "total changed")
+                      else -> BalanceCheck(true, null)
+                  }
+              }
+
+              fun balanceAccounts(balances: Map<String, Long>, threshold: Long): Result<List<Transfer>> {
+                  if (balances.values.sum() < threshold * balances.size) return Result.failure(IllegalStateException("error"))
+                  val transfers = balanceTransfers(balances, threshold)
+                  val check = verify(balances, transfers, threshold)
+                  return if (check.valid) Result.success(transfers) else Result.failure(IllegalStateException(check.error ?: "error"))
+              }
+
+              fun minimalTransfers(balances: Map<String, Long>, threshold: Long): List<Transfer> {
+                  val deficits = balances.filterValues { it < threshold }.map { it.key to threshold - it.value }.sortedByDescending { it.second }.toMutableList()
+                  val surpluses = balances.filterValues { it > threshold }.map { it.key to it.value - threshold }.sortedByDescending { it.second }.toMutableList()
+                  val result = mutableListOf<Transfer>()
+                  var d = 0
+                  var s = 0
+                  while (d < deficits.size && s < surpluses.size) {
+                      val amount = minOf(deficits[d].second, surpluses[s].second)
+                      result += Transfer(surpluses[s].first, deficits[d].first, amount)
+                      deficits[d] = deficits[d].first to deficits[d].second - amount
+                      surpluses[s] = surpluses[s].first to surpluses[s].second - amount
+                      if (deficits[d].second == 0L) d++
+                      if (surpluses[s].second == 0L) s++
+                  }
+                  return result
+              }
+            hints:
+              - Sort deficits and surpluses from largest to smallest before matching them.
+              - Transfer the smaller remaining amount and advance the side that reaches zero.
+            expected: "A 70, B 80, X 120, Y 130: 2 transfers are enough, for example Y→A 30 and X→B 20."
+        faq:
+          - question: How many accounts are there?
+            answer: At most 500.
+          - question: Are amounts integers?
+            answer: Yes.
+          - question: Can one account both send and receive?
+            answer: Avoid it.
+          - question: What output order is required?
+            answer: Any order.
+        discussion: |
+          Part 4 · discussion: This code will move millions of dollars. What changes? Cover dry runs, idempotency keys, audit logs, re-reading balances afterwards, and a transfer that fails halfway.
+
+  - id: ch10-rate-limiter
+    title: Rate limiter
+    explanation: |
+      Rate limits are mostly about boundaries and state. A fixed window groups timestamps by bucket; a sliding window keeps only allowed timestamps inside the half-open interval and never counts denied requests.
+    exercises:
+      - type: multi_part_problem
+        id: ch10-rate-limiter-problem
+        prompt: Build a per-merchant rate limiter, then consider how its state scales.
+        story: |
+          Requests arrive in time order as `(timestamp in seconds, merchant id)`. Return allow or deny for each one. The examples use N = 2 and W = 10 unless a part says otherwise.
+        parts:
+          - id: ch10-rate-limiter-part-1
+            prompt: "Fixed window: each merchant gets at most N requests per window `[k·W, (k+1)·W)`. N = 2, W = 10."
+            starter_code: |
+              data class Request(val timestamp: Int, val merchant: String)
+
+              fun fixedWindow(requests: List<Request>, limit: Int, window: Int): List<Boolean> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class RateLimiterPart1Test {
+                  @Test fun example() {
+                      val requests = listOf(Request(1, "a"), Request(2, "a"), Request(3, "a"), Request(11, "a"), Request(12, "b"))
+                      assertEquals(listOf(true, true, false, true, true), fixedWindow(requests, 2, 10))
+                  }
+              }
+            reference_solution: |
+              data class Request(val timestamp: Int, val merchant: String)
+
+              fun fixedWindow(requests: List<Request>, limit: Int, window: Int): List<Boolean> {
+                  val counts = mutableMapOf<Pair<String, Int>, Int>()
+                  return requests.map { request ->
+                      val bucket = request.timestamp / window
+                      val key = request.merchant to bucket
+                      val count = counts[key] ?: 0
+                      if (count < limit) {
+                          counts[key] = count + 1
+                          true
+                      } else false
+                  }
+              }
+            hints:
+              - The bucket for t is `t / window`, so t = 10 starts a new bucket when W = 10.
+              - Count only requests that are allowed.
+            expected: "(1,a) (2,a) (3,a) (11,a) (12,b) → allow, allow, deny, allow, allow"
+          - id: ch10-rate-limiter-part-2
+            prompt: "Sliding window: allow a request if the merchant has fewer than N allowed requests in `(t − W, t]`. Denied requests do not count. N = 2, W = 10."
+            starter_code: |
+              fun slidingWindow(requests: List<Request>, limit: Int, window: Int): List<Boolean> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class RateLimiterPart2Test {
+                  @Test fun example() {
+                      val requests = listOf(Request(8, "a"), Request(9, "a"), Request(11, "a"), Request(19, "a"))
+                      assertEquals(listOf(true, true, false, true), slidingWindow(requests, 2, 10))
+                  }
+
+                  @Test fun sameSecondRequestsCount() {
+                      val requests = listOf(Request(1, "a"), Request(1, "a"), Request(1, "a"))
+                      assertEquals(listOf(true, true, false), slidingWindow(requests, 2, 10))
+                  }
+              }
+            reference_solution: |
+              data class Request(val timestamp: Int, val merchant: String)
+
+              fun fixedWindow(requests: List<Request>, limit: Int, window: Int): List<Boolean> {
+                  val counts = mutableMapOf<Pair<String, Int>, Int>()
+                  return requests.map { request ->
+                      val key = request.merchant to (request.timestamp / window)
+                      val count = counts[key] ?: 0
+                      if (count < limit) { counts[key] = count + 1; true } else false
+                  }
+              }
+
+              fun slidingWindow(requests: List<Request>, limit: Int, window: Int): List<Boolean> {
+                  val allowed = mutableMapOf<String, ArrayDeque<Int>>()
+                  return requests.map { request ->
+                      val queue = allowed.getOrPut(request.merchant) { ArrayDeque() }
+                      while (queue.firstOrNull()?.let { it <= request.timestamp - window } == true) queue.removeFirst()
+                      if (queue.size < limit) {
+                          queue.addLast(request.timestamp)
+                          true
+                      } else false
+                  }
+              }
+            hints:
+              - Store only timestamps of allowed requests for each merchant.
+              - Before checking the count, remove timestamps at or before `t - W` because the interval is `(t-W, t]`.
+            expected: "(8,a) (9,a) (11,a) (19,a) → allow, allow, deny, allow. A fixed window would allow all four."
+          - id: ch10-rate-limiter-part-3
+            prompt: Per-merchant limits come from config `a:1`; everyone else defaults to 2. Use a sliding window with W = 10.
+            starter_code: |
+              fun configuredSlidingWindow(requests: List<Request>, config: String, defaultLimit: Int, window: Int): List<Boolean> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class RateLimiterPart3Test {
+                  @Test fun example() {
+                      val requests = listOf(Request(1, "a"), Request(2, "a"), Request(3, "c"), Request(4, "c"), Request(5, "c"))
+                      assertEquals(listOf(true, false, true, true, false), configuredSlidingWindow(requests, "a:1", 2, 10))
+                  }
+              }
+            reference_solution: |
+              data class Request(val timestamp: Int, val merchant: String)
+
+              fun fixedWindow(requests: List<Request>, limit: Int, window: Int): List<Boolean> {
+                  val counts = mutableMapOf<Pair<String, Int>, Int>()
+                  return requests.map { request ->
+                      val key = request.merchant to (request.timestamp / window)
+                      val count = counts[key] ?: 0
+                      if (count < limit) { counts[key] = count + 1; true } else false
+                  }
+              }
+
+              fun slidingWindow(requests: List<Request>, limit: Int, window: Int): List<Boolean> {
+                  val allowed = mutableMapOf<String, ArrayDeque<Int>>()
+                  return requests.map { request ->
+                      val queue = allowed.getOrPut(request.merchant) { ArrayDeque() }
+                      while (queue.firstOrNull()?.let { it <= request.timestamp - window } == true) queue.removeFirst()
+                      if (queue.size < limit) { queue.addLast(request.timestamp); true } else false
+                  }
+              }
+
+              fun configuredSlidingWindow(requests: List<Request>, config: String, defaultLimit: Int, window: Int): List<Boolean> {
+                  val limits = config.split(',').mapNotNull { item ->
+                      val fields = item.split(':')
+                      if (fields.size == 2) fields[0].trim() to fields[1].trim().toIntOrNull() else null
+                  }.mapNotNull { (merchant, limit) -> limit?.let { merchant to it } }.toMap()
+                  val allowed = mutableMapOf<String, ArrayDeque<Int>>()
+                  return requests.map { request ->
+                      val queue = allowed.getOrPut(request.merchant) { ArrayDeque() }
+                      while (queue.firstOrNull()?.let { it <= request.timestamp - window } == true) queue.removeFirst()
+                      val limit = limits[request.merchant] ?: defaultLimit
+                      if (queue.size < limit) { queue.addLast(request.timestamp); true } else false
+                  }
+              }
+            hints:
+              - Parse the config into a merchant-to-limit map and use the default when a merchant is absent.
+              - Reuse the same queue and boundary logic from Part 2.
+            expected: "(1,a) (2,a) (3,c) (4,c) (5,c) → allow, deny, allow, allow, deny"
+        faq:
+          - question: Do same-second requests count separately?
+            answer: Yes. Count each one.
+          - question: Which window contains t = 10?
+            answer: The fixed window `[10, 20)`.
+          - question: Do denied requests count?
+            answer: No.
+          - question: Can timestamps go backwards?
+            answer: Not in Parts 1–3.
+        discussion: |
+          Part 4: Ten million merchants. What grows without bound? Add eviction, and state the cost per request. A practical answer evicts inactive merchant queues after their last possible timestamp expires; with a deque, each timestamp is added and removed once, so the amortized cost per request is O(1), while memory is proportional to active merchants and their recent allowed requests.

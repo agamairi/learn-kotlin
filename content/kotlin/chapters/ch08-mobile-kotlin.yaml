@@ -1,0 +1,308 @@
+id: kotlin-ch08-mobile-kotlin
+title: Mobile-style Kotlin
+summary: Hide network, storage, and time behind tiny interfaces so the core logic stays deterministic and easy to test.
+lessons:
+  - id: kotlin-ch08-dependencies
+    title: Interfaces, fakes, and injected time
+    explanation: |
+      Network calls, storage, and the current time are dependencies. Put each behind a tiny interface and pass it into the class that needs it. A fake can then return scripted answers or a controlled timestamp without waiting for real time.
+
+      `Heartbeat` stores only its own policy state. The clock is supplied from outside, so the tests can move from 999 milliseconds to 1,000 exactly and check the boundary.
+    exercises:
+      - type: multiple_choice
+        id: kotlin-ch08-dependencies-mc-clock
+        prompt: 'Why inject a `Clock` instead of calling the system clock inside `Heartbeat`?'
+        options:
+          - Tests can control time deterministically.
+          - The system clock always returns a String.
+          - An injected clock makes the class run on a background thread automatically.
+        correct_index: 0
+        explanation: A fake clock lets a test set exact times and avoid sleeping or depending on wall-clock behavior.
+      - type: cloze
+        id: kotlin-ch08-dependencies-cloze-fun
+        prompt: Declare a one-method Kotlin interface for a clock.
+        template: |
+          ____1 Clock { fun nowMillis(): Long }
+        blanks:
+          - placeholder: "____1"
+            accepted: ["fun interface"]
+            case_sensitive: true
+        explanation: 'A `fun interface` has one abstract method and can be implemented with a lambda when useful.'
+      - type: predict_output
+        id: kotlin-ch08-dependencies-predict
+        prompt: What exact lines are printed by these deterministic checks?
+        code: |
+          fun interface Clock { fun nowMillis(): Long }
+
+          class FakeClock(var now: Long = 0) : Clock {
+              override fun nowMillis() = now
+          }
+
+          class Heartbeat(private val clock: Clock, private val intervalMillis: Long) {
+              private var lastSent: Long? = null
+
+              fun shouldSend(): Boolean {
+                  val now = clock.nowMillis()
+                  val last = lastSent
+                  if (last != null && now - last < intervalMillis) return false
+                  lastSent = now
+                  return true
+              }
+          }
+
+          fun expect(name: String, expected: Boolean, actual: Boolean) {
+              if (expected == actual) println("PASS  $name")
+          }
+
+          fun main() {
+              val clock = FakeClock()
+              val heartbeat = Heartbeat(clock, 1_000)
+              expect("first beat", true, heartbeat.shouldSend())
+              clock.now = 999
+              expect("too soon", false, heartbeat.shouldSend())
+              clock.now = 1_000
+              expect("on time", true, heartbeat.shouldSend())
+          }
+        expected_output: |
+          PASS  first beat
+          PASS  too soon
+          PASS  on time
+        explanation: The first call sends immediately, 999 is too soon, and exactly 1,000 milliseconds is allowed.
+      - type: multiple_choice
+        id: kotlin-ch08-dependencies-mc-sealed
+        prompt: Which type best represents an expected connectivity state with an offline timestamp?
+        options:
+          - '`sealed interface Connectivity` with `Online` and `Offline(sinceMillis)` cases'
+          - '`String connectivity` containing either `"yes"` or `"no"`'
+          - '`Boolean?` plus a separate global timestamp'
+        correct_index: 0
+        explanation: 'The sealed type keeps the state cases and the offline data together and makes `when` exhaustive.'
+      - type: cloze
+        id: kotlin-ch08-dependencies-cloze-received
+        prompt: Have the scripted uploader remember every batch sent to it.
+        template: |
+          val received = ____1<List<String>>()
+        blanks:
+          - placeholder: "____1"
+            accepted: ["mutableListOf"]
+            case_sensitive: true
+        explanation: A mutable list preserves the order of received batches for exact assertions.
+      - type: write_function
+        id: kotlin-ch08-dependencies-write-retry
+        prompt: 'Try an upload up to `maxAttempts` times. Return `SUCCESS` immediately on success, return `PERMANENT` immediately for a permanent failure, and retry only `RETRYABLE`. If all attempts are retryable, return `RETRYABLE`.'
+        starter_code: |
+          enum class SendResult { SUCCESS, RETRYABLE, PERMANENT }
+
+          fun interface Uploader {
+              fun upload(batch: List<String>): SendResult
+          }
+
+          fun retryUpload(uploader: Uploader, batch: List<String>, maxAttempts: Int): SendResult = TODO()
+        hidden_tests: |
+          import org.junit.Test
+          import org.junit.Assert.assertEquals
+
+          class RetryUploadTest {
+              @Test fun retriesThenSucceeds() {
+                  val answers = ArrayDeque(listOf(SendResult.RETRYABLE, SendResult.SUCCESS))
+                  val uploader = Uploader { answers.removeFirst() }
+                  assertEquals(SendResult.SUCCESS, retryUpload(uploader, listOf("a"), 3))
+              }
+
+              @Test fun stopsOnPermanentFailure() {
+                  var calls = 0
+                  val uploader = Uploader {
+                      calls++
+                      SendResult.PERMANENT
+                  }
+                  assertEquals(SendResult.PERMANENT, retryUpload(uploader, listOf("a"), 3))
+                  assertEquals(1, calls)
+              }
+
+              @Test fun returnsRetryableAfterTheLimit() {
+                  var calls = 0
+                  val uploader = Uploader {
+                      calls++
+                      SendResult.RETRYABLE
+                  }
+                  assertEquals(SendResult.RETRYABLE, retryUpload(uploader, listOf("a"), 2))
+                  assertEquals(2, calls)
+              }
+          }
+        reference_solution: |
+          enum class SendResult { SUCCESS, RETRYABLE, PERMANENT }
+
+          fun interface Uploader {
+              fun upload(batch: List<String>): SendResult
+          }
+
+          fun retryUpload(uploader: Uploader, batch: List<String>, maxAttempts: Int): SendResult {
+              require(maxAttempts > 0)
+              repeat(maxAttempts - 1) {
+                  when (val result = uploader.upload(batch)) {
+                      SendResult.SUCCESS, SendResult.PERMANENT -> return result
+                      SendResult.RETRYABLE -> Unit
+                  }
+              }
+              return uploader.upload(batch)
+          }
+        hints:
+          - 'Count attempts, not retries: `maxAttempts = 1` still performs one upload.'
+          - 'Stop as soon as the result is not `RETRYABLE`.'
+          - 'A `when` over `SendResult` makes the policy explicit.'
+        explanation: The uploader is a dependency, so the retry policy can be tested with a scripted fake.
+
+  - id: kotlin-ch08-cache
+    title: Time-to-live caches
+    explanation: |
+      A cache should make its expiry rule explicit. Store the value together with the time it was written, and compare the injected current time with that timestamp on `get`.
+
+      In this lesson, an entry is valid while its age is strictly less than the TTL. At exactly the TTL it is expired, which gives a crisp boundary and avoids retaining stale data.
+    exercises:
+      - type: multiple_choice
+        id: kotlin-ch08-cache-mc-boundary
+        prompt: With a TTL of 1,000 milliseconds, is an entry written at 0 valid at time 1,000?
+        options:
+          - No; the age is exactly the TTL, so it is expired.
+          - Yes; the TTL is inclusive.
+          - Only if the value is a String.
+        correct_index: 0
+        explanation: 'This lesson uses the strict rule `age < ttlMillis`; equality is the expiry boundary.'
+      - type: cloze
+        id: kotlin-ch08-cache-cloze-age
+        prompt: Express the valid-age test for a cached entry.
+        template: |
+          val valid = clock.nowMillis() - storedAt ____1 ttlMillis
+        blanks:
+          - placeholder: "____1"
+            accepted: ["<"]
+            case_sensitive: true
+        explanation: An entry remains valid only while its age is less than the TTL.
+      - type: predict_output
+        id: kotlin-ch08-cache-predict
+        prompt: What does this fake-clock cache print?
+        code: |
+          fun interface Clock { fun nowMillis(): Long }
+
+          class FakeClock(var now: Long = 0) : Clock {
+              override fun nowMillis() = now
+          }
+
+          class TtlCache(private val clock: Clock, private val ttlMillis: Long) {
+              private var entry: Pair<String, Long>? = null
+
+              fun put(value: String) {
+                  entry = value to clock.nowMillis()
+              }
+
+              fun get(): String? {
+                  val current = entry ?: return null
+                  return if (clock.nowMillis() - current.second < ttlMillis) current.first else null
+              }
+          }
+
+          fun main() {
+              val clock = FakeClock(0)
+              val cache = TtlCache(clock, 1_000)
+              cache.put("ready")
+              println(cache.get())
+              clock.now = 1_000
+              println(cache.get())
+          }
+        expected_output: |
+          ready
+          null
+        explanation: The value is fresh at time 0 and exactly expired at time 1,000.
+      - type: multiple_choice
+        id: kotlin-ch08-cache-mc-fake
+        prompt: What should a fake clock expose for this cache exercise?
+        options:
+          - 'A mutable `now` value and `nowMillis()` that returns it.'
+          - A real thread that sleeps until the next expiry.
+          - A random timestamp on every call.
+        correct_index: 0
+        explanation: A mutable fake gives tests direct control over the boundary without sleeping.
+      - type: cloze
+        id: kotlin-ch08-cache-cloze-null
+        prompt: Return a null result immediately when the cache has no entry.
+        template: |
+          val current = entry ____1
+        blanks:
+          - placeholder: "____1"
+            accepted: ["?: return null"]
+            case_sensitive: true
+        explanation: The Elvis operator is a concise early return for the missing-entry case.
+      - type: write_function
+        id: kotlin-ch08-cache-write-ttl
+        prompt: 'Implement a one-value cache with an injected clock. `get` returns null when there is no value or when the value''s age is at least the TTL.'
+        starter_code: |
+          fun interface Clock {
+              fun nowMillis(): Long
+          }
+
+          class FakeClock(var now: Long) : Clock {
+              override fun nowMillis(): Long = now
+          }
+
+          class TtlCache<T>(private val clock: Clock, private val ttlMillis: Long) {
+              fun put(value: T) {
+                  TODO()
+              }
+
+              fun get(): T? = TODO()
+          }
+        hidden_tests: |
+          import org.junit.Test
+          import org.junit.Assert.assertEquals
+          import org.junit.Assert.assertNull
+
+          class TtlCacheTest {
+              @Test fun valueIsAvailableBeforeExpiry() {
+                  val clock = FakeClock(0)
+                  val cache = TtlCache<String>(clock, 1_000)
+                  cache.put("ready")
+                  clock.now = 999
+                  assertEquals("ready", cache.get())
+              }
+
+              @Test fun valueExpiresAtTheBoundary() {
+                  val clock = FakeClock(0)
+                  val cache = TtlCache<String>(clock, 1_000)
+                  cache.put("ready")
+                  clock.now = 1_000
+                  assertNull(cache.get())
+              }
+
+              @Test fun missingValueIsNull() {
+                  val clock = FakeClock(0)
+                  val cache = TtlCache<String>(clock, 1_000)
+                  assertNull(cache.get())
+              }
+          }
+
+        reference_solution: |
+          fun interface Clock {
+              fun nowMillis(): Long
+          }
+
+          class FakeClock(var now: Long) : Clock {
+              override fun nowMillis(): Long = now
+          }
+
+          class TtlCache<T>(private val clock: Clock, private val ttlMillis: Long) {
+              private var entry: Pair<T, Long>? = null
+
+              fun put(value: T) {
+                  entry = value to clock.nowMillis()
+              }
+
+              fun get(): T? {
+                  val current = entry ?: return null
+                  return if (clock.nowMillis() - current.second < ttlMillis) current.first else null
+              }
+          }
+        hints:
+          - Store both the value and the clock time in a private nullable field.
+          - '`get` should first handle a missing entry with `?: return null`.'
+          - 'Keep the entry only when `clock.nowMillis() - storedAt < ttlMillis`.'
+        explanation: The generic cache is plain Kotlin, but its dependency boundary mirrors mobile code that must be tested offline.

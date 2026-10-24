@@ -1,0 +1,213 @@
+id: kotlin-ch07-idioms
+title: Idiomatic, readable Kotlin
+summary: Prefer clear names and small transformations, then keep money in integer minor units with decimal rates.
+lessons:
+  - id: kotlin-ch07-readable-transformations
+    title: Readable transformations
+    explanation: |
+      Idiomatic Kotlin is not a contest to use the most scope functions. Use `let` for a non-null value, `apply` to configure an object, and `also` for a side effect while returning the original value. If nested `it` and `this` make a reader stop, give the value a name instead.
+
+      A small parse → model → compute → format pipeline is easy to extend. `data class Payment` gives the rows a name, `groupBy` or `groupingBy` handles the computation, and `toSortedMap` makes output order explicit.
+    exercises:
+      - type: multiple_choice
+        id: kotlin-ch07-readable-mc-let
+        prompt: 'What is the usual purpose of `value?.let { ... }`?'
+        options:
+          - Run the block only when `value` is not null.
+          - Configure a new object and return that object.
+          - Sort a map by its keys.
+        correct_index: 0
+        explanation: Safe-call plus `let` runs the block only for a non-null receiver and passes the non-null value into it.
+      - type: cloze
+        id: kotlin-ch07-readable-cloze-sorted
+        prompt: Make formatted merchant output deterministic by sorting map keys.
+        template: |
+          totals.____1.entries.joinToString("\n") { (merchant, cents) -> "$merchant: $cents" }
+        blanks:
+          - placeholder: "____1"
+            accepted: ["toSortedMap()"]
+            case_sensitive: true
+        explanation: '`toSortedMap()` orders the merchant keys before formatting.'
+      - type: predict_output
+        id: kotlin-ch07-readable-predict-scope
+        prompt: What does this small scope-function example print?
+        code: |
+          data class Config(var retries: Int = 0)
+
+          fun main() {
+              val config = Config().apply { retries = 2 }
+              val same = config.also { println("retries=${it.retries}") }
+              println(same === config)
+          }
+        expected_output: |
+          retries=2
+          true
+        explanation: '`apply` returns the configured object, and `also` returns that same object after the side effect.'
+      - type: multiple_choice
+        id: kotlin-ch07-readable-mc-val
+        prompt: Which declaration best matches the readability rule for a value that is not reassigned?
+        options:
+          - '`val fixedFeeCents = 30L`'
+          - '`var fixedFeeCents = 30L`'
+          - '`const var fixedFeeCents = 30L`'
+        correct_index: 0
+        explanation: 'Start with `val`; use `var` only when reassignment is part of the design. A `const` is only for compile-time constants and cannot be `var`.'
+      - type: cloze
+        id: kotlin-ch07-readable-cloze-model
+        prompt: Give each CSV payment row a named model.
+        template: |
+          ____1 Payment(val merchant: String, val cents: Long)
+        blanks:
+          - placeholder: "____1"
+            accepted: ["data class"]
+            case_sensitive: true
+        explanation: A data class supplies value semantics and makes the row's fields explicit.
+      - type: write_function
+        id: kotlin-ch07-readable-write-totals
+        prompt: 'Sum payments by merchant and format the totals in sorted merchant order, one `merchant: cents` line per merchant. Ignore blank lines after the header.'
+        starter_code: |
+          data class Payment(val merchant: String, val cents: Long)
+
+          fun parsePayments(csv: String): List<Payment> = TODO()
+
+          fun totalsByMerchant(payments: List<Payment>): Map<String, Long> = TODO()
+
+          fun formatTotals(totals: Map<String, Long>): String = TODO()
+        hidden_tests: |
+          import org.junit.Test
+          import org.junit.Assert.assertEquals
+
+          class PaymentTotalsTest {
+              @Test fun parsesSumsAndSortsTheExample() {
+                  val csv = "date,merchant,cents\n2026-10-20,Stripe,1200\n2026-10-21,Acme,500\n2026-10-22,Stripe,300\n"
+                  val payments = parsePayments(csv)
+                  assertEquals(listOf(Payment("Stripe", 1200), Payment("Acme", 500), Payment("Stripe", 300)), payments)
+                  assertEquals(mapOf("Stripe" to 1500L, "Acme" to 500L), totalsByMerchant(payments))
+                  assertEquals("Acme: 500\nStripe: 1500", formatTotals(totalsByMerchant(payments)))
+              }
+
+              @Test fun blankRowsProduceEmptyOutput() {
+                  assertEquals(emptyList<Payment>(), parsePayments("date,merchant,cents\n\n"))
+                  assertEquals("", formatTotals(emptyMap()))
+              }
+          }
+        reference_solution: |
+          data class Payment(val merchant: String, val cents: Long)
+
+          fun parsePayments(csv: String): List<Payment> =
+              csv.lines().drop(1).filter { it.isNotBlank() }.map { line ->
+                  val (_, merchant, cents) = line.split(",").map { it.trim() }
+                  Payment(merchant, cents.toLong())
+              }
+
+          fun totalsByMerchant(payments: List<Payment>): Map<String, Long> =
+              payments.groupBy({ it.merchant }, { it.cents }).mapValues { (_, cents) -> cents.sum() }
+
+          fun formatTotals(totals: Map<String, Long>): String =
+              totals.toSortedMap().entries.joinToString("\n") { (merchant, cents) -> "$merchant: $cents" }
+        hints:
+          - Parse after dropping the header, then trim each comma-separated field.
+          - Group the payments by merchant and sum their cents.
+          - 'Call `toSortedMap()` before `joinToString`.'
+        explanation: Named stages make each rule visible and keep formatting separate from computation.
+
+  - id: kotlin-ch07-money
+    title: Money without floating-point surprises
+    explanation: |
+      Store money as `Long` minor units such as cents. When a rate arrives as text, construct `BigDecimal` from that string, multiply once, round once with `HALF_UP`, and convert back to a `Long`.
+
+      A `Double` is a binary floating-point approximation, so even `0.1 + 0.2 == 0.3` is false. For arithmetic that must not silently overflow, use exact helpers such as `Math.multiplyExact`.
+    exercises:
+      - type: multiple_choice
+        id: kotlin-ch07-money-mc-decimal
+        prompt: 'Why should a decimal rate such as `1.37` be passed to `BigDecimal` as a string?'
+        options:
+          - It preserves the decimal text instead of carrying a `Double` approximation.
+          - Strings always round toward zero.
+          - '`BigDecimal` accepts strings but not numbers.'
+        correct_index: 0
+        explanation: Building from a string preserves the intended decimal value. A `BigDecimal` can also be built from other types, but a binary `Double` may already contain an approximation.
+      - type: cloze
+        id: kotlin-ch07-money-cloze-round
+        prompt: Round the converted amount once, using the interview-friendly half-up rule.
+        template: |
+          .setScale(0, RoundingMode.____1)
+        blanks:
+          - placeholder: "____1"
+            accepted: ["HALF_UP"]
+            case_sensitive: true
+        explanation: '`HALF_UP` rounds a half away from zero for positive amounts, matching the stated money drill.'
+      - type: predict_output
+        id: kotlin-ch07-money-predict-convert
+        prompt: What does this verified conversion print?
+        code: |
+          import java.math.BigDecimal
+          import java.math.RoundingMode
+
+          fun convert(cents: Long, rate: String): Long =
+              BigDecimal.valueOf(cents)
+                  .multiply(BigDecimal(rate))
+                  .setScale(0, RoundingMode.HALF_UP)
+                  .toLong()
+
+          fun main() {
+              println(convert(10_000, "1.37"))
+          }
+        expected_output: |
+          13700
+        explanation: 10,000 minor units multiplied by 1.37 is 13,700, with no further rounding needed.
+      - type: multiple_choice
+        id: kotlin-ch07-money-mc-overflow
+        prompt: 'What does `Math.multiplyExact(a, b)` do when the `Long` multiplication overflows?'
+        options:
+          - It throws instead of silently wrapping.
+          - It clamps the answer to `Long.MAX_VALUE`.
+          - It converts the answer to a `Double`.
+        correct_index: 0
+        explanation: The exact arithmetic helpers report overflow with an exception.
+      - type: cloze
+        id: kotlin-ch07-money-cloze-value
+        prompt: 'Start a precise decimal conversion from the `Long` amount.'
+        template: |
+          BigDecimal.____1(cents)
+        blanks:
+          - placeholder: "____1"
+            accepted: ["valueOf"]
+            case_sensitive: true
+        explanation: '`BigDecimal.valueOf(cents)` creates the decimal from the integral minor-unit amount.'
+      - type: write_function
+        id: kotlin-ch07-money-write-convert
+        prompt: 'Convert minor units by a decimal rate supplied as text. Round once to zero decimal places with `RoundingMode.HALF_UP` and return minor units.'
+        starter_code: |
+          fun convert(cents: Long, rate: String): Long = TODO()
+        hidden_tests: |
+          import org.junit.Test
+          import org.junit.Assert.assertEquals
+
+          class ConvertMoneyTest {
+              @Test fun convertsTheVerifiedExample() {
+                  assertEquals(13_700L, convert(10_000L, "1.37"))
+              }
+
+              @Test fun roundsHalfUpAtTheEnd() {
+                  assertEquals(101L, convert(100L, "1.005"))
+              }
+
+              @Test fun supportsZeroRate() {
+                  assertEquals(0L, convert(500L, "0"))
+              }
+          }
+        reference_solution: |
+          import java.math.BigDecimal
+          import java.math.RoundingMode
+
+          fun convert(cents: Long, rate: String): Long =
+              BigDecimal.valueOf(cents)
+                  .multiply(BigDecimal(rate))
+                  .setScale(0, RoundingMode.HALF_UP)
+                  .toLong()
+        hints:
+          - 'Use `BigDecimal.valueOf(cents)` and `BigDecimal(rate)`.'
+          - 'Apply `setScale(0, RoundingMode.HALF_UP)` after multiplication.'
+          - 'Finish with `toLong()`.'
+        explanation: Constructing the rate from text and rounding only once keeps the conversion predictable.

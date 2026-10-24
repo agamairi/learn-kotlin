@@ -1,0 +1,212 @@
+id: ch01-syntax
+title: Syntax, values, and control flow
+summary: |
+  Translate familiar Swift and Dart ideas into Kotlin. Practise immutable values, nullable strings, data classes, when expressions, ranges, and integer money calculations.
+lessons:
+  - id: ch01-syntax-values
+    title: Kotlin values and small data models
+    explanation: |
+      Kotlin uses `val` for a read-only reference and `var` for a reassigned one. Money is safest as a `Long` number of cents, such as `1_999L`. A `data class` gives useful value equality and `copy` for free. Kotlin functions can have default arguments, and a `when` expression returns a value.
+
+      Nullable values use a `?`. Call a method safely with `?.`, or choose a fallback with `?:`. Prefer these tools to `!!`, which can throw when the value is null.
+    exercises:
+      - type: multiple_choice
+        id: ch01-syntax-values-mc-val
+        prompt: Which declaration makes the reference read-only after it is initialized?
+        options:
+          - val amountCents = 1_999L
+          - var amountCents = 1_999L
+          - const amountCents = 1_999L
+        correct_index: 0
+        explanation: '`val` prevents reassignment of the reference; it is Kotlin’s closest match to a simple constant local binding.'
+      - type: cloze
+        id: ch01-syntax-values-cloze-money
+        prompt: Fill in the Kotlin type and literal suffix used for money stored as cents.
+        template: "val cents: ____1 = 1_999____2"
+        blanks:
+          - placeholder: ____1
+            accepted:
+              - Long
+            case_sensitive: true
+          - placeholder: ____2
+            accepted:
+              - L
+            case_sensitive: true
+        explanation: Store cents in a `Long`, and use `L` to make the literal a `Long`.
+      - type: multiple_choice
+        id: ch01-syntax-values-mc-data
+        prompt: What does a Kotlin `data class` provide automatically for ordinary value comparisons?
+        options:
+          - Reference identity only
+          - "`equals`, `hashCode`, `toString`, and `copy`"
+          - A database table and serializer
+        correct_index: 1
+        explanation: Data classes are designed for value-like data and generate those useful members.
+      - type: predict_output
+        id: ch01-syntax-values-output-when
+        prompt: What does this program print?
+        code: |
+          data class Transaction(val id: String, val merchant: String, val amountCents: Long)
+
+          fun main() {
+              val tx = Transaction(id = "tx1", merchant = "acme", amountCents = 1_000)
+              val size = when {
+                  tx.amountCents >= 10_000 -> "large"
+                  tx.amountCents > 0 -> "normal"
+                  else -> "empty"
+              }
+              println("${tx.id} is $size")
+          }
+        expected_output: "tx1 is normal"
+        explanation: The first condition is false and the second is true, so the `when` expression returns `normal`.
+      - type: cloze
+        id: ch01-syntax-values-cloze-null
+        prompt: Complete the safe nullable access and fallback.
+        template: "println(nickname____1.uppercase() ____2 \"no nickname\")"
+        blanks:
+          - placeholder: ____1
+            accepted:
+              - '?.'
+            case_sensitive: true
+          - placeholder: ____2
+            accepted:
+              - '?:'
+            case_sensitive: true
+        explanation: "`?.` skips the call for null, and `?:` supplies the fallback value."
+      - type: multiple_choice
+        id: ch01-syntax-values-mc-default
+        prompt: "In `fun feeCents(amountCents: Long, basisPoints: Int = 290)`, what happens when callers omit `basisPoints`?"
+        options:
+          - The function does not compile
+          - Kotlin uses 290
+          - Kotlin uses 0
+          - Kotlin asks for the value at runtime
+        correct_index: 1
+        explanation: A default argument is used when that argument is not supplied by the caller.
+
+  - id: ch01-syntax-control
+    title: Ranges, validation, and integer fees
+    explanation: |
+      `0 until n` excludes `n`, while `0..n` includes it. Use `require` for invalid input and keep fee arithmetic in integer cents. The verified fee formula rounds the percentage half up before adding the fixed 30-cent fee:
+
+      ```kotlin
+      (amountCents * basisPoints + 5_000) / 10_000 + 30
+      ```
+
+      Small helpers such as `formatCents` and `parseCents` turn these rules into easy-to-test functions.
+    exercises:
+      - type: multiple_choice
+        id: ch01-syntax-control-mc-until
+        prompt: Which range visits 0 through 4, but not 5?
+        options:
+          - 0..5
+          - 0 until 5
+          - 1..5
+          - 5 downTo 0
+        correct_index: 1
+        explanation: "`until` creates an end-exclusive range."
+      - type: predict_output
+        id: ch01-syntax-control-output-fee
+        prompt: What does this program print?
+        code: |
+          fun feeCents(amountCents: Long, basisPoints: Int = 290): Long {
+              require(amountCents >= 0) { "amount must be non-negative, was $amountCents" }
+              return (amountCents * basisPoints + 5_000) / 10_000 + 30
+          }
+
+          fun main() {
+              println(feeCents(1_000))
+          }
+        expected_output: "59"
+        explanation: The percentage is 29 cents after half-up integer rounding, then the fixed fee adds 30 cents.
+      - type: cloze
+        id: ch01-syntax-control-cloze-require
+        prompt: Fill in the Kotlin validation function used for bad input.
+        template: "____1(amountCents >= 0) { \"amount must be non-negative\" }"
+        blanks:
+          - placeholder: ____1
+            accepted:
+              - require
+            case_sensitive: true
+        explanation: "`require` throws `IllegalArgumentException` when its condition is false."
+      - type: multiple_choice
+        id: ch01-syntax-control-mc-tier
+        prompt: For a tier function with `when`, which label belongs to 100_000 cents?
+        options:
+          - micro
+          - standard
+          - large
+          - invalid
+        correct_index: 2
+        explanation: The rule says under 100 is `micro`, under 100_000 is `standard`, and all other values are `large`; the boundary itself is large.
+      - type: predict_output
+        id: ch01-syntax-control-output-format
+        prompt: What does this program print?
+        code: |
+          fun formatCents(cents: Long): String {
+              val sign = if (cents < 0) "-" else ""
+              val amount = kotlin.math.abs(cents)
+              return "$sign\$${amount / 100}.${(amount % 100).toString().padStart(2, '0')}"
+          }
+
+          fun main() {
+              println(formatCents(-300))
+          }
+        expected_output: "-$3.00"
+        explanation: The sign is kept separately, and 300 cents becomes 3 dollars and 00 cents.
+      - type: write_function
+        id: ch01-syntax-control-write-cents
+        prompt: Implement `formatCents` and `parseCents` for simple dollar strings. Format cents with two fractional digits and a leading minus sign for negative values. Parse a whole-dollar part plus an optional one- or two-digit fractional part; return null for malformed input.
+        starter_code: |
+          fun formatCents(cents: Long): String = TODO()
+
+          fun parseCents(text: String): Long? = TODO()
+        hidden_tests: |
+          import org.junit.Test
+          import org.junit.Assert.assertEquals
+          import org.junit.Assert.assertNull
+
+          class FormatAndParseCentsTest {
+              @Test
+              fun examples() {
+                  assertEquals("\$12.05", formatCents(1205))
+                  assertEquals("-\$3.00", formatCents(-300))
+                  assertEquals(1205L, parseCents("12.05"))
+                  assertEquals(1250L, parseCents("12.5"))
+                  assertNull(parseCents("abc"))
+              }
+
+              @Test
+              fun zeroAndMissingFraction() {
+                  assertEquals("\$0.00", formatCents(0))
+                  assertEquals(12_00L, parseCents("12"))
+              }
+          }
+        reference_solution: |
+          fun formatCents(cents: Long): String {
+              val sign = if (cents < 0) "-" else ""
+              val amount = kotlin.math.abs(cents)
+              return "$sign\$${amount / 100}.${(amount % 100).toString().padStart(2, '0')}"
+          }
+
+          fun parseCents(text: String): Long? {
+              val trimmed = text.trim()
+              val negative = trimmed.startsWith("-")
+              val unsigned = if (negative) trimmed.drop(1) else trimmed
+              val pieces = unsigned.split(".")
+              if (pieces.size > 2 || pieces.any { it.isEmpty() }) return null
+              val dollars = pieces[0].toLongOrNull() ?: return null
+              val fraction = when (pieces.getOrNull(1)?.length ?: 0) {
+                  0 -> 0
+                  1 -> pieces[1].toLongOrNull()?.times(10) ?: return null
+                  2 -> pieces[1].toLongOrNull() ?: return null
+                  else -> return null
+              }
+              val result = dollars * 100 + fraction
+              return if (negative) -result else result
+          }
+        hints:
+          - Separate the sign and use `abs`, `/`, and `%` for formatting.
+          - For parsing, split once on `.`, parse the whole part with `toLongOrNull`, and multiply a one-digit fraction by 10.
+          - Reject more than two fractional digits and return null from every failed parse.
+        explanation: This exercise turns the first lesson's money-formatting and parsing drills into small pure functions.
