@@ -1,0 +1,16 @@
+CREATE TABLE streak_freeze (
+    epoch_day INTEGER PRIMARY KEY NOT NULL
+);
+
+insertStreakFreeze:
+INSERT OR REPLACE INTO streak_freeze (epoch_day)
+VALUES (?);
+
+selectAllStreakFreezes:
+SELECT epoch_day FROM streak_freeze ORDER BY epoch_day ASC;
+
+selectStreakFreezeByDay:
+SELECT epoch_day FROM streak_freeze WHERE epoch_day = ?;
+
+deleteStreakFreeze:
+DELETE FROM streak_freeze WHERE epoch_day = ?;

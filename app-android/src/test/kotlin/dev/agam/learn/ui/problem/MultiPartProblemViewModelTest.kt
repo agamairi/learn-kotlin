@@ -1,8 +1,13 @@
 package dev.agam.learn.ui.problem
 
 import androidx.compose.ui.text.input.TextFieldValue
+import dev.agam.learn.ai.AiProvider
 import dev.agam.learn.ai.AiResult
 import dev.agam.learn.ai.AiTutor
+import dev.agam.learn.ai.DynamicAiTutor
+import dev.agam.learn.data.AppSettings
+import dev.agam.learn.data.SecretStore
+import dev.agam.learn.fake.FakeSettingsRepository
 import dev.agam.learn.model.FaqItem
 import dev.agam.learn.model.ProblemPart
 import dev.agam.learn.model.Exercise
@@ -10,10 +15,17 @@ import dev.agam.learn.runner.CodeRunner
 import dev.agam.learn.runner.Diagnostic
 import dev.agam.learn.runner.RunOutcome
 import dev.agam.learn.runner.SourceFile
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import dev.agam.learn.ai.createAiHttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -190,6 +202,61 @@ class MultiPartProblemViewModelTest {
 
         assertEquals(1, tutor.calls)
         assertEquals("Mock hint", viewModel.uiState.value.aiDialogState?.content)
+    }
+
+    @Test
+    fun sessionInterviewToggleGovernsAiAvailabilityEvenIfSavedDefaultIsOn() = kotlinx.coroutines.runBlocking {
+        val settingsRepo = FakeSettingsRepository(
+            AppSettings(selectedAiProvider = AiProvider.ANTHROPIC, interviewMode = true)
+        )
+        val secretStore = object : SecretStore {
+            override suspend fun get(): String? = "test-key"
+            override suspend fun set(value: String) {}
+            override suspend fun delete() {}
+        }
+        val mockEngine = MockEngine { request ->
+            respond(
+                content = """{"content":[{"type":"text","text":"Session hint text"}]}""",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+        val httpClient = createAiHttpClient(mockEngine)
+        val dynamicTutor = DynamicAiTutor(
+            settingsRepository = settingsRepo,
+            secretStore = secretStore,
+            httpClient = httpClient
+        )
+
+        val viewModel = MultiPartProblemViewModel(
+            problem = problem,
+            codeRunner = fakeRunner,
+            aiTutor = dynamicTutor,
+            isInterviewModeDefault = true,
+            hasApiKey = true,
+            coroutineScope = this
+        )
+
+        // Session toggle is initially on: tutor is not called
+        viewModel.askAiHint()
+        assertNull(viewModel.uiState.value.aiDialogState)
+
+        // Learner switches session toggle off:
+        viewModel.toggleInterviewMode(false)
+        assertFalse(viewModel.uiState.value.isInterviewMode)
+
+        // The session toggle governs: tutor responds and does NOT refuse with interview mode error
+        viewModel.askAiHint()
+
+        var dialogState = viewModel.uiState.value.aiDialogState
+        while (dialogState == null || dialogState.isLoading) {
+            kotlinx.coroutines.delay(20)
+            dialogState = viewModel.uiState.value.aiDialogState
+        }
+
+        assertNotNull(dialogState)
+        assertFalse("Tutor must not report an error: ${dialogState.content}", dialogState.isError)
+        assertEquals("Session hint text", dialogState.content)
     }
 
     private class FakeAiTutor : AiTutor {

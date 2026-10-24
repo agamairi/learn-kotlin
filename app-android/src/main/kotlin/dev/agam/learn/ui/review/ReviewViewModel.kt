@@ -3,6 +3,7 @@ package dev.agam.learn.ui.review
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import dev.agam.learn.content.CourseRepository
 import dev.agam.learn.data.ProgressRepository
 import dev.agam.learn.di.AppContainer
 import dev.agam.learn.domain.ReviewScheduler
@@ -23,39 +24,60 @@ import kotlinx.coroutines.launch
 class ReviewViewModel(
     private val progressRepository: ProgressRepository,
     private val reviewScheduler: ReviewScheduler,
+    private val courseRepository: CourseRepository? = null,
     private val currentEpochDay: Long = System.currentTimeMillis() / (1000 * 60 * 60 * 24),
-    private val exerciseLookup: (itemId: String) -> Exercise? = { null },
+    private val exerciseLookup: ((itemId: String) -> Exercise?)? = null,
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
     private val scope = coroutineScope ?: viewModelScope
+    private var cachedExercises: Map<String, Exercise>? = null
 
-    private val _uiState = MutableStateFlow(ReviewUiState())
+    private val _uiState = MutableStateFlow(ReviewUiState(isLoading = true))
     val uiState: StateFlow<ReviewUiState> = _uiState.asStateFlow()
 
     init {
-        loadQueue()
+        loadInitialData()
+    }
+
+    fun loadInitialData() {
+        scope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            if (courseRepository != null && cachedExercises == null) {
+                cachedExercises = courseRepository.listCourses()
+                    .flatMap { it.chapters }
+                    .flatMap { it.lessons }
+                    .flatMap { it.exercises }
+                    .associateBy { it.id }
+            }
+            loadQueueInternal()
+            _uiState.update { it.copy(isLoading = false) }
+        }
     }
 
     fun loadQueue() {
         scope.launch {
-            val due = progressRepository.getDueReviewCards(currentEpochDay)
-            val all = progressRepository.getAllReviewCards()
+            loadQueueInternal()
+        }
+    }
 
-            val boxCounts = mutableMapOf(1 to 0, 2 to 0, 3 to 0, 4 to 0, 5 to 0)
-            all.forEach { card ->
-                val box = card.box.coerceIn(1, 5)
-                boxCounts[box] = (boxCounts[box] ?: 0) + 1
-            }
+    private suspend fun loadQueueInternal() {
+        val due = progressRepository.getDueReviewCards(currentEpochDay)
+        val all = progressRepository.getAllReviewCards()
 
-            _uiState.update {
-                it.copy(
-                    dueCards = due,
-                    boxCounts = boxCounts,
-                    isInSession = false,
-                    isSessionComplete = false
-                )
-            }
+        val boxCounts = mutableMapOf(1 to 0, 2 to 0, 3 to 0, 4 to 0, 5 to 0)
+        all.forEach { card ->
+            val box = card.box.coerceIn(1, 5)
+            boxCounts[box] = (boxCounts[box] ?: 0) + 1
+        }
+
+        _uiState.update {
+            it.copy(
+                dueCards = due,
+                boxCounts = boxCounts,
+                isInSession = false,
+                isSessionComplete = false
+            )
         }
     }
 
@@ -66,7 +88,8 @@ class ReviewViewModel(
         // Cards without a gradable exercise are left out of the session rather than replaced with a
         // placeholder: a placeholder would let any answer pass.
         val sessionItems = dueCards.mapNotNull { card ->
-            val exercise = exerciseLookup(card.itemId)?.takeIf { it.isSelfGradable() } ?: return@mapNotNull null
+            val exercise = (exerciseLookup?.invoke(card.itemId) ?: cachedExercises?.get(card.itemId))
+                ?.takeIf { it.isSelfGradable() } ?: return@mapNotNull null
             ReviewSessionItem(card = card, exercise = exercise)
         }
         if (sessionItems.isEmpty()) return
@@ -205,23 +228,10 @@ class ReviewViewModel(
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    var cachedExercises: Map<String, Exercise>? = null
-                    val lookup: (String) -> Exercise? = { itemId ->
-                        if (cachedExercises == null) {
-                            kotlinx.coroutines.runBlocking {
-                                cachedExercises = appContainer.courseRepository.listCourses()
-                                    .flatMap { it.chapters }
-                                    .flatMap { it.lessons }
-                                    .flatMap { it.exercises }
-                                    .associateBy { it.id }
-                            }
-                        }
-                        cachedExercises?.get(itemId)
-                    }
                     return ReviewViewModel(
                         progressRepository = appContainer.progressRepository,
                         reviewScheduler = appContainer.reviewScheduler,
-                        exerciseLookup = lookup
+                        courseRepository = appContainer.courseRepository
                     ) as T
                 }
             }

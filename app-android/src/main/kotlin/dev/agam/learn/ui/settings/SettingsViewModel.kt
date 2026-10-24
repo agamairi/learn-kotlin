@@ -92,25 +92,33 @@ class SettingsViewModel(
     }
 
     fun onApiKeyChange(newKey: String) {
-        _uiState.update { it.copy(apiKey = newKey, aiConnectionTestResult = null) }
+        _uiState.update { it.copy(apiKey = newKey, aiConnectionTestResult = null, keystoreErrorMessage = null) }
     }
 
     fun saveAiSettings() {
         val currentState = _uiState.value
         scope.launch {
-            if (currentState.apiKey.isBlank()) {
-                secretStore.delete()
-            } else {
-                secretStore.set(currentState.apiKey)
+            try {
+                if (currentState.apiKey.isBlank()) {
+                    secretStore.delete()
+                } else {
+                    secretStore.set(currentState.apiKey)
+                }
+                settingsRepository.setAiProvider(
+                    currentState.aiProvider,
+                    currentState.aiModel.ifBlank { null }
+                )
+                savedApiKey = currentState.apiKey
+                savedProvider = currentState.aiProvider
+                savedModel = currentState.aiModel
+                _uiState.update { it.copy(isSavedMessageVisible = true, keystoreErrorMessage = null) }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        keystoreErrorMessage = "Unable to save API key to secure storage: ${e.message ?: "Keystore error"}"
+                    )
+                }
             }
-            settingsRepository.setAiProvider(
-                currentState.aiProvider,
-                currentState.aiModel.ifBlank { null }
-            )
-            savedApiKey = currentState.apiKey
-            savedProvider = currentState.aiProvider
-            savedModel = currentState.aiModel
-            _uiState.update { it.copy(isSavedMessageVisible = true) }
         }
     }
 
@@ -118,12 +126,21 @@ class SettingsViewModel(
         _uiState.update {
             it.copy(
                 apiKey = "",
-                aiConnectionTestResult = null
+                aiConnectionTestResult = null,
+                keystoreErrorMessage = null
             )
         }
         savedApiKey = ""
         scope.launch {
-            secretStore.delete()
+            try {
+                secretStore.delete()
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        keystoreErrorMessage = "Unable to remove API key from secure storage: ${e.message ?: "Keystore error"}"
+                    )
+                }
+            }
         }
     }
 

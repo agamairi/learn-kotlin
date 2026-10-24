@@ -132,6 +132,29 @@ class FakeProgressRepository : ProgressRepository {
     override fun observeCompletedLessonIds(): Flow<Set<String>> =
         lessonCompletionsState.map { it.keys.toSet() }
 
+    private val frozenEpochDays = mutableSetOf<Long>()
+    private var heldStreakFreezes = 0
+
+    override suspend fun getFrozenEpochDays(): Set<Long> = mutex.withLock {
+        frozenEpochDays.toSet()
+    }
+
+    override suspend fun recordStreakFreeze(epochDay: Long) {
+        mutex.withLock {
+            frozenEpochDays.add(epochDay)
+        }
+    }
+
+    override suspend fun getHeldStreakFreezes(): Int = mutex.withLock {
+        heldStreakFreezes
+    }
+
+    override suspend fun setHeldStreakFreezes(count: Int) {
+        mutex.withLock {
+            heldStreakFreezes = count.coerceIn(0, 2)
+        }
+    }
+
     override suspend fun getSetting(key: String): String? = mutex.withLock {
         settings[key]
     }

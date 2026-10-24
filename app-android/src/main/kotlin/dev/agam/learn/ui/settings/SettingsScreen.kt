@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -67,6 +68,7 @@ data class SettingsUiState(
     val apiKey: String = "",
     val isTestingAiConnection: Boolean = false,
     val aiConnectionTestResult: ConnectionTestResult? = null,
+    val keystoreErrorMessage: String? = null,
     val compilerServerUrl: String = "http://10.0.2.2:8080",
     val compilerToken: String = "",
     val isInterviewModeDefault: Boolean = false,
@@ -187,6 +189,7 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .defaultMinSize(minHeight = 48.dp)
                             .padding(vertical = 3.dp)
                             .border(
                                 width = 1.dp,
@@ -301,8 +304,14 @@ fun SettingsScreen(
                     visualTransformation = if (isApiKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     trailingIcon = {
-                        TextButton(onClick = { isApiKeyVisible = !isApiKeyVisible }) {
-                            Text(if (isApiKeyVisible) "Hide" else "Show", fontSize = 12.sp)
+                        TextButton(
+                            onClick = { isApiKeyVisible = !isApiKeyVisible },
+                            modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                        ) {
+                            Text(
+                                if (isApiKeyVisible) "Hide" else "Show",
+                                style = MaterialTheme.typography.labelSmall
+                            )
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -354,6 +363,24 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Save AI Settings")
+                }
+
+                // Keystore error feedback
+                if (state.keystoreErrorMessage != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFFFEBEE), RoundedCornerShape(6.dp))
+                            .padding(10.dp)
+                    ) {
+                        Text(
+                            text = "✗ ${state.keystoreErrorMessage}",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFFB71C1C)
+                        )
+                    }
                 }
 
                 // Connection test feedback result
@@ -432,8 +459,14 @@ fun SettingsScreen(
                     singleLine = true,
                     visualTransformation = if (isTokenVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
-                        TextButton(onClick = { isTokenVisible = !isTokenVisible }) {
-                            Text(if (isTokenVisible) "Hide" else "Show", fontSize = 12.sp)
+                        TextButton(
+                            onClick = { isTokenVisible = !isTokenVisible },
+                            modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                        ) {
+                            Text(
+                                if (isTokenVisible) "Hide" else "Show",
+                                style = MaterialTheme.typography.labelSmall
+                            )
                         }
                     },
                     modifier = Modifier.fillMaxWidth()

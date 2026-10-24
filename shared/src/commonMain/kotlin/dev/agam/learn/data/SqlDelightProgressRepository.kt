@@ -19,6 +19,7 @@ class SqlDelightProgressRepository(
     private val dailyActivities = database.dailyActivityQueries
     private val reviewCards = database.reviewCardQueries
     private val lessonCompletions = database.lessonCompletionQueries
+    private val streakFreezes = database.streakFreezeQueries
     private val settings = database.settingsKvQueries
 
     override suspend fun recordExerciseResult(result: ExerciseResult) {
@@ -255,6 +256,21 @@ class SqlDelightProgressRepository(
             rows.mapTo(linkedSetOf()) { it.lesson_id }
         }
 
+    override suspend fun getFrozenEpochDays(): Set<Long> =
+        streakFreezes.selectAllStreakFreezes().executeAsList().toSet()
+
+    override suspend fun recordStreakFreeze(epochDay: Long) {
+        streakFreezes.insertStreakFreeze(epochDay)
+    }
+
+    override suspend fun getHeldStreakFreezes(): Int =
+        settings.selectSettingByKey(HELD_FREEZES_SETTING).executeAsOneOrNull()?.toIntOrNull() ?: 0
+
+    override suspend fun setHeldStreakFreezes(count: Int) {
+        val clamped = count.coerceIn(0, 2)
+        settings.insertSetting(HELD_FREEZES_SETTING, clamped.toString())
+    }
+
     override suspend fun getSetting(key: String): String? {
         require(key != AI_API_KEY_SETTING) {
             "Secret settings cannot be accessed via ProgressRepository; use SecretStore instead"
@@ -270,5 +286,9 @@ class SqlDelightProgressRepository(
     }
 
     private fun Boolean.toSqlBoolean(): Long = if (this) 1L else 0L
+
+    private companion object {
+        const val HELD_FREEZES_SETTING = "streak.held_freezes"
+    }
 
 }

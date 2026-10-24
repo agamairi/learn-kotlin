@@ -3,10 +3,10 @@ package dev.agam.learn.data
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import android.util.Base64
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import java.security.GeneralSecurityException
 import java.security.KeyStore
+import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -14,7 +14,8 @@ import javax.crypto.spec.GCMParameterSpec
 
 /** Android Keystore-backed AES-256-GCM implementation of [SecretStore]. */
 class AndroidSecretStore(
-    private val database: LearnDatabase
+    private val database: LearnDatabase,
+    private val keyProvider: (() -> SecretKey)? = null
 ) : SecretStore {
     private val settings = database.settingsKvQueries
     private val lock = Any()
@@ -25,14 +26,19 @@ class AndroidSecretStore(
         try {
             val separator = stored.indexOf('.')
             require(separator > 0) { "Invalid encrypted secret" }
-            val iv = Base64.decode(stored.substring(0, separator), Base64.DEFAULT)
-            val ciphertext = Base64.decode(stored.substring(separator + 1), Base64.DEFAULT)
+            val iv = Base64.getDecoder().decode(stored.substring(0, separator))
+            val ciphertext = Base64.getDecoder().decode(stored.substring(separator + 1))
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(GCM_TAG_BITS, iv))
             cipher.doFinal(ciphertext).decodeToString()
         } catch (_: GeneralSecurityException) {
+            runCatching { settings.deleteSetting(AI_API_KEY_SETTING) }
             null
         } catch (_: IllegalArgumentException) {
+            runCatching { settings.deleteSetting(AI_API_KEY_SETTING) }
+            null
+        } catch (_: Exception) {
+            runCatching { settings.deleteSetting(AI_API_KEY_SETTING) }
             null
         }
     }
@@ -42,20 +48,24 @@ class AndroidSecretStore(
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, key(), GCMParameterSpec(GCM_TAG_BITS, iv))
         val ciphertext = cipher.doFinal(value.encodeToByteArray())
-        val encoded = Base64.encodeToString(iv, Base64.NO_WRAP) + "." +
-            Base64.encodeToString(ciphertext, Base64.NO_WRAP)
+        val encoded = Base64.getEncoder().encodeToString(iv) + "." +
+            Base64.getEncoder().encodeToString(ciphertext)
         settings.insertSetting(AI_API_KEY_SETTING, encoded)
     }
 
     override suspend fun delete() = synchronized(lock) {
         settings.deleteSetting(AI_API_KEY_SETTING)
-        val keyStore = keyStore()
-        if (keyStore.containsAlias(KEY_ALIAS)) {
-            keyStore.deleteEntry(KEY_ALIAS)
+        try {
+            val keyStore = keyStore()
+            if (keyStore.containsAlias(KEY_ALIAS)) {
+                keyStore.deleteEntry(KEY_ALIAS)
+            }
+        } catch (_: Exception) {
+            // Ignore Keystore errors on entry deletion
         }
     }
 
-    private fun key(): SecretKey {
+    private fun key(): SecretKey = keyProvider?.invoke() ?: run {
         val keyStore = keyStore()
         (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
 
