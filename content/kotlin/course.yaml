@@ -1,0 +1,6 @@
+id: kotlin-foundations
+language: kotlin
+title: Kotlin Foundations
+description: Master Kotlin from syntax essentials to idioms and interview problem solving.
+chapters:
+  - ch01-intro

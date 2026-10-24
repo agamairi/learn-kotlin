@@ -1,0 +1,66 @@
+id: ch01-basics
+title: Kotlin Basics
+summary: Getting started with fundamental Kotlin concepts
+lessons:
+  - id: l01-variables
+    title: Variables and Functions
+    explanation: In Kotlin, variables can be read-only (val) or mutable (var).
+    exercises:
+      - type: multiple_choice
+        id: mc-var-val
+        prompt: Which keyword makes a variable immutable?
+        code: val a = 1
+        options:
+          - val
+          - var
+        correct_index: 0
+        explanation: val cannot be reassigned once initialized.
+      - type: cloze
+        id: cloze-print
+        prompt: Complete the statement to print to stdout.
+        template: "____1(\"Testing\")"
+        blanks:
+          - placeholder: "____1"
+            accepted:
+              - println
+            case_sensitive: true
+        explanation: println outputs a line to console.
+      - type: predict_output
+        id: po-add
+        prompt: Predict the output.
+        code: |
+          fun main() {
+              println(10 + 5)
+          }
+        expected_output: "15"
+        explanation: 10 + 5 evaluates to 15.
+      - type: write_function
+        id: wf-sum
+        prompt: Write a sum function.
+        starter_code: "fun sum(a: Int, b: Int): Int = TODO()"
+        hidden_tests: |
+          import org.junit.Test
+          import org.junit.Assert.assertEquals
+          class SumTest {
+              @Test fun testSum() { assertEquals(3, sum(1, 2)) }
+          }
+        reference_solution: "fun sum(a: Int, b: Int): Int = a + b"
+        hints:
+          - Use the + operator
+        explanation: Simple addition.
+      - type: multi_part_problem
+        id: mp-counter
+        prompt: Implement a simple state machine.
+        story: Track counts sequentially across requests.
+        parts:
+          - id: mp-counter-p1
+            prompt: Implement increment.
+            starter_code: "fun inc(x: Int): Int = TODO()"
+            hidden_tests: "class IncTest"
+            reference_solution: "fun inc(x: Int): Int = x + 1"
+            expected: Returns x + 1.
+        faq:
+          - question: Can x be negative?
+            answer: Yes, x can be any integer.
+        discussion: Discussion of counters.
+        source_note: Synthetic test problem.
