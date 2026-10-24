@@ -10,6 +10,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.Url
 import io.ktor.http.contentType
 import io.ktor.http.takeFrom
+import kotlinx.coroutines.CancellationException
 
 internal suspend fun HttpClient.executeStatus(
     method: HttpMethod,
@@ -24,7 +25,9 @@ internal suspend fun HttpClient.executeStatus(
             header(AiProviderConfig.CONTENT_TYPE_HEADER, AiProviderConfig.CONTENT_TYPE_JSON)
             requestBuilder()
         })
-    } catch (error: Throwable) {
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (error: Exception) {
         return Result.failure(error)
     }
 }

@@ -48,8 +48,19 @@ object KotlinTestFileBuilder {
         return SourceFile("${classes.single()}.kt", hiddenTests)
     }
 
-    internal fun testMethodNames(testFile: SourceFile): List<String> = testMethodNames(testFile.text)
+    internal fun expectedTestPairs(testFile: SourceFile): List<ExpectedTest> =
+        expectedTestPairs(testFile.text)
 
-    internal fun testMethodNames(testText: String): List<String> =
-        testMethodPattern.findAll(testText).map { it.groupValues[1] }.toList()
+    internal fun expectedTestPairs(testText: String): List<ExpectedTest> {
+        val className = classPattern.findAll(testText).map { it.groupValues[1] }.singleOrNull()
+            ?: return emptyList()
+        return testMethodPattern.findAll(testText)
+            .map { ExpectedTest(className, it.groupValues[1]) }
+            .toList()
+    }
+
+    internal data class ExpectedTest(
+        val className: String,
+        val methodName: String
+    )
 }

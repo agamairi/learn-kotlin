@@ -79,26 +79,45 @@ class KotlinCompilerServerRunner(
         val resultEntries = decoded.testResults.orEmpty().values.flatten()
         if (resultEntries.isEmpty()) return RunOutcome.Unavailable("No tests ran.")
 
-        val expectedNames = tests.flatMap { KotlinTestFileBuilder.testMethodNames(it) }.toSet()
-        if (expectedNames.isEmpty()) {
+        val expectedTests = tests
+            .flatMap { KotlinTestFileBuilder.expectedTestPairs(it) }
+            .toSet()
+        if (expectedTests.isEmpty()) {
             return RunOutcome.Unavailable("No runnable tests were found.")
         }
 
         val failures = buildList {
+            val expectedClassNames = expectedTests.map { it.className }.toSet()
             resultEntries
-                .filter { it.status.uppercase() != OK_STATUS }
-                .forEach { add(TestFailure(it.testName(), it.failureMessage())) }
+                .filter { it.className?.let(expectedClassNames::contains) == true }
+                .filterNot { result ->
+                    val className = result.className
+                    val methodName = result.methodName
+                    className != null && methodName != null &&
+                        KotlinTestFileBuilder.ExpectedTest(className, methodName) in expectedTests
+                }
+                .forEach { add(TestFailure(it.testName(), "Unexpected test result.")) }
 
-            val actualNames = resultEntries.mapNotNull { it.methodName }.toSet()
-            expectedNames
-                .filterNot(actualNames::contains)
-                .forEach { add(TestFailure(it, "Expected test did not run.")) }
+            expectedTests.forEach { expected ->
+                val matches = resultEntries.filter { it.matches(expected) }
+                when {
+                    matches.isEmpty() -> add(
+                        TestFailure(expected.methodName, "Expected test did not run.")
+                    )
+                    matches.size > 1 -> add(
+                        TestFailure(expected.methodName, "Expected test ran more than once.")
+                    )
+                }
+                matches
+                    .filter { it.status.uppercase() != OK_STATUS }
+                    .forEach { add(TestFailure(it.testName(), it.failureMessage())) }
+            }
         }
         if (failures.isNotEmpty()) {
             return RunOutcome.TestsFailed(failures, stripStreamTags(text))
         }
 
-        return RunOutcome.Passed(resultEntries.size, stripStreamTags(text))
+        return RunOutcome.Passed(expectedTests.size, stripStreamTags(text))
     }
 
     override suspend fun diagnostics(files: List<SourceFile>): List<Diagnostic> {
@@ -109,7 +128,7 @@ class KotlinCompilerServerRunner(
                 .values
                 .flatten()
                 .map(ServerDiagnostic::toDiagnostic)
-        } catch (_: Throwable) {
+        } catch (_: Exception) {
             emptyList()
         }
     }
@@ -131,7 +150,7 @@ class KotlinCompilerServerRunner(
             null
         } catch (cancellation: CancellationException) {
             throw cancellation
-        } catch (_: Throwable) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -171,7 +190,7 @@ class KotlinCompilerServerRunner(
 
     private fun String.decodeOrUnavailable(): ServerResponse? = try {
         json.decodeFromString<ServerResponse>(this)
-    } catch (_: Throwable) {
+    } catch (_: Exception) {
         null
     }
 
@@ -266,6 +285,9 @@ private data class ServerTestResult(
     val exception: ServerException? = null,
     val comparisonFailure: ServerComparisonFailure? = null
 ) {
+    fun matches(expected: KotlinTestFileBuilder.ExpectedTest): Boolean =
+        className == expected.className && methodName == expected.methodName
+
     fun testName(): String = methodName ?: className ?: "unknown test"
 
     fun failureMessage(): String {

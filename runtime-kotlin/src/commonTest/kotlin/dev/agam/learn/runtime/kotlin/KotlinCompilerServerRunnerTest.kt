@@ -32,6 +32,38 @@ class KotlinCompilerServerRunnerTest {
     }
 
     @Test
+    fun learnerClassWithMatchingMethodsCannotReplaceExpectedClass() = networkTest {
+        val outcome = runner(RESPONSE_LEARNER_CLASS_ONLY).test(
+            files = listOf(SourceFile("Solution.kt", "fun sum(a: Int, b: Int) = a + b")),
+            tests = listOf(SourceFile("SumTest.kt", TEST_SOURCE))
+        )
+
+        val failed = assertIs<RunOutcome.TestsFailed>(outcome)
+        assertEquals(2, failed.failures.count { it.message == "Expected test did not run." })
+    }
+
+    @Test
+    fun duplicateExpectedPairFails() = networkTest {
+        val outcome = runner(RESPONSE_DUPLICATE_EXPECTED).test(
+            files = listOf(SourceFile("Solution.kt", "fun sum(a: Int, b: Int) = a + b")),
+            tests = listOf(SourceFile("SumTest.kt", TEST_SOURCE))
+        )
+
+        val failed = assertIs<RunOutcome.TestsFailed>(outcome)
+        assertTrue(failed.failures.any { it.message == "Expected test ran more than once." })
+    }
+
+    @Test
+    fun extraLearnerClassDoesNotPreventExpectedTestsFromPassing() = networkTest {
+        val outcome = runner(RESPONSE_EXPECTED_AND_LEARNER_CLASS).test(
+            files = listOf(SourceFile("Solution.kt", "fun sum(a: Int, b: Int) = a + b")),
+            tests = listOf(SourceFile("SumTest.kt", TEST_SOURCE))
+        )
+
+        assertEquals(2, assertIs<RunOutcome.Passed>(outcome).testsRun)
+    }
+
+    @Test
     fun compileErrorsBecomeOneBasedDiagnostics() = networkTest {
         val outcome = runner(RESPONSE_COMPILE_ERROR).run(
             listOf(SourceFile("Solution.kt", "fun sum(a: Int) = a + \"bad\""))
@@ -170,6 +202,15 @@ class KotlinCompilerServerRunnerTest {
 
         const val RESPONSE_CORRECT = """
             {"testResults":{"SumTest":[{"output":"","className":"SumTest","methodName":"addsTwoNumbers","executionTime":4,"exception":null,"comparisonFailure":null,"status":"OK"},{"output":"","className":"SumTest","methodName":"addsNegatives","executionTime":0,"exception":null,"comparisonFailure":null,"status":"OK"}]},"errors":{"Solution.kt":[],"SumTest.kt":[]}}
+        """
+        const val RESPONSE_LEARNER_CLASS_ONLY = """
+            {"testResults":{"LearnerTest":[{"output":"","className":"LearnerTest","methodName":"addsTwoNumbers","executionTime":1,"exception":null,"comparisonFailure":null,"status":"OK"},{"output":"","className":"LearnerTest","methodName":"addsNegatives","executionTime":1,"exception":null,"comparisonFailure":null,"status":"OK"}]},"errors":{"Solution.kt":[],"SumTest.kt":[]}}
+        """
+        const val RESPONSE_DUPLICATE_EXPECTED = """
+            {"testResults":{"SumTest":[{"output":"","className":"SumTest","methodName":"addsTwoNumbers","executionTime":1,"exception":null,"comparisonFailure":null,"status":"OK"},{"output":"","className":"SumTest","methodName":"addsTwoNumbers","executionTime":1,"exception":null,"comparisonFailure":null,"status":"OK"},{"output":"","className":"SumTest","methodName":"addsNegatives","executionTime":1,"exception":null,"comparisonFailure":null,"status":"OK"}]},"errors":{"Solution.kt":[],"SumTest.kt":[]}}
+        """
+        const val RESPONSE_EXPECTED_AND_LEARNER_CLASS = """
+            {"testResults":{"LearnerTest":[{"output":"","className":"LearnerTest","methodName":"addsTwoNumbers","executionTime":1,"exception":null,"comparisonFailure":null,"status":"FAIL"}],"SumTest":[{"output":"","className":"SumTest","methodName":"addsTwoNumbers","executionTime":1,"exception":null,"comparisonFailure":null,"status":"OK"},{"output":"","className":"SumTest","methodName":"addsNegatives","executionTime":1,"exception":null,"comparisonFailure":null,"status":"OK"}]},"errors":{"Solution.kt":[],"SumTest.kt":[]}}
         """
         const val RESPONSE_COMPILE_ERROR = """
             {"errors":{"Solution.kt":[{"interval":{"start":{"line":0,"ch":33},"end":{"line":0,"ch":34}},"message":"type mismatch","severity":"ERROR","className":"Solution"}],"SumTest.kt":[]},"exception":null,"text":""}

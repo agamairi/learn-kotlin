@@ -5,6 +5,7 @@ import io.ktor.client.call.body
 import io.ktor.client.request.header
 import io.ktor.client.request.setBody
 import io.ktor.http.HttpMethod
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
@@ -51,7 +52,9 @@ internal class GeminiClient(
         return try {
             val parsed = response.body<GeminiResponse>()
             AiClientResult.Text(parsed.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text.orEmpty())
-        } catch (_: Throwable) {
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
             AiClientResult.Failure(networkFailure = true)
         }
     }
