@@ -7,6 +7,10 @@ import dev.agam.learn.runner.LanguageSupport
 /**
  * Kotlin language support configuration, providing keyword syntax highlighting data
  * and binding to the Kotlin compiler runner.
+ *
+ * The default endpoint is the emulator's loopback bridge. The compiler server is suitable for
+ * one trusted user on a loopback/private network only: learner code is not fully sandboxed and
+ * compiler results are not tamper-proof. Use a token when the endpoint is deployed elsewhere.
  */
 class KotlinLanguageSupport(
     override val runner: CodeRunner = KotlinCompilerServerRunner(baseUrl = "http://10.0.2.2:8080")
