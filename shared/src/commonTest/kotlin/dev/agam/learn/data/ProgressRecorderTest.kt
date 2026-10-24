@@ -106,7 +106,7 @@ class ProgressRecorderTest {
 
     @BeforeTest
     fun setUp() {
-        driver = LearnDatabaseDriverFactory().createDriver(":memory:")
+        driver = createInMemoryTestDriver()
         val database = LearnDatabase(driver)
         repository = SqlDelightProgressRepository(database)
         settings = SqlDelightSettingsRepository(database)
