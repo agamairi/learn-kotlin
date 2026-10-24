@@ -182,7 +182,7 @@ fun LearnAppNavHost(
                 LaunchedEffect(completedExerciseId) {
                     val exerciseId = completedExerciseId ?: return@LaunchedEffect
                     backStackEntry.savedStateHandle.remove<String>(COMPLETED_EXERCISE_KEY)
-                    lessonViewModel.recordExternalExerciseResult(exerciseId, isCorrect = true)
+                    lessonViewModel.onStudioExerciseCompleted(exerciseId)
                 }
 
                 LessonScreen(
@@ -227,6 +227,7 @@ fun LearnAppNavHost(
                                 CodeExerciseViewModel(
                                     exercise = currentExercise,
                                     codeRunner = appContainer.languageSupport.runner,
+                                    progressRecorder = appContainer.progressRecorder,
                                     aiTutor = appContainer.aiTutor,
                                     isInterviewMode = access.interviewMode,
                                     hasApiKey = access.hasApiKey
@@ -249,7 +250,7 @@ fun LearnAppNavHost(
                         onDismissAiDialog = viewModel::dismissAiDialog,
                         onNavigateBack = { navController.popBackStack() },
                         onFinish = {
-                            // The lesson records the result when it receives this id; nothing is recorded here.
+                            // The code drill has recorded its passing attempt; the lesson only advances on this id.
                             navController.previousBackStackEntry?.savedStateHandle?.set(
                                 COMPLETED_EXERCISE_KEY,
                                 currentExercise.id
@@ -293,6 +294,7 @@ fun LearnAppNavHost(
                                 MultiPartProblemViewModel(
                                     problem = currentProblem,
                                     codeRunner = appContainer.languageSupport.runner,
+                                    progressRecorder = appContainer.progressRecorder,
                                     aiTutor = appContainer.aiTutor,
                                     isInterviewModeDefault = access.interviewMode,
                                     hasApiKey = access.hasApiKey

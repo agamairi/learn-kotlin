@@ -4,35 +4,36 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import dev.agam.learn.content.CourseRepository
+import dev.agam.learn.data.ProgressRecorder
 import dev.agam.learn.data.ProgressRepository
+import dev.agam.learn.data.SettingsRepository
 import dev.agam.learn.di.AppContainer
 import dev.agam.learn.domain.DailyGoalTracker
-import dev.agam.learn.domain.StreakCalculator
+import dev.agam.learn.domain.isLessonComplete
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 /**
- * ViewModel for the Home dashboard, coordinating streak calculation, daily goal progress,
- * due review count, and continue learning suggestions.
+ * ViewModel for the Home dashboard: streak and held freezes, today's XP against the saved goal,
+ * the review count due, and the next lesson to continue. Every day here is the effective learning
+ * day (04:00 rollover), and the streak comes from the same evaluation Stats uses.
  */
 class HomeViewModel(
     private val courseRepository: CourseRepository,
     private val progressRepository: ProgressRepository,
-    private val streakCalculator: StreakCalculator,
+    private val settingsRepository: SettingsRepository,
+    private val progressRecorder: ProgressRecorder,
     private val dailyGoalTracker: DailyGoalTracker
 ) : ViewModel() {
 
     constructor(appContainer: AppContainer) : this(
         courseRepository = appContainer.courseRepository,
         progressRepository = appContainer.progressRepository,
-        streakCalculator = appContainer.streakCalculator,
+        settingsRepository = appContainer.settingsRepository,
+        progressRecorder = appContainer.progressRecorder,
         dailyGoalTracker = appContainer.dailyGoalTracker
     )
 
@@ -43,38 +44,32 @@ class HomeViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            val now = Clock.System.now()
-            val timeZone = TimeZone.currentSystemDefault()
-            val todayEpochDay = now.toLocalDateTime(timeZone).date.toEpochDays().toLong()
+            val today = progressRecorder.today()
+            val goalXp = settingsRepository.getSettings().dailyGoalXp
 
-            // 1. Goal and Today's XP
-            val todayActivity = progressRepository.getDailyActivity(todayEpochDay)
-            val todayXp = todayActivity?.xpEarned ?: 0
-            val goalXp = 50
+            // 1. Today's XP against the saved goal
+            val todayXp = progressRepository.getDailyActivity(today)?.xpEarned ?: 0
             val goalRatio = dailyGoalTracker.progressRatio(todayXp, goalXp)
             val isGoalMet = dailyGoalTracker.isGoalMet(todayXp, goalXp)
 
-            // 2. Streak
-            val results = progressRepository.getExerciseResults()
-            val timestamps = results.map { Instant.fromEpochMilliseconds(it.epochMillis) }
-            val streakDays = streakCalculator.calculateStreak(timestamps, now, timeZone)
+            // 2. Streak and held freezes (this also spends a freeze on a day that just ended)
+            val streak = progressRecorder.refreshStreak()
 
             // 3. Due review count
-            val dueCards = progressRepository.getDueReviewCards(todayEpochDay)
-            val reviewCount = dueCards.size
+            val reviewCount = progressRepository.getDueReviewCards(today).size
 
-            // 4. Continue Lesson recommendation
+            // 4. Continue Lesson recommendation: the first lesson that is not complete
             val courses = courseRepository.listCourses()
             val mainCourse = courses.firstOrNull()
             var continueLessonInfo: ContinueLessonInfo? = null
 
             if (mainCourse != null) {
+                val results = progressRepository.getExerciseResults()
                 val passedExerciseIds = results.filter { it.correct }.map { it.exerciseId }.toSet()
+                val savedCompletions = progressRepository.getCompletedLessonIds()
                 findLoop@ for (chapter in mainCourse.chapters) {
                     for (lesson in chapter.lessons) {
-                        val isComplete = lesson.exercises.isNotEmpty() &&
-                            lesson.exercises.all { passedExerciseIds.contains(it.id) }
-                        if (!isComplete) {
+                        if (!isLessonComplete(lesson, savedCompletions, passedExerciseIds)) {
                             continueLessonInfo = ContinueLessonInfo(
                                 courseId = mainCourse.id,
                                 lessonId = lesson.id,
@@ -103,8 +98,9 @@ class HomeViewModel(
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    streakDays = streakDays,
-                    isStreakActiveToday = todayXp > 0,
+                    streakDays = streak.currentStreak,
+                    heldStreakFreezes = streak.heldFreezes,
+                    isStreakActiveToday = isGoalMet,
                     todayXp = todayXp,
                     dailyGoalXp = goalXp,
                     goalProgressRatio = goalRatio,

@@ -100,7 +100,7 @@ fun HomeScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
-                                text = "${uiState.streakDays}d streak",
+                                text = streakLabel(uiState.streakDays, uiState.heldStreakFreezes),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer
@@ -325,6 +325,12 @@ fun HomeScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = if (uiState.isStreakActiveToday) extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+
+                                Text(
+                                    text = freezesLabel(uiState.heldStreakFreezes),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
 
@@ -420,4 +426,15 @@ fun HomeScreen(
             }
         }
     }
+}
+
+/** Top bar streak text, with held freezes when the learner has any. */
+private fun streakLabel(streakDays: Int, heldFreezes: Int): String =
+    if (heldFreezes > 0) "${streakDays}d streak · ❄ $heldFreezes" else "${streakDays}d streak"
+
+/** Streak card line describing the freezes that cover a missed day. */
+private fun freezesLabel(heldFreezes: Int): String = when (heldFreezes) {
+    0 -> "No freezes held"
+    1 -> "1 freeze held"
+    else -> "$heldFreezes freezes held"
 }

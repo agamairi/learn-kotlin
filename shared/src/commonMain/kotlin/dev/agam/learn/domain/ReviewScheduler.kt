@@ -20,6 +20,10 @@ interface ReviewScheduler {
         correct: Boolean,
         currentEpochDay: Long
     ): ReviewCard
+
+    /** Creates the card for an item that was just missed: box 1, due tomorrow. */
+    fun newCard(itemId: String, currentEpochDay: Long): ReviewCard =
+        ReviewCard(itemId = itemId, box = 1, dueEpochDay = currentEpochDay + 1)
 }
 
 /**
@@ -41,7 +45,7 @@ class LeitnerScheduler : ReviewScheduler {
     }
 
     /** Creates a new card in box 1, due tomorrow. */
-    fun newCard(itemId: String, currentEpochDay: Long): ReviewCard =
+    override fun newCard(itemId: String, currentEpochDay: Long): ReviewCard =
         ReviewCard(itemId = itemId, box = MIN_BOX, dueEpochDay = currentEpochDay + 1)
 
     /** Returns cards due on or before [epochDay], preserving input order. */

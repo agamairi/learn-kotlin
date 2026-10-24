@@ -1,0 +1,8 @@
+-- Schema version 1 -> 2: attempts are identified so that a repeated attempt is stored once.
+ALTER TABLE exercise_result ADD COLUMN attempt_id TEXT;
+
+CREATE UNIQUE INDEX exercise_result_attempt_id ON exercise_result(attempt_id);
+
+CREATE TABLE streak_freeze (
+    epoch_day INTEGER PRIMARY KEY NOT NULL
+);

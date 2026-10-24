@@ -23,13 +23,43 @@ class SqlDelightProgressRepository(
     private val settings = database.settingsKvQueries
 
     override suspend fun recordExerciseResult(result: ExerciseResult) {
+        insertResult(result, attemptId = null)
+    }
+
+    override suspend fun commitProgress(commit: ProgressCommit): Boolean = database.transactionWithResult {
+        if (exerciseResults.selectResultIdByAttemptId(commit.attemptId).executeAsOneOrNull() != null) {
+            return@transactionWithResult false
+        }
+        insertResult(commit.result, attemptId = commit.attemptId)
+        dailyActivities.insertDailyActivity(
+            epoch_day = commit.dailyActivity.epochDay,
+            xp_earned = commit.dailyActivity.xpEarned.toLong(),
+            exercises_completed = commit.dailyActivity.exercisesCompleted.toLong(),
+            goal_met = commit.dailyActivity.goalMet.toSqlBoolean()
+        )
+        commit.reviewCard?.let { card ->
+            reviewCards.insertReviewCard(
+                item_id = card.itemId,
+                box = card.box.toLong(),
+                due_epoch_day = card.dueEpochDay
+            )
+        }
+        commit.frozenEpochDays.forEach { epochDay -> streakFreezes.insertStreakFreeze(epochDay) }
+        commit.heldStreakFreezes?.let { held ->
+            settings.insertSetting(HELD_FREEZES_SETTING, held.coerceIn(0, 2).toString())
+        }
+        true
+    }
+
+    private fun insertResult(result: ExerciseResult, attemptId: String?) {
         exerciseResults.insertExerciseResult(
             exercise_id = result.exerciseId,
             lesson_id = result.lessonId,
             chapter_id = result.chapterId,
             correct = result.correct.toSqlBoolean(),
             xp_awarded = result.xpAwarded.toLong(),
-            epoch_millis = result.epochMillis
+            epoch_millis = result.epochMillis,
+            attempt_id = attemptId
         )
     }
 

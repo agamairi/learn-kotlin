@@ -36,6 +36,7 @@ data class StatsUiState(
     val totalExercisesCompleted: Int = 0,
     val currentStreak: Int = 0,
     val longestStreak: Int = 0,
+    val heldStreakFreezes: Int = 0,
     val dailyGoalXp: Int = 50,
     val recentXpHistory: List<DailyXp> = emptyList(),
     val calendarDays: List<CalendarDay> = emptyList(),
@@ -130,6 +131,7 @@ fun StatsScreen(
             StreakCalendar(
                 currentStreak = state.currentStreak,
                 longestStreak = state.longestStreak,
+                heldFreezes = state.heldStreakFreezes,
                 days = state.calendarDays,
                 modifier = Modifier.fillMaxWidth()
             )

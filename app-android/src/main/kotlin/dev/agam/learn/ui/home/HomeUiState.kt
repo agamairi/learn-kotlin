@@ -17,6 +17,8 @@ data class ContinueLessonInfo(
 data class HomeUiState(
     val isLoading: Boolean = true,
     val streakDays: Int = 0,
+    /** Streak freezes available to cover a missed day. */
+    val heldStreakFreezes: Int = 0,
     val isStreakActiveToday: Boolean = false,
     val todayXp: Int = 0,
     val dailyGoalXp: Int = 50,

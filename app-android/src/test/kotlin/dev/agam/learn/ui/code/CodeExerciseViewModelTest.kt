@@ -18,13 +18,24 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
+import dev.agam.learn.data.ProgressRecorder
+import dev.agam.learn.fake.FakeProgressRepository
+import dev.agam.learn.fake.courseOf
+import dev.agam.learn.fake.progressRecorderFor
 
 class CodeExerciseViewModelTest {
 
     private lateinit var fakeRunner: FakeCodeRunner
     private lateinit var fakeAiTutor: FakeAiTutor
     private lateinit var sampleExercise: Exercise.WriteFunction
+    private lateinit var progress: FakeProgressRepository
+    private lateinit var recorder: ProgressRecorder
+
+    private fun storedResults() = runBlocking { progress.getExerciseResults() }
+
+    private fun storedActivities() = runBlocking { progress.getDailyActivities() }
     private val testScope = CoroutineScope(Dispatchers.Unconfined)
 
     @Before
@@ -39,6 +50,8 @@ class CodeExerciseViewModelTest {
             referenceSolution = "fun sum(a: Int, b: Int): Int = a + b",
             hints = listOf("Use + operator", "Return expression directly")
         )
+        progress = FakeProgressRepository()
+        recorder = progressRecorderFor(progress, listOf(courseOf(sampleExercise)))
     }
 
     @Test
@@ -46,6 +59,7 @@ class CodeExerciseViewModelTest {
         val viewModel = CodeExerciseViewModel(
             exercise = sampleExercise,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             aiTutor = fakeAiTutor,
             isInterviewMode = false,
             hasApiKey = true,
@@ -70,6 +84,7 @@ class CodeExerciseViewModelTest {
         val viewModel = CodeExerciseViewModel(
             exercise = sampleExercise,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             coroutineScope = testScope
         )
 
@@ -90,6 +105,7 @@ class CodeExerciseViewModelTest {
         val viewModel = CodeExerciseViewModel(
             exercise = sampleExercise,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             coroutineScope = testScope
         )
 
@@ -113,6 +129,7 @@ class CodeExerciseViewModelTest {
         val viewModel = CodeExerciseViewModel(
             exercise = sampleExercise,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             coroutineScope = testScope
         )
 
@@ -136,6 +153,7 @@ class CodeExerciseViewModelTest {
         val viewModel = CodeExerciseViewModel(
             exercise = sampleExercise,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             coroutineScope = testScope
         )
 
@@ -159,6 +177,7 @@ class CodeExerciseViewModelTest {
         val viewModel = CodeExerciseViewModel(
             exercise = sampleExercise,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             coroutineScope = testScope
         )
 
@@ -179,6 +198,7 @@ class CodeExerciseViewModelTest {
         val viewModel = CodeExerciseViewModel(
             exercise = sampleExercise,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             coroutineScope = testScope
         )
 
@@ -197,6 +217,7 @@ class CodeExerciseViewModelTest {
         val viewModel = CodeExerciseViewModel(
             exercise = sampleExercise,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             aiTutor = fakeAiTutor,
             isInterviewMode = false,
             hasApiKey = true,
@@ -221,6 +242,7 @@ class CodeExerciseViewModelTest {
         val viewModel = CodeExerciseViewModel(
             exercise = sampleExercise,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             aiTutor = fakeAiTutor,
             isInterviewMode = true,
             hasApiKey = true,
@@ -243,6 +265,7 @@ class CodeExerciseViewModelTest {
         val viewModel = CodeExerciseViewModel(
             exercise = sampleExercise,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             aiTutor = fakeAiTutor,
             isInterviewMode = false,
             hasApiKey = false,
@@ -267,6 +290,7 @@ class CodeExerciseViewModelTest {
         val viewModel = CodeExerciseViewModel(
             exercise = sampleExercise,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             aiTutor = fakeAiTutor,
             isInterviewMode = false,
             hasApiKey = true,
@@ -285,6 +309,7 @@ class CodeExerciseViewModelTest {
         val viewModel = CodeExerciseViewModel(
             exercise = sampleExercise,
             codeRunner = fakeRunner,
+            progressRecorder = recorder,
             coroutineScope = testScope
         )
 
@@ -293,6 +318,125 @@ class CodeExerciseViewModelTest {
 
         viewModel.dismissOutcome()
         assertNull(viewModel.uiState.value.outcome)
+    }
+
+    @Test
+    fun aPassedCheckEnablesCompleteOnlyForTheSourceThatPassed() {
+        fakeRunner.testResult = RunOutcome.Passed(testsRun = 1, stdout = "")
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            coroutineScope = testScope
+        )
+
+        viewModel.checkCode()
+
+        assertTrue(viewModel.uiState.value.canComplete)
+    }
+
+    @Test
+    fun editingAfterAPassClearsThePassAndTheCompleteOffer() {
+        fakeRunner.testResult = RunOutcome.Passed(testsRun = 1, stdout = "")
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            coroutineScope = testScope
+        )
+        viewModel.checkCode()
+
+        viewModel.onCodeChange(TextFieldValue("fun sum(a: Int, b: Int): Int = a - b"))
+
+        val state = viewModel.uiState.value
+        assertFalse(state.canComplete)
+        assertNull(state.outcome)
+        assertNull(state.passedSource)
+    }
+
+    @Test
+    fun aCursorOnlyMoveKeepsThePass() {
+        fakeRunner.testResult = RunOutcome.Passed(testsRun = 1, stdout = "")
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            coroutineScope = testScope
+        )
+        viewModel.checkCode()
+
+        viewModel.onCodeChange(viewModel.uiState.value.code.copy(selection = TextRange(0)))
+
+        assertTrue(viewModel.uiState.value.canComplete)
+    }
+
+    @Test
+    fun aRunThatPassesDoesNotEnableComplete() {
+        fakeRunner.runResult = RunOutcome.Passed(testsRun = 0, stdout = "3")
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            coroutineScope = testScope
+        )
+
+        viewModel.runCode()
+
+        assertTrue(viewModel.uiState.value.outcome is RunOutcome.Passed)
+        assertFalse(viewModel.uiState.value.canComplete)
+    }
+
+    @Test
+    fun aFirstTryPassIsRecordedForTwentyFiveXp() {
+        fakeRunner.testResult = RunOutcome.Passed(testsRun = 1, stdout = "")
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            coroutineScope = testScope
+        )
+
+        viewModel.checkCode()
+
+        assertEquals(25, storedResults().single().xpAwarded)
+        assertEquals("lesson-test", storedResults().single().lessonId)
+    }
+
+    @Test
+    fun aPassAfterAFailedCheckIsRecordedForFifteenXp() {
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            coroutineScope = testScope
+        )
+        fakeRunner.testResult = RunOutcome.TestsFailed(
+            failures = listOf(TestFailure("testSum", "expected 3 but was 0")),
+            stdout = ""
+        )
+        viewModel.checkCode()
+        fakeRunner.testResult = RunOutcome.Passed(testsRun = 1, stdout = "")
+
+        viewModel.checkCode()
+
+        val results = storedResults()
+        assertEquals(listOf(false, true), results.map { it.correct })
+        assertEquals(listOf(0, 15), results.map { it.xpAwarded })
+    }
+
+    @Test
+    fun aCheckThatCannotRunIsNotRecorded() {
+        fakeRunner.testResult = RunOutcome.Timeout(seconds = 10)
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            coroutineScope = testScope
+        )
+
+        viewModel.checkCode()
+
+        assertTrue(storedResults().isEmpty())
     }
 
     private class FakeCodeRunner : CodeRunner {

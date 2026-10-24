@@ -1,5 +1,6 @@
 package dev.agam.learn.fake
 
+import dev.agam.learn.data.ProgressCommit
 import dev.agam.learn.data.ProgressRepository
 import dev.agam.learn.model.DailyActivity
 import dev.agam.learn.model.ExerciseResult
@@ -134,6 +135,23 @@ class FakeProgressRepository : ProgressRepository {
 
     private val frozenEpochDays = mutableSetOf<Long>()
     private var heldStreakFreezes = 0
+    private val committedAttemptIds = mutableSetOf<String>()
+
+    override suspend fun commitProgress(commit: ProgressCommit): Boolean = mutex.withLock {
+        if (!committedAttemptIds.add(commit.attemptId)) return@withLock false
+        exerciseResultsState.value = exerciseResultsState.value + commit.result
+        val updatedActivities = dailyActivitiesState.value.toMutableMap()
+        updatedActivities[commit.dailyActivity.epochDay] = commit.dailyActivity
+        dailyActivitiesState.value = updatedActivities
+        commit.reviewCard?.let { card ->
+            val updatedCards = reviewCardsState.value.toMutableMap()
+            updatedCards[card.itemId] = card
+            reviewCardsState.value = updatedCards
+        }
+        frozenEpochDays.addAll(commit.frozenEpochDays)
+        commit.heldStreakFreezes?.let { heldStreakFreezes = it.coerceIn(0, 2) }
+        true
+    }
 
     override suspend fun getFrozenEpochDays(): Set<Long> = mutex.withLock {
         frozenEpochDays.toSet()

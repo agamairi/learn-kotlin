@@ -82,10 +82,15 @@ fun ChapterAccuracyList(
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
-                                text = "${item.accuracyPercent}% (${item.correct}/${item.attempted})",
+                                text = if (item.attempted == 0) {
+                                    "No attempts yet"
+                                } else {
+                                    "${item.accuracyPercent}% (${item.correct}/${item.attempted})"
+                                },
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = when {
+                                    item.attempted == 0 -> MaterialTheme.colorScheme.onSurfaceVariant
                                     item.accuracyPercent >= 80 -> Color(0xFF2E7D32)
                                     item.accuracyPercent >= 60 -> MaterialTheme.colorScheme.primary
                                     else -> MaterialTheme.colorScheme.error

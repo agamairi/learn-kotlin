@@ -5,12 +5,19 @@ CREATE TABLE exercise_result (
     chapter_id TEXT,
     correct INTEGER NOT NULL,
     xp_awarded INTEGER NOT NULL,
-    epoch_millis INTEGER NOT NULL
+    epoch_millis INTEGER NOT NULL,
+    attempt_id TEXT
 );
 
+-- One row per graded attempt. Rows written before attempt ids existed have NULL, which is allowed to repeat.
+CREATE UNIQUE INDEX exercise_result_attempt_id ON exercise_result(attempt_id);
+
 insertExerciseResult:
-INSERT INTO exercise_result (exercise_id, lesson_id, chapter_id, correct, xp_awarded, epoch_millis)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT INTO exercise_result (exercise_id, lesson_id, chapter_id, correct, xp_awarded, epoch_millis, attempt_id)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+selectResultIdByAttemptId:
+SELECT id FROM exercise_result WHERE attempt_id = ?;
 
 selectAllExerciseResults:
 SELECT * FROM exercise_result ORDER BY epoch_millis ASC, id ASC;

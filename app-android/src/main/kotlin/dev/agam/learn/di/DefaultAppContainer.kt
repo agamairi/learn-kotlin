@@ -7,6 +7,7 @@ import dev.agam.learn.content.CourseRepository
 import dev.agam.learn.data.AssetCourseRepository
 import dev.agam.learn.data.LearnDatabase
 import dev.agam.learn.data.LearnDatabaseDriverFactory
+import dev.agam.learn.data.ProgressRecorder
 import dev.agam.learn.data.ProgressRepository
 import dev.agam.learn.data.SecretStore
 import dev.agam.learn.data.SettingsRepository
@@ -56,6 +57,16 @@ class DefaultAppContainer(
 
     override val settingsRepository: SettingsRepository by lazy {
         SqlDelightSettingsRepository(database)
+    }
+
+    override val progressRecorder: ProgressRecorder by lazy {
+        ProgressRecorder(
+            progressRepository = progressRepository,
+            courseRepository = courseRepository,
+            settingsRepository = settingsRepository,
+            reviewScheduler = reviewScheduler,
+            xpPolicy = xpPolicy
+        )
     }
 
     override val secretStore: SecretStore by lazy {

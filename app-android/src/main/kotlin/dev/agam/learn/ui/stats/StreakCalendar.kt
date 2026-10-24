@@ -34,7 +34,9 @@ import androidx.compose.ui.unit.sp
 data class CalendarDay(
     val dayOfMonth: Int,
     val isActive: Boolean,
-    val isToday: Boolean = false
+    val isToday: Boolean = false,
+    /** A missed day covered by a streak freeze. */
+    val isFrozen: Boolean = false
 )
 
 /**
@@ -45,7 +47,8 @@ fun StreakCalendar(
     currentStreak: Int,
     longestStreak: Int,
     days: List<CalendarDay>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    heldFreezes: Int = 0
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -76,6 +79,12 @@ fun StreakCalendar(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            Text(
+                text = freezeSummary(heldFreezes, days.any { it.isFrozen }),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             Spacer(modifier = Modifier.height(14.dp))
 
@@ -129,6 +138,7 @@ private fun DayCircle(day: CalendarDay) {
 
     val backgroundModifier = when {
         day.isActive -> Modifier.background(activeColor, CircleShape)
+        day.isFrozen -> Modifier.background(FrozenDayColor.copy(alpha = 0.25f), CircleShape)
         else -> Modifier.background(Color.Transparent, CircleShape)
     }
 
@@ -147,6 +157,17 @@ private fun DayCircle(day: CalendarDay) {
             color = if (day.isActive) Color.White else MaterialTheme.colorScheme.onSurface
         )
     }
+}
+
+private val FrozenDayColor = Color(0xFF3F7FD6)
+
+private fun freezeSummary(heldFreezes: Int, anyFrozenDay: Boolean): String {
+    val held = when (heldFreezes) {
+        0 -> "No freezes held"
+        1 -> "1 freeze held"
+        else -> "$heldFreezes freezes held"
+    }
+    return if (anyFrozenDay) "$held · blue days were covered by a freeze" else held
 }
 
 @Preview
