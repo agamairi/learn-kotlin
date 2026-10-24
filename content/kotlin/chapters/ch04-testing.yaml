@@ -1,0 +1,188 @@
+id: ch04-testing
+title: Testing Kotlin code
+summary: |
+  Learn the screen's testing vocabulary: JUnit 4 tests, exact assertions, and a zero-setup harness. Build a test list that covers examples, empty input, boundaries, invalid rows, duplicates, ordering, and large values.
+lessons:
+  - id: ch04-testing-junit
+    title: Assertions and JUnit 4
+    explanation: |
+      Android Studio commonly runs Kotlin tests through JUnit 4. A test method has `@Test`, and assertions describe the expected result. `assertEquals` checks values, while `assertTrue`, `assertFalse`, and `assertNull` cover predicates and nullable results. Keep each test focused on one behaviour and use names that explain the rule.
+
+      For a fee function, test the verified examples and the invalid-input rule. The test itself is executable documentation: it says that 1,000 cents costs 59 cents in fees, 2,550 cents costs 104 cents, and negative amounts are rejected.
+    exercises:
+      - type: multiple_choice
+        id: ch04-testing-junit-mc-annotation
+        prompt: Which annotation marks a JUnit 4 test method?
+        options:
+          - '@Test'
+          - '@Check'
+          - '@Run'
+          - '@Case'
+        correct_index: 0
+        explanation: JUnit 4 discovers methods annotated with `org.junit.Test`.
+      - type: cloze
+        id: ch04-testing-junit-cloze-equals
+        prompt: Fill in the assertion used to compare an expected value with an actual value.
+        template: "____1(59L, feeCents(1_000))"
+        blanks:
+          - placeholder: ____1
+            accepted:
+              - assertEquals
+            case_sensitive: true
+        explanation: "`assertEquals(expected, actual)` gives a clear failure when the values differ."
+      - type: multiple_choice
+        id: ch04-testing-junit-mc-null
+        prompt: Which assertion is the best direct check that a nullable parser returned no value?
+        options:
+          - assertNull(result)
+          - assertEquals(true, result)
+          - assertFalse(result)
+          - assertTrue(result)
+        correct_index: 0
+        explanation: "`assertNull` states the intended nullable result directly."
+      - type: predict_output
+        id: ch04-testing-junit-output-fees
+        prompt: What does this test body print?
+        code: |
+          fun feeCents(amountCents: Long, basisPoints: Int = 290): Long {
+              require(amountCents >= 0)
+              return (amountCents * basisPoints + 5_000) / 10_000 + 30
+          }
+
+          fun main() {
+              println(feeCents(1_000))
+              println(feeCents(2_550))
+          }
+        expected_output: "59\n104"
+        explanation: The two verified fee examples produce 59 and 104 cents.
+      - type: multiple_choice
+        id: ch04-testing-junit-mc-negative
+        prompt: What should a test expect from `feeCents(-1)` under the lesson's rule?
+        options:
+          - An `IllegalArgumentException`
+          - The value `29`
+          - "`null`"
+          - An empty string
+        correct_index: 0
+        explanation: "`require(amountCents >= 0)` rejects a negative amount with `IllegalArgumentException`."
+      - type: cloze
+        id: ch04-testing-junit-cloze-import
+        prompt: Complete the JUnit import for the test annotation.
+        template: "import org.junit.____1"
+        blanks:
+          - placeholder: ____1
+            accepted:
+              - Test
+            case_sensitive: true
+        explanation: The tests use `org.junit.Test`, not the Kotlin test annotation.
+
+  - id: ch04-testing-harness
+    title: A zero-setup test harness
+    explanation: |
+      When a test library is unavailable, a tiny harness still gives useful feedback. Compare expected and actual values, print a named PASS or FAIL line, count failures, and finish with `ALL PASS` or the number of failures. This style works in a single file and makes the test list explicit.
+
+      For every screen problem, start with the prompt's example, then add empty input, one item, ties and ordering, exact boundaries, invalid rows, duplicates, whitespace/case, and large values when those cases apply.
+    exercises:
+      - type: predict_output
+        id: ch04-testing-harness-output-pass
+        prompt: What does this complete harness print?
+        code: |
+          var failures = 0
+
+          fun <T> expect(name: String, expected: T, actual: T) {
+              if (expected == actual) println("PASS  $name")
+              else { failures++; println("FAIL  $name") }
+          }
+
+          fun main() {
+              expect("visa fee", 59L, 59L)
+              expect("empty report", emptyList<String>(), emptyList<String>())
+              println(if (failures == 0) "ALL PASS" else "$failures FAILED")
+          }
+        expected_output: "PASS  visa fee\nPASS  empty report\nALL PASS"
+        explanation: Both expected and actual values match, so no failures are counted.
+      - type: multiple_choice
+        id: ch04-testing-harness-mc-order
+        prompt: Why should a collection test include ties and ordering?
+        options:
+          - To make deterministic output and tie-break rules visible
+          - Because lists cannot contain equal values
+          - To avoid testing the main example
+          - Because maps always sort themselves
+        correct_index: 0
+        explanation: Equal keys often expose an unstated ordering rule; a test makes the intended result exact.
+      - type: cloze
+        id: ch04-testing-harness-cloze-failures
+        prompt: Fill in the variable update used when a harness assertion fails.
+        template: "else { ____1++; println(\"FAIL\") }"
+        blanks:
+          - placeholder: ____1
+            accepted:
+              - failures
+            case_sensitive: true
+        explanation: Incrementing the shared failure count lets the final line summarize the run.
+      - type: multiple_choice
+        id: ch04-testing-harness-mc-empty
+        prompt: Which input is especially important to test for a report function?
+        options:
+          - Empty input
+          - Only the largest possible input
+          - A random unrelated string
+          - No input at all to the test runner
+        correct_index: 0
+        explanation: Empty input often reveals accidental indexing or initialization assumptions.
+      - type: predict_output
+        id: ch04-testing-harness-output-fail
+        prompt: What does this harness print?
+        code: |
+          var failures = 0
+
+          fun <T> expect(name: String, expected: T, actual: T) {
+              if (expected == actual) println("PASS  $name")
+              else { failures++; println("FAIL  $name\n      expected: $expected\n      actual:   $actual") }
+          }
+
+          fun main() {
+              expect("count", 2, 3)
+              println(if (failures == 0) "ALL PASS" else "$failures FAILED")
+          }
+        expected_output: "FAIL  count\n      expected: 2\n      actual:   3\n1 FAILED"
+        explanation: The mismatch prints both values and increments the failure count once.
+      - type: write_function
+        id: ch04-testing-harness-write-fee
+        prompt: Implement the verified fee calculation so it can be tested with JUnit. Reject negative amounts, use the default 290 basis points, round the percentage half up with integer arithmetic, and add the fixed 30-cent fee.
+        starter_code: |
+          fun feeCents(amountCents: Long, basisPoints: Int = 290): Long = TODO()
+        hidden_tests: |
+          import org.junit.Test
+          import org.junit.Assert.assertEquals
+          import org.junit.Assert.assertTrue
+
+          class FeeCentsTest {
+              @Test
+              fun verifiedExamples() {
+                  assertEquals(59L, feeCents(1_000))
+                  assertEquals(104L, feeCents(2_550))
+              }
+
+              @Test
+              fun negativeAmountIsRejected() {
+                  var rejected = false
+                  try {
+                      feeCents(-1)
+                  } catch (error: IllegalArgumentException) {
+                      rejected = true
+                  }
+                  assertTrue(rejected)
+              }
+          }
+        reference_solution: |
+          fun feeCents(amountCents: Long, basisPoints: Int = 290): Long {
+              require(amountCents >= 0) { "amount must be non-negative, was $amountCents" }
+              return (amountCents * basisPoints + 5_000) / 10_000 + 30
+          }
+        hints:
+          - Validate the amount before doing arithmetic.
+          - Add 5,000 before integer division by 10,000 for half-up rounding.
+          - Add the fixed 30 cents after the rounded percentage.
+        explanation: The code exercise is the fee example from the testing lesson, with its verified JUnit checks.

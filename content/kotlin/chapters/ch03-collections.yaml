@@ -1,0 +1,189 @@
+id: ch03-collections
+title: The collections toolkit
+summary: |
+  Use Kotlin collections to group transactions, total money, count categories, find duplicates, and build deterministic reports with explicit ordering.
+lessons:
+  - id: ch03-collections-grouping
+    title: Grouping and aggregation
+    explanation: |
+      Kotlin's collection operations map closely to Swift and Dart. Use `groupBy` to make piles, `groupingBy { }.eachCount()` to count categories, and `sumOf` for totals. The two-argument form of `groupBy` can group one key with a projected value, which is handy for merchant volume:
+
+      ```kotlin
+      txs.groupBy({ it.merchant }, { it.cents })
+          .mapValues { (_, amounts) -> amounts.sum() }
+      ```
+
+      Keep the result type visible when it makes the intent clearer. `List` and `Map` are read-only interfaces; use mutable collections only when the algorithm needs updates.
+    exercises:
+      - type: multiple_choice
+        id: ch03-collections-grouping-mc-groupby
+        prompt: Which operation creates a map from each merchant to its list of transactions?
+        options:
+          - groupBy { it.merchant }
+          - associateBy { it.merchant }
+          - eachCount()
+          - partition { it.merchant }
+        correct_index: 0
+        explanation: "`groupBy` collects all matching items under each key."
+      - type: predict_output
+        id: ch03-collections-grouping-output-volume
+        prompt: What does this program print?
+        code: |
+          data class Tx(val id: String, val merchant: String, val cents: Long)
+
+          fun main() {
+              val txs = listOf(
+                  Tx("tx1", "acme", 1000),
+                  Tx("tx2", "acme", 2550),
+                  Tx("tx3", "bolt", 99)
+              )
+              val volume = txs.groupBy({ it.merchant }, { it.cents })
+                  .mapValues { (_, amounts) -> amounts.sum() }
+              println(volume)
+          }
+        expected_output: "{acme=3550, bolt=99}"
+        explanation: The two acme amounts total 3550, while bolt has one transaction worth 99.
+      - type: cloze
+        id: ch03-collections-grouping-cloze-count
+        prompt: Fill in the operation that counts each card brand.
+        template: "val countByCard = txs.____1 { it.card }.eachCount()"
+        blanks:
+          - placeholder: ____1
+            accepted:
+              - groupingBy
+            case_sensitive: true
+        explanation: "`groupingBy` creates a counting view without first building lists for every key."
+      - type: multiple_choice
+        id: ch03-collections-grouping-mc-total
+        prompt: Which expression returns the total cents across all transactions?
+        options:
+          - txs.sumOf { it.cents }
+          - txs.count { it.cents }
+          - txs.maxByOrNull { it.cents }
+          - txs.associateBy { it.cents }
+        correct_index: 0
+        explanation: "`sumOf` projects each transaction to cents and adds the resulting `Long` values."
+      - type: predict_output
+        id: ch03-collections-grouping-output-count
+        prompt: What does this program print?
+        code: |
+          data class Tx(val id: String, val card: String)
+
+          fun main() {
+              val txs = listOf(Tx("tx1", "visa"), Tx("tx2", "amex"), Tx("tx3", "visa"))
+              println(txs.groupingBy { it.card }.eachCount())
+          }
+        expected_output: "{visa=2, amex=1}"
+        explanation: Two items have the `visa` brand and one has the `amex` brand.
+      - type: write_function
+        id: ch03-collections-grouping-write-totals
+        prompt: Return each merchant's total cents, sorted by total descending and then merchant name ascending.
+        starter_code: |
+          data class Tx(val id: String, val merchant: String, val cents: Long, val card: String)
+
+          fun totalsByMerchant(txs: List<Tx>): List<Pair<String, Long>> = TODO()
+        hidden_tests: |
+          import org.junit.Test
+          import org.junit.Assert.assertEquals
+
+          class TotalsByMerchantTest {
+              @Test
+              fun example() {
+                  val txs = listOf(
+                      Tx("tx1", "acme", 1000, "visa"),
+                      Tx("tx2", "acme", 2550, "amex"),
+                      Tx("tx3", "bolt", 99, "visa")
+                  )
+                  assertEquals(listOf("acme" to 3550L, "bolt" to 99L), totalsByMerchant(txs))
+              }
+
+              @Test
+              fun tiesUseMerchantName() {
+                  val txs = listOf(Tx("a", "zeta", 10, "visa"), Tx("b", "alpha", 10, "visa"))
+                  assertEquals(listOf("alpha" to 10L, "zeta" to 10L), totalsByMerchant(txs))
+              }
+          }
+        reference_solution: |
+          data class Tx(val id: String, val merchant: String, val cents: Long, val card: String)
+
+          fun totalsByMerchant(txs: List<Tx>): List<Pair<String, Long>> =
+              txs.groupBy({ it.merchant }, { it.cents })
+                  .map { (merchant, amounts) -> merchant to amounts.sum() }
+                  .sortedWith(compareByDescending<Pair<String, Long>> { it.second }.thenBy { it.first })
+        hints:
+          - Group by merchant and project each transaction to its cents.
+          - Convert the map entries to pairs, then sort with a descending total and ascending name.
+        explanation: The example is the lesson's total-per-merchant drill, with the stated tie-break made explicit.
+
+  - id: ch03-collections-searching
+    title: Searching, ordering, and mutable buckets
+    explanation: |
+      Use `firstOrNull` when a search may find nothing, and use a mutable set to detect the first duplicate. `sortedByDescending`, `take`, and `partition` make result selection readable. For a mutable map of lists, `getOrPut` creates the bucket only when the key is first seen.
+
+      Kotlin sorts are stable, but interview answers are clearer when the tie-break is written down with `sortedWith(compareBy(...).thenBy { ... })`.
+    exercises:
+      - type: multiple_choice
+        id: ch03-collections-searching-mc-first
+        prompt: Which operation returns the first matching item or `null` when there is no match?
+        options:
+          - firstOrNull { }
+          - first { }
+          - any { }
+          - none { }
+        correct_index: 0
+        explanation: "`firstOrNull` is the non-throwing search operation."
+      - type: cloze
+        id: ch03-collections-searching-cloze-duplicate
+        prompt: Complete the set operation whose Boolean result is false when an item was already present.
+        template: "if (!seen.____1(id)) return id"
+        blanks:
+          - placeholder: ____1
+            accepted:
+              - add
+            case_sensitive: true
+        explanation: "`MutableSet.add` returns false for a repeat, which makes duplicate detection concise."
+      - type: predict_output
+        id: ch03-collections-searching-output-biggest
+        prompt: What does this program print?
+        code: |
+          data class Tx(val id: String, val cents: Long)
+
+          fun main() {
+              val txs = listOf(Tx("tx1", 1000), Tx("tx2", 2550), Tx("tx3", 99))
+              println(txs.maxByOrNull { it.cents }?.id)
+          }
+        expected_output: "tx2"
+        explanation: "`tx2` has the greatest cents value."
+      - type: multiple_choice
+        id: ch03-collections-searching-mc-take
+        prompt: Which sequence returns the top two entries after sorting counts from highest to lowest?
+        options:
+          - entries.sortedByDescending { it.value }.take(2)
+          - entries.take(2).sortedByDescending { it.value }
+          - entries.maxByOrNull { it.value }.take(2)
+          - entries.groupBy { it.value }.take(2)
+        correct_index: 0
+        explanation: Sort the complete entry set first, then keep its first two entries.
+      - type: cloze
+        id: ch03-collections-searching-cloze-bucket
+        prompt: Fill in the map helper that creates a mutable list only when the card brand is first encountered.
+        template: "buckets.____1(tx.card) { mutableListOf() }.add(tx)"
+        blanks:
+          - placeholder: ____1
+            accepted:
+              - getOrPut
+            case_sensitive: true
+        explanation: "`getOrPut` returns the existing bucket or stores and returns a new one."
+      - type: predict_output
+        id: ch03-collections-searching-output-partition
+        prompt: What does this program print?
+        code: |
+          data class Tx(val id: String, val card: String)
+
+          fun main() {
+              val txs = listOf(Tx("tx1", "visa"), Tx("tx2", "amex"), Tx("tx3", "visa"))
+              val (visa, other) = txs.partition { it.card == "visa" }
+              println("${visa.size}/${other.size}")
+          }
+        expected_output: "2/1"
+        explanation: "`partition` returns matching items first and the remaining items second."

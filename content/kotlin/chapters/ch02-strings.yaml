@@ -1,0 +1,167 @@
+id: ch02-strings
+title: Strings and parsing
+summary: |
+  Turn messy text into predictable Kotlin values. Practise trimming CSV fields, safe numeric parsing, defaults, regular expressions, and small validation algorithms.
+lessons:
+  - id: ch02-strings-splitting
+    title: Split, trim, and destructure
+    explanation: |
+      Kotlin's string helpers are compact: `split`, `trim`, `lines`, `drop`, `filter`, `joinToString`, and `padStart` cover many screen-sized parsing tasks. A CSV-like line can be split and mapped before destructuring:
+
+      ```kotlin
+      val parts = line.split(",").map { it.trim() }
+      val (id, merchant, amountText, card) = parts
+      ```
+
+      Destructuring expects enough values, so validate input when rows may be malformed. For numbers, prefer `toLongOrNull()` or `toIntOrNull()` when invalid text should become a result instead of an exception.
+    exercises:
+      - type: multiple_choice
+        id: ch02-strings-splitting-mc-trim
+        prompt: Which expression turns `" acme "` into `"acme"` while mapping every field in a list?
+        options:
+          - fields.map { it.trim() }
+          - fields.joinToString("trim")
+          - fields.filter { it.trim() }
+          - fields.lines { it.trim() }
+        correct_index: 0
+        explanation: "`map` transforms every element, and `trim` removes surrounding whitespace."
+      - type: predict_output
+        id: ch02-strings-splitting-output-csv
+        prompt: What does this program print?
+        code: |
+          fun main() {
+              val line = "tx2, acme ,2550,amex"
+              val parts = line.split(",").map { it.trim() }
+              println(parts)
+          }
+        expected_output: "[tx2, acme, 2550, amex]"
+        explanation: Splitting creates four strings, and trimming removes the spaces around `acme`.
+      - type: cloze
+        id: ch02-strings-splitting-cloze-safe-number
+        prompt: Complete the safe conversion that returns null for non-numeric text.
+        template: "val amount = amountText.____1()"
+        blanks:
+          - placeholder: ____1
+            accepted:
+              - toLongOrNull
+            case_sensitive: true
+        explanation: "`toLongOrNull` avoids a number-format exception for text such as `abc`."
+      - type: multiple_choice
+        id: ch02-strings-splitting-mc-blank
+        prompt: What is the result of `"   ".isBlank()`?
+        options:
+          - true
+          - false
+          - null
+        correct_index: 0
+        explanation: "`isBlank` treats whitespace-only text as blank."
+      - type: cloze
+        id: ch02-strings-splitting-cloze-padding
+        prompt: Fill in the helper that turns `"5"` into `"05"`.
+        template: "\"5\".____1(2, '0')"
+        blanks:
+          - placeholder: ____1
+            accepted:
+              - padStart
+            case_sensitive: true
+        explanation: "`padStart` adds characters on the left until the requested length is reached."
+      - type: predict_output
+        id: ch02-strings-splitting-output-filter
+        prompt: What does this program print?
+        code: |
+          fun main() {
+              println("4242 4242".filter { it.isDigit() })
+          }
+        expected_output: "42424242"
+        explanation: "`filter` keeps only the characters for which `isDigit()` is true."
+
+  - id: ch02-strings-structured
+    title: Structured text and validation
+    explanation: |
+      Once a string has structure, keep the parsing steps visible. `substringBefore` and `substringAfter` are useful for a single delimiter, and `missingDelimiterValue` provides a default. A regular expression with `matchEntire` ensures the whole string follows the expected format. For CSV rows, `zip` pairs a header list with a value list.
+
+      These small operations compose well: normalize first, parse second, then return a value or a clear failure such as `null`.
+    exercises:
+      - type: multiple_choice
+        id: ch02-strings-structured-mc-before
+        prompt: What does `"fr-CA;q=0.8".substringBefore(";")` return?
+        options:
+          - fr-CA
+          - q=0.8
+          - fr-CA;q=0.8
+          - an empty string
+        correct_index: 0
+        explanation: "`substringBefore` returns the text before the first matching delimiter."
+      - type: predict_output
+        id: ch02-strings-structured-output-default
+        prompt: What does this program print?
+        code: |
+          fun main() {
+              println("fr-CA".substringAfter("q=", missingDelimiterValue = "1"))
+          }
+        expected_output: "1"
+        explanation: Because `q=` is missing, the requested fallback value is returned.
+      - type: cloze
+        id: ch02-strings-structured-cloze-regex
+        prompt: Complete the call that requires the regular expression to match the complete input.
+        template: "pair.____1(\"limit=25\")"
+        blanks:
+          - placeholder: ____1
+            accepted:
+              - matchEntire
+            case_sensitive: true
+        explanation: "`matchEntire` rejects extra text before or after the intended pattern."
+      - type: multiple_choice
+        id: ch02-strings-structured-mc-zip
+        prompt: What does `headers.zip(values)` produce when both lists have the same length?
+        options:
+          - Pairs each header with the value at the same position
+          - Sorts both lists alphabetically
+          - Joins every header with every value
+          - Drops all duplicate values
+        correct_index: 0
+        explanation: "`zip` combines corresponding positions into pairs."
+      - type: predict_output
+        id: ch02-strings-structured-output-locale
+        prompt: What does this program print?
+        code: |
+          fun main() {
+              val language = "en-US".lowercase().split("-")
+              println(language)
+          }
+        expected_output: "[en, us]"
+        explanation: Lowercasing happens first, then splitting on the hyphen creates two list elements.
+      - type: write_function
+        id: ch02-strings-structured-write-pairs
+        prompt: Parse a semicolon-separated string of integer settings such as `"limit=25;window=10;burst=5"` into a map from setting name to value. Return an empty map for an empty input and ignore no valid pairs.
+        starter_code: |
+          fun parseSettings(text: String): Map<String, Int> = TODO()
+        hidden_tests: |
+          import org.junit.Test
+          import org.junit.Assert.assertEquals
+
+          class ParseSettingsTest {
+              @Test
+              fun example() {
+                  assertEquals(
+                      mapOf("limit" to 25, "window" to 10, "burst" to 5),
+                      parseSettings("limit=25;window=10;burst=5")
+                  )
+              }
+
+              @Test
+              fun emptyInput() {
+                  assertEquals(emptyMap<String, Int>(), parseSettings(""))
+              }
+          }
+        reference_solution: |
+          fun parseSettings(text: String): Map<String, Int> =
+              if (text.isEmpty()) emptyMap()
+              else text.split(";").associate { part ->
+                  val (key, value) = part.split("=", limit = 2)
+                  key to value.toInt()
+              }
+        hints:
+          - Split the input into semicolon-separated parts, then split each part at `=`.
+          - "`associate` turns a sequence of key/value pairs into a map."
+        explanation: This is the settings-parsing drill from the lesson, kept small enough to test with exact maps.

@@ -1,0 +1,1197 @@
+id: ch11-more-practice
+title: More practice problems
+summary: Practice routes, streaming state, retries, exact decimal conversion, and checkout totals.
+lessons:
+  - id: ch11-more-practice-shipping-routes
+    title: Shipping routes
+    explanation: |
+      Model each lane as a directed edge. A direct lookup is a small map problem;
+      a cheapest route with positive costs is a Dijkstra problem. Keep the path and
+      carrier names alongside the total so the result is useful to a caller.
+    exercises:
+      - type: multi_part_problem
+        id: ch11-more-practice-shipping-routes-problem
+        prompt: |
+          Find the cheapest one-way shipping route. Lanes use
+          `from:to:carrier:cost` and are separated by commas:
+          `US:UK:UPS:5,US:CA:FedEx:3,CA:UK:DHL:1,UK:FR:DHL:2,CA:FR:FedEx:9`.
+        story: |
+          Lanes are one-way. Build the solution in parts, keeping the route and
+          carriers as well as its total cost.
+        parts:
+          - id: ch11-more-practice-shipping-routes-part-1
+            prompt: Return the cheapest direct lane from `from` to `to`, or `null` when there is none.
+            starter_code: |
+              data class Lane(val from: String, val to: String, val carrier: String, val cost: Int)
+
+              fun parseLanes(text: String): List<Lane> = TODO()
+
+              fun directCost(lanes: List<Lane>, from: String, to: String): Int? = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Assert.assertNull
+              import org.junit.Test
+
+              class ShippingRoutesPart1Test {
+                  private val lanes = parseLanes("US:UK:UPS:5,US:CA:FedEx:3,CA:UK:DHL:1,UK:FR:DHL:2,CA:FR:FedEx:9")
+
+                  @Test fun findsDirectLane() {
+                      assertEquals(5, directCost(lanes, "US", "UK"))
+                  }
+
+                  @Test fun respectsDirectionAndUnknownCountries() {
+                      assertNull(directCost(lanes, "UK", "US"))
+                      assertNull(directCost(lanes, "ZZ", "US"))
+                  }
+
+                  @Test fun usesCheapestDuplicateLane() {
+                      val withDuplicate = lanes + Lane("US", "UK", "DHL", 4)
+                      assertEquals(4, directCost(withDuplicate, "US", "UK"))
+                  }
+              }
+            reference_solution: |
+              data class Lane(val from: String, val to: String, val carrier: String, val cost: Int)
+
+              fun parseLanes(text: String): List<Lane> = text.split(",").filter { it.isNotBlank() }.map { raw ->
+                  val fields = raw.trim().split(":")
+                  require(fields.size == 4)
+                  Lane(fields[0], fields[1], fields[2], fields[3].toInt())
+              }
+
+              fun directCost(lanes: List<Lane>, from: String, to: String): Int? =
+                  lanes.filter { it.from == from && it.to == to }.minOfOrNull { it.cost }
+            expected: |
+              `cost(US, UK) = 5` and `cost(UK, US) = none`.
+          - id: ch11-more-practice-shipping-routes-part-2
+            prompt: Find the cheapest route with exactly one stop. Return its path, carriers, and cost.
+            starter_code: |
+              data class Route(val places: List<String>, val carriers: List<String>, val cost: Int)
+
+              fun oneStopRoute(lanes: List<Lane>, from: String, to: String): Route? = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Assert.assertNull
+              import org.junit.Test
+
+              class ShippingRoutesPart2Test {
+                  private val lanes = parseLanes("US:UK:UPS:5,US:CA:FedEx:3,CA:UK:DHL:1,UK:FR:DHL:2,CA:FR:FedEx:9")
+
+                  @Test fun findsCheapestOneStopRoute() {
+                      assertEquals(
+                          Route(listOf("US", "UK", "FR"), listOf("UPS", "DHL"), 7),
+                          oneStopRoute(lanes, "US", "FR")
+                      )
+                  }
+
+                  @Test fun returnsNullWhenNoOneStopRouteExists() {
+                      assertNull(oneStopRoute(lanes, "UK", "US"))
+                  }
+              }
+            reference_solution: |
+              data class Lane(val from: String, val to: String, val carrier: String, val cost: Int)
+
+              fun parseLanes(text: String): List<Lane> = text.split(",").filter { it.isNotBlank() }.map { raw ->
+                  val fields = raw.trim().split(":")
+                  require(fields.size == 4)
+                  Lane(fields[0], fields[1], fields[2], fields[3].toInt())
+              }
+
+              fun directCost(lanes: List<Lane>, from: String, to: String): Int? =
+                  lanes.filter { it.from == from && it.to == to }.minOfOrNull { it.cost }
+
+              data class Route(val places: List<String>, val carriers: List<String>, val cost: Int)
+
+              fun oneStopRoute(lanes: List<Lane>, from: String, to: String): Route? {
+                  val candidates = lanes.filter { it.from == from }.flatMap { first ->
+                      lanes.filter { it.from == first.to && it.to == to }.map { second ->
+                          Route(listOf(from, first.to, to), listOf(first.carrier, second.carrier), first.cost + second.cost)
+                      }
+                  }
+                  return candidates.minByOrNull { it.cost }
+              }
+            expected: |
+              `US → FR: US→UK→FR, [UPS, DHL], 7`.
+          - id: ch11-more-practice-shipping-routes-part-3
+            prompt: Find the cheapest route with any number of stops.
+            starter_code: |
+              fun cheapestRoute(lanes: List<Lane>, from: String, to: String): Route? = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class ShippingRoutesPart3Test {
+                  private val lanes = parseLanes("US:UK:UPS:5,US:CA:FedEx:3,CA:UK:DHL:1,UK:FR:DHL:2,CA:FR:FedEx:9")
+
+                  @Test fun findsCheapestRouteAcrossAnyNumberOfStops() {
+                      assertEquals(
+                          Route(listOf("US", "CA", "UK", "FR"), listOf("FedEx", "DHL", "DHL"), 6),
+                          cheapestRoute(lanes, "US", "FR")
+                      )
+                  }
+
+                  @Test fun sameCountryHasEmptyZeroCostRoute() {
+                      assertEquals(Route(listOf("US"), emptyList(), 0), cheapestRoute(lanes, "US", "US"))
+                  }
+              }
+            reference_solution: |
+              import java.util.PriorityQueue
+
+              data class Lane(val from: String, val to: String, val carrier: String, val cost: Int)
+
+              fun parseLanes(text: String): List<Lane> = text.split(",").filter { it.isNotBlank() }.map { raw ->
+                  val fields = raw.trim().split(":")
+                  require(fields.size == 4)
+                  Lane(fields[0], fields[1], fields[2], fields[3].toInt())
+              }
+
+              fun directCost(lanes: List<Lane>, from: String, to: String): Int? =
+                  lanes.filter { it.from == from && it.to == to }.minOfOrNull { it.cost }
+
+              data class Route(val places: List<String>, val carriers: List<String>, val cost: Int)
+
+              fun oneStopRoute(lanes: List<Lane>, from: String, to: String): Route? {
+                  val candidates = lanes.filter { it.from == from }.flatMap { first ->
+                      lanes.filter { it.from == first.to && it.to == to }.map { second ->
+                          Route(listOf(from, first.to, to), listOf(first.carrier, second.carrier), first.cost + second.cost)
+                      }
+                  }
+                  return candidates.minByOrNull { it.cost }
+              }
+
+              private data class QueueItem(val cost: Int, val route: Route)
+
+              fun cheapestRoute(lanes: List<Lane>, from: String, to: String): Route? {
+                  if (from == to) return Route(listOf(from), emptyList(), 0)
+                  val graph = lanes.groupBy { it.from }
+                  val queue = PriorityQueue<QueueItem>(compareBy { it.cost })
+                  queue += QueueItem(0, Route(listOf(from), emptyList(), 0))
+                  val best = mutableMapOf(from to 0)
+                  while (queue.isNotEmpty()) {
+                      val current = queue.remove()
+                      if (current.cost != best[current.route.places.last()]) continue
+                      if (current.route.places.last() == to) return current.route
+                      for (lane in graph[current.route.places.last()].orEmpty()) {
+                          if (lane.to in current.route.places) continue
+                          val nextCost = current.cost + lane.cost
+                          if (nextCost < best.getOrDefault(lane.to, Int.MAX_VALUE)) {
+                              best[lane.to] = nextCost
+                              queue += QueueItem(nextCost, Route(current.route.places + lane.to, current.route.carriers + lane.carrier, nextCost))
+                          }
+                      }
+                  }
+                  return null
+              }
+            expected: |
+              `US → FR: US→CA→UK→FR, [FedEx, DHL, DHL], 6`. `US → UK` is now 4 via CA, cheaper than the direct lane.
+          - id: ch11-more-practice-shipping-routes-part-4
+            prompt: The customer refuses one carrier. Find the cheapest route that does not use it.
+            starter_code: |
+              fun cheapestRouteAvoiding(
+                  lanes: List<Lane>,
+                  from: String,
+                  to: String,
+                  refusedCarrier: String
+              ): Route? = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class ShippingRoutesPart4Test {
+                  private val lanes = parseLanes("US:UK:UPS:5,US:CA:FedEx:3,CA:UK:DHL:1,UK:FR:DHL:2,CA:FR:FedEx:9")
+
+                  @Test fun avoidsRefusedCarrier() {
+                      assertEquals(
+                          Route(listOf("US", "CA", "FR"), listOf("FedEx", "FedEx"), 12),
+                          cheapestRouteAvoiding(lanes, "US", "FR", "DHL")
+                      )
+                  }
+              }
+            reference_solution: |
+              import java.util.PriorityQueue
+
+              data class Lane(val from: String, val to: String, val carrier: String, val cost: Int)
+
+              fun parseLanes(text: String): List<Lane> = text.split(",").filter { it.isNotBlank() }.map { raw ->
+                  val fields = raw.trim().split(":")
+                  require(fields.size == 4)
+                  Lane(fields[0], fields[1], fields[2], fields[3].toInt())
+              }
+
+              fun directCost(lanes: List<Lane>, from: String, to: String): Int? =
+                  lanes.filter { it.from == from && it.to == to }.minOfOrNull { it.cost }
+
+              data class Route(val places: List<String>, val carriers: List<String>, val cost: Int)
+
+              fun oneStopRoute(lanes: List<Lane>, from: String, to: String): Route? {
+                  val candidates = lanes.filter { it.from == from }.flatMap { first ->
+                      lanes.filter { it.from == first.to && it.to == to }.map { second ->
+                          Route(listOf(from, first.to, to), listOf(first.carrier, second.carrier), first.cost + second.cost)
+                      }
+                  }
+                  return candidates.minByOrNull { it.cost }
+              }
+
+              private data class QueueItem(val cost: Int, val route: Route)
+
+              fun cheapestRoute(lanes: List<Lane>, from: String, to: String): Route? =
+                  cheapestRouteUsing(lanes, from, to)
+
+              private fun cheapestRouteUsing(lanes: List<Lane>, from: String, to: String): Route? {
+                  if (from == to) return Route(listOf(from), emptyList(), 0)
+                  val graph = lanes.groupBy { it.from }
+                  val queue = PriorityQueue<QueueItem>(compareBy { it.cost })
+                  queue += QueueItem(0, Route(listOf(from), emptyList(), 0))
+                  val best = mutableMapOf(from to 0)
+                  while (queue.isNotEmpty()) {
+                      val current = queue.remove()
+                      if (current.cost != best[current.route.places.last()]) continue
+                      if (current.route.places.last() == to) return current.route
+                      for (lane in graph[current.route.places.last()].orEmpty()) {
+                          if (lane.carrier == refusedCarrierForSearch || lane.to in current.route.places) continue
+                          val nextCost = current.cost + lane.cost
+                          if (nextCost < best.getOrDefault(lane.to, Int.MAX_VALUE)) {
+                              best[lane.to] = nextCost
+                              queue += QueueItem(nextCost, Route(current.route.places + lane.to, current.route.carriers + lane.carrier, nextCost))
+                          }
+                      }
+                  }
+                  return null
+              }
+
+              private var refusedCarrierForSearch: String = ""
+
+              fun cheapestRouteAvoiding(lanes: List<Lane>, from: String, to: String, refusedCarrier: String): Route? {
+                  refusedCarrierForSearch = refusedCarrier
+                  return try { cheapestRouteUsing(lanes, from, to) } finally { refusedCarrierForSearch = "" }
+              }
+            expected: |
+              Without DHL: `US→CA→FR, [FedEx, FedEx], 12`.
+        faq:
+          - question: Several lanes between the same pair?
+            answer: Possible. Use the cheapest.
+          - question: Same from and to?
+            answer: Cost 0, empty route.
+          - question: Costs?
+            answer: Positive integers.
+          - question: Unknown country?
+            answer: No route.
+        source_note: Stripe phone-screen theme, original version.
+
+  - id: ch11-more-practice-shop-closing-time
+    title: Shop closing time
+    explanation: |
+      A closing hour is a boundary between open and closed hours. Start with the
+      penalty at hour zero, then update it as the boundary moves one hour at a
+      time. That turns a million-hour search into linear time.
+    exercises:
+      - type: multi_part_problem
+        id: ch11-more-practice-shop-closing-time-problem
+        prompt: |
+          A shop logs each hour as `Y` (customers came) or `N`. Closing at hour `j`
+          means open for hours `0` through `j - 1` and closed from `j` onward,
+          with `j` from `0` to `n`.
+        story: |
+          The penalty is +1 for each open hour with no customers and +1 for each
+          closed hour when customers came.
+        parts:
+          - id: ch11-more-practice-shop-closing-time-part-1
+            prompt: Implement `penalty(log, j)`.
+            starter_code: |
+              fun penalty(log: String, j: Int): Int = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class ShopClosingTimePart1Test {
+                  @Test fun computesPenaltyAtThreeBoundaries() {
+                      assertEquals(3, penalty("Y Y N Y", 0))
+                      assertEquals(1, penalty("Y Y N Y", 2))
+                      assertEquals(1, penalty("Y Y N Y", 4))
+                  }
+
+                  @Test fun emptyLogHasZeroPenalty() {
+                      assertEquals(0, penalty("", 0))
+                  }
+              }
+            reference_solution: |
+              private fun logTokens(log: String): List<String> = log.trim().takeIf { it.isNotEmpty() }?.split(Regex("\\s+")) ?: emptyList()
+
+              fun penalty(log: String, j: Int): Int {
+                  val tokens = logTokens(log)
+                  require(j in 0..tokens.size)
+                  return tokens.indices.count { index ->
+                      (index < j && tokens[index] == "N") || (index >= j && tokens[index] == "Y")
+                  }
+              }
+            expected: |
+              For `"Y Y N Y"`: `j=0 → 3`, `j=2 → 1`, and `j=4 → 1`.
+          - id: ch11-more-practice-shop-closing-time-part-2
+            prompt: |
+              Return the best closing hour: lowest penalty, earliest on ties.
+            starter_code: |
+              fun bestClosingHour(log: String): Int = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class ShopClosingTimePart2Test {
+                  @Test fun choosesEarliestMinimum() {
+                      assertEquals(2, bestClosingHour("Y Y N Y"))
+                      assertEquals(0, bestClosingHour(""))
+                      assertEquals(0, bestClosingHour("N N"))
+                      assertEquals(2, bestClosingHour("Y Y"))
+                  }
+              }
+            reference_solution: |
+              private fun logTokens(log: String): List<String> = log.trim().takeIf { it.isNotEmpty() }?.split(Regex("\\s+")) ?: emptyList()
+
+              fun penalty(log: String, j: Int): Int {
+                  val tokens = logTokens(log)
+                  require(j in 0..tokens.size)
+                  return tokens.indices.count { index ->
+                      (index < j && tokens[index] == "N") || (index >= j && tokens[index] == "Y")
+                  }
+              }
+
+              fun bestClosingHour(log: String): Int {
+                  val tokens = logTokens(log)
+                  return (0..tokens.size).minWith(compareBy<Int> { penalty(log, it) }.thenBy { it })
+              }
+            expected: |
+              `"Y Y N Y" → 2`, `"" → 0`, `"N N" → 0`, and `"Y Y" → 2`.
+          - id: ch11-more-practice-shop-closing-time-part-3
+            prompt: |
+              The input is a stream of tokens, with `BEGIN` and `END` around each
+              log. Ignore tokens outside a log. A `BEGIN` inside an open log throws
+              away the unfinished log and starts a new one. Ignore a log without `END`.
+              Return the best closing hour for each complete log.
+            starter_code: |
+              fun bestClosingHours(stream: String): List<Int> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class ShopClosingTimePart3Test {
+                  @Test fun handlesCompleteRestartedAndUnfinishedLogs() {
+                      assertEquals(listOf(2, 0), bestClosingHours("BEGIN Y Y END N BEGIN BEGIN N Y END BEGIN Y"))
+                  }
+              }
+            reference_solution: |
+              private fun logTokens(log: String): List<String> = log.trim().takeIf { it.isNotEmpty() }?.split(Regex("\\s+")) ?: emptyList()
+
+              fun penalty(log: String, j: Int): Int {
+                  val tokens = logTokens(log)
+                  require(j in 0..tokens.size)
+                  return tokens.indices.count { index ->
+                      (index < j && tokens[index] == "N") || (index >= j && tokens[index] == "Y")
+                  }
+              }
+
+              fun bestClosingHour(log: String): Int {
+                  val tokens = logTokens(log)
+                  return (0..tokens.size).minWith(compareBy<Int> { penalty(log, it) }.thenBy { it })
+              }
+
+              fun bestClosingHours(stream: String): List<Int> {
+                  val answers = mutableListOf<Int>()
+                  var current = mutableListOf<String>()
+                  var open = false
+                  var invalid = false
+                  for (token in stream.split(Regex("\\s+")).filter { it.isNotEmpty() }) {
+                      when (token) {
+                          "BEGIN" -> { current = mutableListOf(); open = true; invalid = false }
+                          "END" -> if (open) {
+                              if (!invalid) answers += bestClosingHour(current.joinToString(" "))
+                              current = mutableListOf(); open = false; invalid = false
+                          }
+                          else -> if (open) {
+                              if (token != "Y" && token != "N") invalid = true
+                              current += token
+                          }
+                      }
+                  }
+                  return answers
+              }
+            expected: |
+              `"BEGIN Y Y END N BEGIN BEGIN N Y END BEGIN Y" → [2, 0]`.
+          - id: ch11-more-practice-shop-closing-time-part-4
+            prompt: Make the best-closing search linear time for logs up to 1,000,000 hours, and explain why the first version was slower.
+            starter_code: |
+              fun bestClosingHourLinear(log: String): Int = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class ShopClosingTimePart4Test {
+                  @Test fun matchesTheEarlierAnswers() {
+                      assertEquals(2, bestClosingHourLinear("Y Y N Y"))
+                      assertEquals(0, bestClosingHourLinear("N N"))
+                  }
+
+                  @Test fun handlesALargeLog() {
+                      val log = List(1_000_000) { if (it % 2 == 0) "Y" else "N" }.joinToString(" ")
+                      assertEquals(1, bestClosingHourLinear(log))
+                  }
+              }
+            reference_solution: |
+              private fun logTokens(log: String): List<String> = log.trim().takeIf { it.isNotEmpty() }?.split(Regex("\\s+")) ?: emptyList()
+
+              fun penalty(log: String, j: Int): Int {
+                  val tokens = logTokens(log)
+                  require(j in 0..tokens.size)
+                  return tokens.indices.count { index ->
+                      (index < j && tokens[index] == "N") || (index >= j && tokens[index] == "Y")
+                  }
+              }
+
+              fun bestClosingHour(log: String): Int {
+                  val tokens = logTokens(log)
+                  return (0..tokens.size).minWith(compareBy<Int> { penalty(log, it) }.thenBy { it })
+              }
+
+              fun bestClosingHours(stream: String): List<Int> {
+                  val answers = mutableListOf<Int>()
+                  var current = mutableListOf<String>()
+                  var open = false
+                  var invalid = false
+                  for (token in stream.split(Regex("\\s+")).filter { it.isNotEmpty() }) {
+                      when (token) {
+                          "BEGIN" -> { current = mutableListOf(); open = true; invalid = false }
+                          "END" -> if (open) {
+                              if (!invalid) answers += bestClosingHour(current.joinToString(" "))
+                              current = mutableListOf(); open = false; invalid = false
+                          }
+                          else -> if (open) {
+                              if (token != "Y" && token != "N") invalid = true
+                              current += token
+                          }
+                      }
+                  }
+                  return answers
+              }
+
+              fun bestClosingHourLinear(log: String): Int {
+                  val tokens = logTokens(log)
+                  var current = tokens.count { it == "Y" }
+                  var bestPenalty = current
+                  var bestHour = 0
+                  for (hour in tokens.indices) {
+                      current += if (tokens[hour] == "Y") -1 else 1
+                      if (current < bestPenalty) {
+                          bestPenalty = current
+                          bestHour = hour + 1
+                      }
+                  }
+                  return bestHour
+              }
+            expected: |
+              Scan the log once: moving the boundary past `Y` lowers the penalty by 1,
+              while moving it past `N` raises it by 1. The first version recomputed
+              every prefix/suffix penalty, so it was quadratic; this version is linear.
+        faq:
+          - question: Separators?
+            answer: Any whitespace, including newlines.
+          - question: Something other than Y or N inside a log?
+            answer: Not in these examples. Asking about it is a good question; propose throwing that log away.
+        source_note: Stripe screen theme, original version.
+
+  - id: ch11-more-practice-webhook-retries
+    title: Webhook retries
+    explanation: |
+      Retry schedules are data. Generate the attempt times once, then combine each
+      event's attempts with its result letters. In production, backoff and delivery
+      handling also need jitter and idempotency.
+    exercises:
+      - type: multi_part_problem
+        id: ch11-more-practice-webhook-retries-problem
+        prompt: When delivering an event fails, retry with exponential backoff. Times are whole minutes.
+        story: |
+          Stripe's docs recommend exponential backoff with added randomness for
+          retries. This exercise uses deterministic times first, so the schedule is
+          easy to test.
+        parts:
+          - id: ch11-more-practice-webhook-retries-part-1
+            prompt: Attempt 1 happens at t0. After each failure, wait 1, 2, 4, 8 … minutes, capped at 60, for at most 8 attempts. Return all 8 attempt times.
+            starter_code: |
+              fun retryTimes(t0: Int): List<Int> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class WebhookRetriesPart1Test {
+                  @Test fun buildsTheCappedEightAttemptSchedule() {
+                      assertEquals(listOf(0, 1, 3, 7, 15, 31, 63, 123), retryTimes(0))
+                  }
+
+                  @Test fun preservesTheStartingMinute() {
+                      assertEquals(listOf(10, 11, 13, 17, 25, 41, 73, 133), retryTimes(10))
+                  }
+              }
+            reference_solution: |
+              fun retryTimes(t0: Int): List<Int> {
+                  val times = mutableListOf(t0)
+                  var wait = 1
+                  repeat(7) {
+                      times += times.last() + wait.coerceAtMost(60)
+                      wait = (wait * 2).coerceAtMost(60)
+                  }
+                  return times
+              }
+            expected: |
+              `t0 = 0 → [0, 1, 3, 7, 15, 31, 63, 123]`.
+          - id: ch11-more-practice-webhook-retries-part-2
+            prompt: |
+              Each line is `event_id,t0,results`, with one `F` or `S` per attempt.
+              Report when each event was delivered, or when delivery gave up.
+            starter_code: |
+              data class DeliveryResult(val eventId: String, val status: String, val minute: Int, val attempt: Int)
+
+              fun deliverEvents(input: String): List<DeliveryResult> = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class WebhookRetriesPart2Test {
+                  @Test fun reportsDeliveryAndGiveUp() {
+                      val input = "evt_1,0,FFS\nevt_2,10,FFFFFFFF\nevt_3,5,S"
+                      assertEquals(
+                          listOf(
+                              DeliveryResult("evt_1", "delivered", 3, 3),
+                              DeliveryResult("evt_2", "gave up", 133, 8),
+                              DeliveryResult("evt_3", "delivered", 5, 1)
+                          ),
+                          deliverEvents(input)
+                      )
+                  }
+              }
+            reference_solution: |
+              data class DeliveryResult(val eventId: String, val status: String, val minute: Int, val attempt: Int)
+
+              fun retryTimes(t0: Int): List<Int> {
+                  val times = mutableListOf(t0)
+                  var wait = 1
+                  repeat(7) {
+                      times += times.last() + wait.coerceAtMost(60)
+                      wait = (wait * 2).coerceAtMost(60)
+                  }
+                  return times
+              }
+
+              fun deliverEvents(input: String): List<DeliveryResult> = input.lines().filter { it.isNotBlank() }.map { line ->
+                  val fields = line.split(",")
+                  require(fields.size == 3)
+                  val id = fields[0].trim()
+                  val times = retryTimes(fields[1].trim().toInt())
+                  val results = fields[2].trim()
+                  val success = results.take(8).indexOfFirst { it == 'S' }
+                  if (success >= 0) DeliveryResult(id, "delivered", times[success], success + 1)
+                  else DeliveryResult(id, "gave up", times[minOf(results.length, 8) - 1], minOf(results.length, 8))
+              }
+            expected: |
+              `evt_1 delivered at minute 3 (attempt 3)` · `evt_2 gave up at minute 133` · `evt_3 delivered at minute 5`.
+          - id: ch11-more-practice-webhook-retries-part-3
+            prompt: Merge all events' attempts in time order. After 5 failed attempts in a row, disable the endpoint and make no more attempts.
+            starter_code: |
+              data class EndpointReport(val disabledAt: Int?, val deliveredEventIds: List<String>)
+
+              fun mergeWebhookAttempts(input: String): EndpointReport = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class WebhookRetriesPart3Test {
+                  @Test fun disablesAfterFiveFailuresAndStopsLaterEvents() {
+                      assertEquals(
+                          EndpointReport(15, emptyList()),
+                          mergeWebhookAttempts("evt_1,0,FFFFFFS\nevt_2,20,S")
+                      )
+                  }
+              }
+            reference_solution: |
+              data class DeliveryResult(val eventId: String, val status: String, val minute: Int, val attempt: Int)
+              data class EndpointReport(val disabledAt: Int?, val deliveredEventIds: List<String>)
+
+              fun retryTimes(t0: Int): List<Int> {
+                  val times = mutableListOf(t0)
+                  var wait = 1
+                  repeat(7) {
+                      times += times.last() + wait.coerceAtMost(60)
+                      wait = (wait * 2).coerceAtMost(60)
+                  }
+                  return times
+              }
+
+              fun deliverEvents(input: String): List<DeliveryResult> = input.lines().filter { it.isNotBlank() }.map { line ->
+                  val fields = line.split(",")
+                  require(fields.size == 3)
+                  val times = retryTimes(fields[1].trim().toInt())
+                  val results = fields[2].trim().take(8)
+                  val success = results.indexOfFirst { it == 'S' }
+                  if (success >= 0) DeliveryResult(fields[0].trim(), "delivered", times[success], success + 1)
+                  else DeliveryResult(fields[0].trim(), "gave up", times[results.length - 1], results.length)
+              }
+
+              private data class Attempt(val eventId: String, val minute: Int, val success: Boolean)
+
+              fun mergeWebhookAttempts(input: String): EndpointReport {
+                  val attempts = input.lines().filter { it.isNotBlank() }.flatMap { line ->
+                      val fields = line.split(",")
+                      val times = retryTimes(fields[1].trim().toInt())
+                      fields[2].trim().take(8).mapIndexed { index, result ->
+                          Attempt(fields[0].trim(), times[index], result == 'S')
+                      }
+                  }.sortedWith(compareBy<Attempt> { it.minute }.thenBy { it.eventId })
+                  var failures = 0
+                  val delivered = mutableListOf<String>()
+                  for (attempt in attempts) {
+                      if (attempt.success) {
+                          failures = 0
+                          delivered += attempt.eventId
+                      } else {
+                          failures++
+                          if (failures == 5) return EndpointReport(attempt.minute, delivered.distinct())
+                      }
+                  }
+                  return EndpointReport(null, delivered.distinct())
+              }
+            expected: |
+              `evt_1,0,FFFFFFS` and `evt_2,20,S` disable the endpoint at minute 15;
+              neither event is delivered.
+          - id: ch11-more-practice-webhook-retries-part-4
+            prompt: Why add random jitter to retry times? What happens when a merchant receives the same event twice, and how should each side handle it?
+            starter_code: |
+              fun explainWebhookReliability(): String = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertTrue
+              import org.junit.Test
+
+              class WebhookRetriesPart4Test {
+                  @Test fun explanationCoversJitterAndIdempotency() {
+                      val answer = explainWebhookReliability().lowercase()
+                      assertTrue(answer.contains("jitter"))
+                      assertTrue(answer.contains("idempot"))
+                  }
+              }
+            reference_solution: |
+              fun explainWebhookReliability(): String =
+                  "Add jitter to spread retries and avoid a thundering herd. A merchant may receive the same event twice, so it should deduplicate by event id and handle the operation idempotently; the sender should retry safely."
+            expected: |
+              Add random jitter so many customers do not retry at exactly the same time.
+              Delivery is at-least-once, so a merchant may see an event twice: deduplicate
+              by event id and make its handler idempotent, while the sender retries safely.
+        faq:
+          - question: More letters than attempts made?
+            answer: Ignore the extras.
+          - question: Ties in Part 3?
+            answer: None in the example. If asked, order by event id.
+        discussion: |
+          Why add random jitter to retry times? What happens when a merchant receives
+          the same event twice, and how should each side handle it?
+        source_note: Original exercise; retry guidance is inspired by Stripe documentation.
+
+  - id: ch11-more-practice-currency-conversion
+    title: Currency conversion
+    explanation: |
+      Exchange rates arrive as decimal text, so construct `BigDecimal` values from
+      strings. Keep the full-precision result while following a path and round only
+      the final amount to two decimal places with `RoundingMode.HALF_UP`.
+    exercises:
+      - type: multi_part_problem
+        id: ch11-more-practice-currency-conversion-problem
+        prompt: |
+          Rates arrive as text: `USD:CAD:1.37,USD:EUR:0.92,EUR:GBP:0.86,CAD:JPY:110`.
+          A rate also works backwards. Round the final amount half-up to 2 decimals.
+          Amounts are decimal strings; compare formatted results as strings such as
+          `"19047.02"`.
+        story: |
+          Use `BigDecimal` built from rate strings, never `Double`. Reverse rates
+          require division with an explicit scale and rounding mode.
+        parts:
+          - id: ch11-more-practice-currency-conversion-part-1
+            prompt: Support direct conversion only.
+            starter_code: |
+              fun convertDirect(ratesText: String, amount: String, from: String, to: String): String = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CurrencyConversionPart1Test {
+                  private val rates = "USD:CAD:1.37,USD:EUR:0.92,EUR:GBP:0.86,CAD:JPY:110"
+
+                  @Test fun convertsForwardAndBackward() {
+                      assertEquals("137.00", convertDirect(rates, "100", "USD", "CAD"))
+                      assertEquals("100.00", convertDirect(rates, "137", "CAD", "USD"))
+                      assertEquals("10.87", convertDirect(rates, "10", "EUR", "USD"))
+                  }
+
+                  @Test fun sameCurrencyIsUnchanged() {
+                      assertEquals("12.30", convertDirect(rates, "12.3", "USD", "USD"))
+                  }
+              }
+            reference_solution: |
+              import java.math.BigDecimal
+              import java.math.RoundingMode
+
+              private data class FxEdge(val to: String, val rate: BigDecimal)
+
+              private fun graph(ratesText: String): Map<String, List<FxEdge>> {
+                  val result = mutableMapOf<String, MutableList<FxEdge>>()
+                  for (raw in ratesText.split(",").filter { it.isNotBlank() }) {
+                      val fields = raw.trim().split(":")
+                      require(fields.size == 3)
+                      val from = fields[0].trim(); val to = fields[1].trim(); val rate = BigDecimal(fields[2].trim())
+                      result.getOrPut(from) { mutableListOf() } += FxEdge(to, rate)
+                      result.getOrPut(to) { mutableListOf() } += FxEdge(from, BigDecimal.ONE.divide(rate, 24, RoundingMode.HALF_UP))
+                  }
+                  return result
+              }
+
+              private fun money(value: BigDecimal): String = value.setScale(2, RoundingMode.HALF_UP).toPlainString()
+
+              fun convertDirect(ratesText: String, amount: String, from: String, to: String): String {
+                  val graph = graph(ratesText)
+                  if (from == to) {
+                      require(graph.containsKey(from))
+                      return money(BigDecimal(amount))
+                  }
+                  val edge = graph[from].orEmpty().firstOrNull { it.to == to } ?: throw IllegalArgumentException("unknown or non-direct currency")
+                  return money(BigDecimal(amount).multiply(edge.rate))
+              }
+            expected: |
+              `100 USD → CAD = 137.00` · `137 CAD → USD = 100.00` · `10 EUR → USD = 10.87`.
+          - id: ch11-more-practice-currency-conversion-part-2
+            prompt: Allow at most one intermediate currency.
+            starter_code: |
+              fun convertWithOneIntermediate(ratesText: String, amount: String, from: String, to: String): String = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CurrencyConversionPart2Test {
+                  private val rates = "USD:CAD:1.37,USD:EUR:0.92,EUR:GBP:0.86,CAD:JPY:110"
+
+                  @Test fun usesOneIntermediateCurrency() {
+                      assertEquals("79.12", convertWithOneIntermediate(rates, "100", "USD", "GBP"))
+                      assertEquals("150.70", convertWithOneIntermediate(rates, "1", "USD", "JPY"))
+                  }
+              }
+            reference_solution: |
+              import java.math.BigDecimal
+              import java.math.RoundingMode
+
+              private data class FxEdge(val to: String, val rate: BigDecimal)
+
+              private fun graph(ratesText: String): Map<String, List<FxEdge>> {
+                  val result = mutableMapOf<String, MutableList<FxEdge>>()
+                  for (raw in ratesText.split(",").filter { it.isNotBlank() }) {
+                      val fields = raw.trim().split(":")
+                      require(fields.size == 3)
+                      val from = fields[0].trim(); val to = fields[1].trim(); val rate = BigDecimal(fields[2].trim())
+                      result.getOrPut(from) { mutableListOf() } += FxEdge(to, rate)
+                      result.getOrPut(to) { mutableListOf() } += FxEdge(from, BigDecimal.ONE.divide(rate, 24, RoundingMode.HALF_UP))
+                  }
+                  return result
+              }
+
+              private fun money(value: BigDecimal): String = value.setScale(2, RoundingMode.HALF_UP).toPlainString()
+
+              private fun findPath(graph: Map<String, List<FxEdge>>, from: String, to: String, maxEdges: Int): List<FxEdge>? {
+                  if (from == to) return emptyList()
+                  fun visit(current: String, path: List<FxEdge>, seen: Set<String>): List<FxEdge>? {
+                      if (current == to) return path
+                      if (path.size == maxEdges) return null
+                      return graph[current].orEmpty().firstNotNullOfOrNull { edge ->
+                          if (edge.to in seen) null else visit(edge.to, path + edge, seen + edge.to)
+                      }
+                  }
+                  require(graph.containsKey(from) && graph.containsKey(to))
+                  return visit(from, emptyList(), setOf(from))
+              }
+
+              private fun convertPath(amount: String, path: List<FxEdge>): String {
+                  var value = BigDecimal(amount)
+                  path.forEach { value = value.multiply(it.rate) }
+                  return money(value)
+              }
+
+              fun convertWithOneIntermediate(ratesText: String, amount: String, from: String, to: String): String {
+                  val path = findPath(graph(ratesText), from, to, 2) ?: throw IllegalArgumentException("no path")
+                  return convertPath(amount, path)
+              }
+            expected: |
+              `100 USD → GBP = 79.12 (via EUR)` · `1 USD → JPY = 150.70 (via CAD)`.
+          - id: ch11-more-practice-currency-conversion-part-3
+            prompt: Allow any number of steps, without rounding between steps.
+            starter_code: |
+              data class FxQuote(val amount: String, val path: List<String>)
+
+              fun convertAnyPath(ratesText: String, amount: String, from: String, to: String): FxQuote = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CurrencyConversionPart3Test {
+                  @Test fun keepsPrecisionAcrossTheWholePath() {
+                      val rates = "USD:CAD:1.37,USD:EUR:0.92,EUR:GBP:0.86,CAD:JPY:110"
+                      assertEquals(FxQuote("19047.02", listOf("GBP", "EUR", "USD", "CAD", "JPY")), convertAnyPath(rates, "100", "GBP", "JPY"))
+                  }
+              }
+            reference_solution: |
+              import java.math.BigDecimal
+              import java.math.RoundingMode
+
+              data class FxQuote(val amount: String, val path: List<String>)
+              private data class FxEdge(val to: String, val rate: BigDecimal)
+
+              private fun graph(ratesText: String): Map<String, List<FxEdge>> {
+                  val result = mutableMapOf<String, MutableList<FxEdge>>()
+                  for (raw in ratesText.split(",").filter { it.isNotBlank() }) {
+                      val fields = raw.trim().split(":")
+                      require(fields.size == 3)
+                      val from = fields[0].trim(); val to = fields[1].trim(); val rate = BigDecimal(fields[2].trim())
+                      result.getOrPut(from) { mutableListOf() } += FxEdge(to, rate)
+                      result.getOrPut(to) { mutableListOf() } += FxEdge(from, BigDecimal.ONE.divide(rate, 24, RoundingMode.HALF_UP))
+                  }
+                  return result
+              }
+
+              private fun money(value: BigDecimal): String = value.setScale(2, RoundingMode.HALF_UP).toPlainString()
+
+              fun convertAnyPath(ratesText: String, amount: String, from: String, to: String): FxQuote {
+                  val graph = graph(ratesText)
+                  require(graph.containsKey(from) && graph.containsKey(to))
+                  fun visit(current: String, value: BigDecimal, path: List<String>, seen: Set<String>): FxQuote? {
+                      if (current == to) return FxQuote(money(value), path)
+                      return graph[current].orEmpty().firstNotNullOfOrNull { edge ->
+                          if (edge.to in seen) null else visit(edge.to, value.multiply(edge.rate), path + edge.to, seen + edge.to)
+                      }
+                  }
+                  return visit(from, BigDecimal(amount), listOf(from), setOf(from)) ?: throw IllegalArgumentException("no path")
+              }
+            expected: |
+              `100 GBP → JPY = 19047.02 (GBP → EUR → USD → CAD → JPY)`.
+          - id: ch11-more-practice-currency-conversion-part-4
+            prompt: Add `USD:GBP:0.80`. Two paths now disagree. Return the path that gives the customer the most money, show both, and explain why rates must never be stored as floating point.
+            starter_code: |
+              data class FxComparison(val best: FxQuote, val options: List<FxQuote>)
+
+              fun compareConversions(ratesText: String, amount: String, from: String, to: String): FxComparison = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CurrencyConversionPart4Test {
+                  @Test fun choosesTheMoreGenerousPathAndShowsBoth() {
+                      val rates = "USD:CAD:1.37,USD:EUR:0.92,EUR:GBP:0.86,CAD:JPY:110,USD:GBP:0.80"
+                      val result = compareConversions(rates, "100", "USD", "GBP")
+                      assertEquals(FxQuote("80.00", listOf("USD", "GBP")), result.best)
+                      assertEquals(setOf("80.00", "79.12"), result.options.map { it.amount }.toSet())
+                  }
+              }
+            reference_solution: |
+              import java.math.BigDecimal
+              import java.math.RoundingMode
+
+              data class FxQuote(val amount: String, val path: List<String>)
+              data class FxComparison(val best: FxQuote, val options: List<FxQuote>)
+              private data class FxEdge(val to: String, val rate: BigDecimal)
+
+              private fun graph(ratesText: String): Map<String, List<FxEdge>> {
+                  val result = mutableMapOf<String, MutableList<FxEdge>>()
+                  for (raw in ratesText.split(",").filter { it.isNotBlank() }) {
+                      val fields = raw.trim().split(":")
+                      require(fields.size == 3)
+                      val from = fields[0].trim(); val to = fields[1].trim(); val rate = BigDecimal(fields[2].trim())
+                      result.getOrPut(from) { mutableListOf() } += FxEdge(to, rate)
+                      result.getOrPut(to) { mutableListOf() } += FxEdge(from, BigDecimal.ONE.divide(rate, 24, RoundingMode.HALF_UP))
+                  }
+                  return result
+              }
+
+              private fun money(value: BigDecimal): String = value.setScale(2, RoundingMode.HALF_UP).toPlainString()
+
+              fun compareConversions(ratesText: String, amount: String, from: String, to: String): FxComparison {
+                  val graph = graph(ratesText)
+                  require(graph.containsKey(from) && graph.containsKey(to))
+                  fun visit(current: String, value: BigDecimal, path: List<String>, seen: Set<String>): List<FxQuote> {
+                      if (current == to) return listOf(FxQuote(money(value), path))
+                      return graph[current].orEmpty().flatMap { edge ->
+                          if (edge.to in seen) emptyList() else visit(edge.to, value.multiply(edge.rate), path + edge.to, seen + edge.to)
+                      }
+                  }
+                  val options = visit(from, BigDecimal(amount), listOf(from), setOf(from))
+                      .distinctBy { it.path }
+                      .sortedByDescending { BigDecimal(it.amount) }
+                  require(options.isNotEmpty())
+                  return FxComparison(options.first(), options)
+              }
+            expected: |
+              `100 USD → GBP = 80.00 direct, vs 79.12 via EUR`; choose the direct path.
+              Store rates as decimal strings because binary floating point cannot represent
+              most decimal fractions exactly and can change a rounded money result.
+        faq:
+          - question: Round at each step?
+            answer: No, only at the end.
+          - question: Same currency?
+            answer: The amount is unchanged.
+          - question: Unknown currency?
+            answer: An error.
+          - question: JPY decimals?
+            answer: Keep 2 here. Say how real minor units differ (JPY has none).
+        source_note: Original exercise; amount handling follows the course's BigDecimal guidance.
+
+  - id: ch11-more-practice-checkout-discounts
+    title: Checkout discounts
+    explanation: |
+      Keep prices in cents as `Long`. Parse the cart, compute the subtotal, then
+      apply coupon kinds in the required order. For percentage discounts and tax,
+      use exact decimal arithmetic and round half-up once for each operation.
+    exercises:
+      - type: multi_part_problem
+        id: ch11-more-practice-checkout-discounts-problem
+        prompt: |
+          A point-of-sale cart has lines `sku,unit_price_cents,qty`, separated by
+          semicolons: `tee,2000,2; mug,1250,1; sticker,300,4`.
+          Prices are cents and tax is Ontario HST.
+        story: |
+          Build the checkout in stages. The cart's subtotal is 6450 cents, so the
+          examples make rounding and coupon order visible.
+        parts:
+          - id: ch11-more-practice-checkout-discounts-part-1
+            prompt: |
+              Compute the subtotal, then apply one `SAVE10` coupon: 10% off the subtotal, rounded half-up to a cent.
+            starter_code: |
+              data class CartLine(val sku: String, val unitPriceCents: Long, val quantity: Int)
+
+              fun parseCart(text: String): List<CartLine> = TODO()
+
+              fun subtotal(lines: List<CartLine>): Long = TODO()
+
+              fun save10(lines: List<CartLine>): Long = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CheckoutDiscountsPart1Test {
+                  private val cart = "tee,2000,2; mug,1250,1; sticker,300,4"
+
+                  @Test fun computesSubtotalAndSave10() {
+                      val lines = parseCart(cart)
+                      assertEquals(6450L, subtotal(lines))
+                      assertEquals(5805L, save10(lines))
+                  }
+
+                  @Test fun roundsHalfUp() {
+                      assertEquals(4L, save10(parseCart("pin,5,1")))
+                  }
+              }
+            reference_solution: |
+              import java.math.BigDecimal
+              import java.math.RoundingMode
+
+              data class CartLine(val sku: String, val unitPriceCents: Long, val quantity: Int)
+
+              fun parseCart(text: String): List<CartLine> = text.split(";").filter { it.isNotBlank() }.map { raw ->
+                  val fields = raw.trim().split(",").map(String::trim)
+                  require(fields.size == 3)
+                  CartLine(fields[0], fields[1].toLong(), fields[2].toInt())
+              }
+
+              fun subtotal(lines: List<CartLine>): Long = lines.sumOf { it.unitPriceCents * it.quantity }
+
+              private fun percentDiscount(base: Long, percent: String): Long =
+                  BigDecimal.valueOf(base).multiply(BigDecimal(percent)).setScale(0, RoundingMode.HALF_UP).toLong()
+
+              fun save10(lines: List<CartLine>): Long = subtotal(lines) - percentDiscount(subtotal(lines), "0.10")
+            expected: |
+              `subtotal 6450 · discount 645 · total 5805`.
+          - id: ch11-more-practice-checkout-discounts-part-2
+            prompt: |
+              Support `SAVE10` (10% off the subtotal), `FIVEOFF` (500 off), and
+              `TEES20` (20% off tee lines only). Apply one code. A total never goes
+              below 0, and an unknown code is an error.
+            starter_code: |
+              fun applyCoupon(lines: List<CartLine>, code: String): Long = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CheckoutDiscountsPart2Test {
+                  private val lines = parseCart("tee,2000,2; mug,1250,1; sticker,300,4")
+
+                  @Test fun supportsEachCouponKind() {
+                      assertEquals(5650L, applyCoupon(lines, "TEES20"))
+                      assertEquals(5950L, applyCoupon(lines, "FIVEOFF"))
+                      assertEquals(5805L, applyCoupon(lines, "SAVE10"))
+                  }
+              }
+            reference_solution: |
+              import java.math.BigDecimal
+              import java.math.RoundingMode
+
+              data class CartLine(val sku: String, val unitPriceCents: Long, val quantity: Int)
+
+              fun parseCart(text: String): List<CartLine> = text.split(";").filter { it.isNotBlank() }.map { raw ->
+                  val fields = raw.trim().split(",").map(String::trim)
+                  require(fields.size == 3)
+                  CartLine(fields[0], fields[1].toLong(), fields[2].toInt())
+              }
+
+              fun subtotal(lines: List<CartLine>): Long = lines.sumOf { it.unitPriceCents * it.quantity }
+
+              private fun percentDiscount(base: Long, percent: String): Long =
+                  BigDecimal.valueOf(base).multiply(BigDecimal(percent)).setScale(0, RoundingMode.HALF_UP).toLong()
+
+              fun save10(lines: List<CartLine>): Long = subtotal(lines) - percentDiscount(subtotal(lines), "0.10")
+
+              fun applyCoupon(lines: List<CartLine>, code: String): Long = when (code.trim()) {
+                  "SAVE10" -> (subtotal(lines) - percentDiscount(subtotal(lines), "0.10")).coerceAtLeast(0)
+                  "FIVEOFF" -> (subtotal(lines) - 500L).coerceAtLeast(0)
+                  "TEES20" -> {
+                      val teeTotal = lines.filter { it.sku == "tee" }.sumOf { it.unitPriceCents * it.quantity }
+                      (subtotal(lines) - percentDiscount(teeTotal, "0.20")).coerceAtLeast(0)
+                  }
+                  else -> throw IllegalArgumentException("unknown coupon")
+              }
+            expected: |
+              `TEES20 → 5650` · `FIVEOFF → 5950`.
+          - id: ch11-more-practice-checkout-discounts-part-3
+            prompt: |
+              Apply several codes: item coupons first, then percentage off the running total, then fixed amounts. At most one coupon of each kind.
+            starter_code: |
+              fun checkoutTotal(lines: List<CartLine>, codes: List<String>): Long = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CheckoutDiscountsPart3Test {
+                  @Test fun appliesCouponsInTheRequiredOrder() {
+                      val lines = parseCart("tee,2000,2; mug,1250,1; sticker,300,4")
+                      assertEquals(4585L, checkoutTotal(lines, listOf("FIVEOFF", "SAVE10", "TEES20")))
+                  }
+              }
+            reference_solution: |
+              import java.math.BigDecimal
+              import java.math.RoundingMode
+
+              data class CartLine(val sku: String, val unitPriceCents: Long, val quantity: Int)
+
+              fun parseCart(text: String): List<CartLine> = text.split(";").filter { it.isNotBlank() }.map { raw ->
+                  val fields = raw.trim().split(",").map(String::trim)
+                  require(fields.size == 3)
+                  CartLine(fields[0], fields[1].toLong(), fields[2].toInt())
+              }
+
+              fun subtotal(lines: List<CartLine>): Long = lines.sumOf { it.unitPriceCents * it.quantity }
+
+              private fun percentDiscount(base: Long, percent: String): Long =
+                  BigDecimal.valueOf(base).multiply(BigDecimal(percent)).setScale(0, RoundingMode.HALF_UP).toLong()
+
+              fun save10(lines: List<CartLine>): Long = subtotal(lines) - percentDiscount(subtotal(lines), "0.10")
+
+              fun applyCoupon(lines: List<CartLine>, code: String): Long = when (code.trim()) {
+                  "SAVE10" -> (subtotal(lines) - percentDiscount(subtotal(lines), "0.10")).coerceAtLeast(0)
+                  "FIVEOFF" -> (subtotal(lines) - 500L).coerceAtLeast(0)
+                  "TEES20" -> {
+                      val teeTotal = lines.filter { it.sku == "tee" }.sumOf { it.unitPriceCents * it.quantity }
+                      (subtotal(lines) - percentDiscount(teeTotal, "0.20")).coerceAtLeast(0)
+                  }
+                  else -> throw IllegalArgumentException("unknown coupon")
+              }
+
+              fun checkoutTotal(lines: List<CartLine>, codes: List<String>): Long {
+                  val normalized = codes.map(String::trim)
+                  val kinds = normalized.map { code -> when (code) {
+                      "TEES20" -> "item"
+                      "SAVE10" -> "percentage"
+                      "FIVEOFF" -> "fixed"
+                      else -> throw IllegalArgumentException("unknown coupon")
+                  } }
+                  require(kinds.groupingBy { it }.eachCount().values.all { it == 1 })
+                  var total = subtotal(lines)
+                  normalized.filter { it == "TEES20" }.forEach { total = applyCoupon(lines, it) }
+                  normalized.filter { it == "SAVE10" }.forEach { total = (total - percentDiscount(total, "0.10")).coerceAtLeast(0) }
+                  normalized.filter { it == "FIVEOFF" }.forEach { total = (total - 500L).coerceAtLeast(0) }
+                  return total
+              }
+            expected: |
+              `[FIVEOFF, SAVE10, TEES20] → 4585`.
+          - id: ch11-more-practice-checkout-discounts-part-4
+            prompt: Add 13% HST on the discounted total, rounded half-up. Then explain what changes if each line needs its own tax line on the receipt.
+            starter_code: |
+              data class CheckoutTotal(val discountedTotal: Long, val tax: Long, val grandTotal: Long)
+
+              fun checkoutWithTax(lines: List<CartLine>, codes: List<String>): CheckoutTotal = TODO()
+            hidden_tests: |
+              import org.junit.Assert.assertEquals
+              import org.junit.Test
+
+              class CheckoutDiscountsPart4Test {
+                  @Test fun addsOntarioHstAfterDiscounts() {
+                      val lines = parseCart("tee,2000,2; mug,1250,1; sticker,300,4")
+                      assertEquals(CheckoutTotal(4585L, 596L, 5181L), checkoutWithTax(lines, listOf("FIVEOFF", "SAVE10", "TEES20")))
+                  }
+              }
+            reference_solution: |
+              import java.math.BigDecimal
+              import java.math.RoundingMode
+
+              data class CartLine(val sku: String, val unitPriceCents: Long, val quantity: Int)
+              data class CheckoutTotal(val discountedTotal: Long, val tax: Long, val grandTotal: Long)
+
+              fun parseCart(text: String): List<CartLine> = text.split(";").filter { it.isNotBlank() }.map { raw ->
+                  val fields = raw.trim().split(",").map(String::trim)
+                  require(fields.size == 3)
+                  CartLine(fields[0], fields[1].toLong(), fields[2].toInt())
+              }
+
+              fun subtotal(lines: List<CartLine>): Long = lines.sumOf { it.unitPriceCents * it.quantity }
+
+              private fun percentDiscount(base: Long, percent: String): Long =
+                  BigDecimal.valueOf(base).multiply(BigDecimal(percent)).setScale(0, RoundingMode.HALF_UP).toLong()
+
+              fun save10(lines: List<CartLine>): Long = subtotal(lines) - percentDiscount(subtotal(lines), "0.10")
+
+              fun applyCoupon(lines: List<CartLine>, code: String): Long = when (code.trim()) {
+                  "SAVE10" -> (subtotal(lines) - percentDiscount(subtotal(lines), "0.10")).coerceAtLeast(0)
+                  "FIVEOFF" -> (subtotal(lines) - 500L).coerceAtLeast(0)
+                  "TEES20" -> {
+                      val teeTotal = lines.filter { it.sku == "tee" }.sumOf { it.unitPriceCents * it.quantity }
+                      (subtotal(lines) - percentDiscount(teeTotal, "0.20")).coerceAtLeast(0)
+                  }
+                  else -> throw IllegalArgumentException("unknown coupon")
+              }
+
+              fun checkoutTotal(lines: List<CartLine>, codes: List<String>): Long {
+                  val normalized = codes.map(String::trim)
+                  val kinds = normalized.map { code -> when (code) {
+                      "TEES20" -> "item"
+                      "SAVE10" -> "percentage"
+                      "FIVEOFF" -> "fixed"
+                      else -> throw IllegalArgumentException("unknown coupon")
+                  } }
+                  require(kinds.groupingBy { it }.eachCount().values.all { it == 1 })
+                  var total = subtotal(lines)
+                  if ("TEES20" in normalized) total = applyCoupon(lines, "TEES20")
+                  if ("SAVE10" in normalized) total = (total - percentDiscount(total, "0.10")).coerceAtLeast(0)
+                  if ("FIVEOFF" in normalized) total = (total - 500L).coerceAtLeast(0)
+                  return total
+              }
+
+              fun checkoutWithTax(lines: List<CartLine>, codes: List<String>): CheckoutTotal {
+                  val discounted = checkoutTotal(lines, codes)
+                  val tax = BigDecimal.valueOf(discounted).multiply(BigDecimal("0.13")).setScale(0, RoundingMode.HALF_UP).toLong()
+                  return CheckoutTotal(discounted, tax, discounted + tax)
+              }
+            expected: |
+              `tax 596 · grand total 5181`. If every line needs its own tax line,
+              calculate and round each line's tax separately, then sum those rounded taxes;
+              that can differ from rounding tax on the aggregate discounted total.
+        faq:
+          - question: Two coupons of the same kind?
+            answer: An error.
+          - question: When to round?
+            answer: Half-up, once per discount.
+          - question: Whitespace?
+            answer: Trim around separators.
+        source_note: Original point-of-sale exercise.

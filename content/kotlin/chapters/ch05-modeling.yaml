@@ -1,0 +1,255 @@
+id: kotlin-ch05-modeling
+title: Modeling data and state
+summary: Give data a clear shape with data classes, sealed results, enums, and small stateful objects.
+lessons:
+  - id: kotlin-ch05-results
+    title: Sealed results and safe parsing
+    explanation: |
+      A data class names the fields that belong together. A sealed interface names a closed set of outcomes, so a `when` expression can handle every case without a catch-all `else`.
+
+      Parsing is a good place to return a result instead of throwing. Trim fields, validate them, and use `?: return` when a conversion fails. The caller can then separate valid values from useful error messages.
+    exercises:
+      - type: multiple_choice
+        id: kotlin-ch05-results-mc-sealed
+        prompt: 'Why can this `when` omit an `else` branch?'
+        code: |
+          sealed interface RowResult
+          fun label(result: RowResult): String = when (result) {
+              is RowResult.Ok -> "ok"
+              is RowResult.Invalid -> "bad"
+          }
+        options:
+          - RowResult is sealed, so the compiler knows its direct cases.
+          - '`when` expressions never need an `else` in Kotlin.'
+          - The function returns a String, so Kotlin inserts the missing case.
+        correct_index: 0
+        explanation: A sealed hierarchy lets the compiler check that every known subtype is handled.
+      - type: cloze
+        id: kotlin-ch05-results-cloze-guard
+        prompt: Complete the safe integer conversion so the function returns an error result when the text is not a number.
+        template: |
+          val battery = batteryText.toIntOrNull()
+              ____1
+        blanks:
+          - placeholder: "____1"
+            accepted: ['?: return RowResult.Invalid(lineNo, "battery is not a number")']
+            case_sensitive: true
+        explanation: '`toIntOrNull()` returns null for bad input; the Elvis operator can return from the function immediately. The blank is the guarded return expression.'
+      - type: predict_output
+        id: kotlin-ch05-results-predict
+        prompt: What does this parser describe for a valid row and a row with an out-of-range battery?
+        code: |
+          data class Reader(val id: String, val location: String, val battery: Int)
+
+          sealed interface RowResult {
+              data class Ok(val reader: Reader) : RowResult
+              data class Invalid(val line: Int, val reason: String) : RowResult
+          }
+
+          fun parseReader(lineNo: Int, row: String): RowResult {
+              val cols = row.split(",").map { it.trim() }
+              if (cols.size != 3) return RowResult.Invalid(lineNo, "expected 3 columns, got ${cols.size}")
+              val (id, location, batteryText) = cols
+              if (id.isEmpty()) return RowResult.Invalid(lineNo, "missing reader id")
+              val battery = batteryText.toIntOrNull()
+                  ?: return RowResult.Invalid(lineNo, "battery is not a number")
+              if (battery !in 0..100) return RowResult.Invalid(lineNo, "battery out of range: $battery")
+              return RowResult.Ok(Reader(id, location, battery))
+          }
+
+          fun describe(result: RowResult): String = when (result) {
+              is RowResult.Ok -> "ok ${result.reader.id}"
+              is RowResult.Invalid -> "line ${result.line}: ${result.reason}"
+          }
+
+          fun main() {
+              println(describe(parseReader(2, "r-7, Toronto, 80")))
+              println(describe(parseReader(3, "r-8, Montreal, 101")))
+          }
+        expected_output: |
+          ok r-7
+          line 3: battery out of range: 101
+        explanation: 'The valid row becomes `RowResult.Ok`; the second row fails the inclusive `0..100` range check.'
+      - type: multiple_choice
+        id: kotlin-ch05-results-mc-validation
+        prompt: Which Kotlin helper is intended for invalid input supplied by a caller?
+        options:
+          - '`require(condition) { message }`'
+          - '`check(condition) { message }`'
+          - '`also { message }`'
+          - '`error(null)`'
+        correct_index: 0
+        explanation: '`require` throws `IllegalArgumentException` for a bad argument. `check` is for an invalid state.'
+      - type: cloze
+        id: kotlin-ch05-results-cloze-filter
+        prompt: Keep only successful parsed rows.
+        template: |
+          val readers = results.____1<RowResult.Ok>().map { it.reader }
+        blanks:
+          - placeholder: "____1"
+            accepted: ["filterIsInstance"]
+            case_sensitive: true
+        explanation: '`filterIsInstance<RowResult.Ok>()` selects only the successful subtype and narrows its type for the following `map`.'
+      - type: write_function
+        id: kotlin-ch05-results-write-refund
+        prompt: Model the three refund outcomes from the drill and return the exact description shown in the examples.
+        starter_code: |
+          sealed interface RefundRequest {
+              data object Full : RefundRequest
+              data class Partial(val cents: Long) : RefundRequest
+              data class Rejected(val reason: String) : RefundRequest
+          }
+
+          fun describeRefund(request: RefundRequest): String = TODO()
+        hidden_tests: |
+          import org.junit.Test
+          import org.junit.Assert.assertEquals
+
+          class DescribeRefundTest {
+              @Test fun fullRefund() {
+                  assertEquals("full refund", describeRefund(RefundRequest.Full))
+              }
+
+              @Test fun partialRefund() {
+                  assertEquals("partial refund: 250 cents", describeRefund(RefundRequest.Partial(250)))
+              }
+
+              @Test fun rejectedRefund() {
+                  assertEquals("rejected: duplicate", describeRefund(RefundRequest.Rejected("duplicate")))
+              }
+          }
+        reference_solution: |
+          sealed interface RefundRequest {
+              data object Full : RefundRequest
+              data class Partial(val cents: Long) : RefundRequest
+              data class Rejected(val reason: String) : RefundRequest
+          }
+
+          fun describeRefund(request: RefundRequest): String = when (request) {
+              RefundRequest.Full -> "full refund"
+              is RefundRequest.Partial -> "partial refund: ${request.cents} cents"
+              is RefundRequest.Rejected -> "rejected: ${request.reason}"
+          }
+        hints:
+          - 'Start with an exhaustive `when (request)`.'
+          - 'Match the object with `RefundRequest.Full` and the data cases with `is`.'
+          - 'Return `"full refund"`, `"partial refund: ${request.cents} cents`, or `"rejected: ${request.reason}`.'
+        explanation: A sealed result keeps the possible outcomes visible and makes the formatter exhaustive.
+
+  - id: kotlin-ch05-enums-state
+    title: Enums and small state machines
+    explanation: |
+      Enums are useful when a value has a fixed vocabulary plus a little data, such as a battery level with a display label. A companion function can translate raw input into an enum without spreading string comparisons through the rest of the program.
+
+      For mutable state, keep the collection private and expose a small policy-shaped API. `SessionTracker` owns its active IDs, so callers can ask to open or close a session without editing the set directly.
+    exercises:
+      - type: multiple_choice
+        id: kotlin-ch05-enums-mc-entries
+        prompt: 'In Kotlin 1.9 and later, what does `BatteryLevel.entries` provide?'
+        options:
+          - The list of all enum constants.
+          - The name of the current enum constant.
+          - A mutable set of every battery percentage.
+        correct_index: 0
+        explanation: '`entries` is the generated list of enum constants; it is useful for parsing a name.'
+      - type: cloze
+        id: kotlin-ch05-enums-cloze-low
+        prompt: 'Complete the low-battery boundary in `BatteryLevel.of`.'
+        template: |
+          fun of(percent: Int): BatteryLevel = when {
+              percent ____1 20 -> LOW
+              percent < 95 -> OK
+              else -> FULL
+          }
+        blanks:
+          - placeholder: "____1"
+            accepted: ["<"]
+            case_sensitive: true
+        explanation: Values below 20 are low; 20 itself is not low and continues to the next branch.
+      - type: predict_output
+        id: kotlin-ch05-enums-predict
+        prompt: What labels are printed for the three battery percentages?
+        code: |
+          enum class BatteryLevel(val label: String) {
+              LOW("Charge now"), OK("Fine"), FULL("Full");
+
+              companion object {
+                  fun of(percent: Int): BatteryLevel = when {
+                      percent < 20 -> LOW
+                      percent < 95 -> OK
+                      else -> FULL
+                  }
+              }
+          }
+
+          fun main() {
+              println(BatteryLevel.of(19).label)
+              println(BatteryLevel.of(20).label)
+              println(BatteryLevel.of(95).label)
+          }
+        expected_output: |
+          Charge now
+          Fine
+          Full
+        explanation: 'The first comparison is strict, and the final `else` covers 95 and above.'
+      - type: multiple_choice
+        id: kotlin-ch05-enums-mc-session
+        prompt: 'What should `SessionTracker.open("r1")` return when `r1` is already active?'
+        options:
+          - '`false`, without changing the active set'
+          - '`true`, adding a duplicate entry'
+          - It throws because sets cannot contain duplicates
+        correct_index: 0
+        explanation: The tracker rejects duplicate opens. A set naturally stores only one ID, but the explicit check also reports the failed open.
+      - type: cloze
+        id: kotlin-ch05-enums-cloze-set
+        prompt: Choose the collection that keeps each active reader ID only once.
+        template: |
+          private val active = ____1<String>()
+        blanks:
+          - placeholder: "____1"
+            accepted: ["mutableSetOf"]
+            case_sensitive: true
+        explanation: A mutable set is the right model for membership without duplicates.
+      - type: write_function
+        id: kotlin-ch05-enums-write-currency
+        prompt: 'Define the three currencies from the drill and format minor units as `CODE whole.fraction` for two-decimal currencies and `CODE whole` for JPY. Use truncating integer division for the whole part and preserve a two-digit fraction.'
+        starter_code: |
+          enum class Currency(val minorUnits: Int) {
+              USD(2), CAD(2), JPY(0)
+          }
+
+          fun format(currency: Currency, amountMinor: Long): String = TODO()
+        hidden_tests: |
+          import org.junit.Test
+          import org.junit.Assert.assertEquals
+
+          class CurrencyFormatTest {
+              @Test fun formatsDollars() {
+                  assertEquals("USD 12.34", format(Currency.USD, 1234))
+              }
+
+              @Test fun formatsCanadianCents() {
+                  assertEquals("CAD 0.05", format(Currency.CAD, 5))
+              }
+
+              @Test fun formatsYenWithoutFraction() {
+                  assertEquals("JPY 500", format(Currency.JPY, 500))
+              }
+          }
+        reference_solution: |
+          enum class Currency(val minorUnits: Int) {
+              USD(2), CAD(2), JPY(0)
+          }
+
+          fun format(currency: Currency, amountMinor: Long): String {
+              if (currency.minorUnits == 0) return "${currency.name} $amountMinor"
+              val whole = amountMinor / 100
+              val fraction = (amountMinor % 100).toString().padStart(2, '0')
+              return "${currency.name} $whole.$fraction"
+          }
+        hints:
+          - 'Use `currency.minorUnits` to choose the JPY branch.'
+          - For two-decimal currencies, divide by 100 and use the remainder as a two-character fraction.
+          - '`padStart(2, ''0'')` turns a remainder such as `5` into `05`.'
+        explanation: The enum carries the currency metadata, while the formatter owns the presentation rule.

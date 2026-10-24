@@ -1,0 +1,255 @@
+id: kotlin-ch06-time-queues-graphs
+title: Time, queues, and graphs
+summary: Keep rolling state in queues, make time boundaries explicit, and choose BFS or Dijkstra for the graph question.
+lessons:
+  - id: kotlin-ch06-queues-time
+    title: Rolling windows and queue state
+    explanation: |
+      `ArrayDeque` is a natural first-in, first-out queue. Add new values at the back and remove old values from the front. A running sum makes a moving average constant-time per update instead of rescanning the whole window.
+
+      Time-window rules should be written down before coding. In this course, a timestamp is in seconds and the last 60 seconds are inclusive: keep values in `now - 60..now`.
+    exercises:
+      - type: multiple_choice
+        id: kotlin-ch06-queues-mc-deque
+        prompt: 'Which operation removes the oldest item from an `ArrayDeque`?'
+        options:
+          - '`removeFirst()`'
+          - '`removeLast()`'
+          - '`pollSmallest()`'
+          - '`dropOldest()`'
+        correct_index: 0
+        explanation: 'A queue removes from the front, so `removeFirst()` removes the oldest item.'
+      - type: cloze
+        id: kotlin-ch06-queues-cloze-average
+        prompt: Keep the moving average window at its configured size.
+        template: |
+          if (values.size > size) sum -= values.____1()
+        blanks:
+          - placeholder: "____1"
+            accepted: ["removeFirst"]
+            case_sensitive: true
+        explanation: The oldest value is at the front of the deque and must be removed when the new value makes the window too large.
+      - type: predict_output
+        id: kotlin-ch06-queues-predict-average
+        prompt: What does the moving average print after each addition?
+        code: |
+          class MovingAverage(private val size: Int) {
+              private val values = ArrayDeque<Int>()
+              private var sum = 0L
+
+              fun add(value: Int): Double {
+                  values.addLast(value)
+                  sum += value
+                  if (values.size > size) sum -= values.removeFirst()
+                  return sum.toDouble() / values.size
+              }
+          }
+
+          fun main() {
+              val average = MovingAverage(2)
+              println(average.add(2))
+              println(average.add(4))
+              println(average.add(8))
+          }
+        expected_output: |
+          2.0
+          3.0
+          6.0
+        explanation: The third value evicts 2, leaving the window `[4, 8]` whose average is 6.0.
+      - type: multiple_choice
+        id: kotlin-ch06-queues-mc-window
+        prompt: 'With an inclusive 60-second window, which timestamp is kept when `now` is 100?'
+        options:
+          - 40
+          - 39
+          - 101
+        correct_index: 0
+        explanation: 'The inclusive lower edge is `now - 60`, so 40 is still inside the window.'
+      - type: cloze
+        id: kotlin-ch06-queues-cloze-window
+        prompt: Complete the inclusive lower-bound test for a timestamp.
+        template: |
+          timestamp >= now ____1 60 && timestamp <= now
+        blanks:
+          - placeholder: "____1"
+            accepted: ["-"]
+            case_sensitive: true
+        explanation: 'Subtract 60 from `now` for the inclusive lower edge.'
+      - type: write_function
+        id: kotlin-ch06-queues-write-window
+        prompt: Count timestamps in the inclusive last-60-second window. Timestamps are seconds, and the input may be in any order.
+        starter_code: |
+          fun countRecent(timestamps: List<Long>, now: Long): Int = TODO()
+        hidden_tests: |
+          import org.junit.Test
+          import org.junit.Assert.assertEquals
+
+          class CountRecentTest {
+              @Test fun countsTheExampleWindow() {
+                  assertEquals(3, countRecent(listOf(40L, 39L, 70L, 100L, 101L), 100L))
+              }
+
+              @Test fun includesBothWindowEdges() {
+                  assertEquals(2, countRecent(listOf(40L, 100L), 100L))
+              }
+
+              @Test fun emptyInputHasNoEvents() {
+                  assertEquals(0, countRecent(emptyList(), 100L))
+              }
+          }
+        reference_solution: |
+          fun countRecent(timestamps: List<Long>, now: Long): Int =
+              timestamps.count { it in (now - 60)..now }
+        hints:
+          - Translate “last 60 seconds” into a lower and upper bound before writing the predicate.
+          - The range includes both endpoints.
+          - 'Count timestamps where `it >= now - 60 && it <= now`.'
+        explanation: Explicit inclusive bounds make the boundary behavior easy to test and discuss.
+
+  - id: kotlin-ch06-graphs
+    title: BFS and Dijkstra
+    explanation: |
+      Breadth-first search (BFS) explores a graph layer by layer, so it finds a path with the fewest hops when every edge has the same cost. Keep a `previous` map to reconstruct the path after reaching the goal.
+
+      Dijkstra's algorithm is the matching tool when edges have non-negative costs. A `PriorityQueue` visits the currently cheapest known route, and a `best` map discards stale queue entries.
+    exercises:
+      - type: multiple_choice
+        id: kotlin-ch06-graphs-mc-algorithm
+        prompt: Which algorithm finds the fewest hops when every edge has equal cost?
+        options:
+          - BFS with a queue
+          - Dijkstra with arbitrary negative edge costs
+          - Sorting the node names
+        correct_index: 0
+        explanation: BFS visits all nodes at distance 1, then distance 2, and so on.
+      - type: cloze
+        id: kotlin-ch06-graphs-cloze-previous
+        prompt: Record the predecessor when BFS discovers an unseen neighbor.
+        template: |
+          if (next !in previous) {
+              previous[next] = ____1
+              queue.addLast(next)
+          }
+        blanks:
+          - placeholder: "____1"
+            accepted: ["node"]
+            case_sensitive: true
+        explanation: 'The current `node` is the predecessor used later to rebuild the path.'
+      - type: predict_output
+        id: kotlin-ch06-graphs-predict-dijkstra
+        prompt: What is the cheapest cost from US to CA?
+        code: |
+          data class Edge(val to: String, val cost: Int)
+
+          fun cheapest(graph: Map<String, List<Edge>>, start: String, goal: String): Int? {
+              val best = mutableMapOf(start to 0)
+              val queue = java.util.PriorityQueue<Pair<Int, String>>(compareBy { it.first })
+              queue.add(0 to start)
+              while (queue.isNotEmpty()) {
+                  val (cost, node) = queue.poll()
+                  if (node == goal) return cost
+                  if (cost > best.getValue(node)) continue
+                  for (edge in graph[node].orEmpty()) {
+                      val next = cost + edge.cost
+                      if (next < (best[edge.to] ?: Int.MAX_VALUE)) {
+                          best[edge.to] = next
+                          queue.add(next to edge.to)
+                      }
+                  }
+              }
+              return null
+          }
+
+          fun main() {
+              val graph = mapOf(
+                  "US" to listOf(Edge("CA", 3), Edge("GB", 8)),
+                  "GB" to listOf(Edge("CA", 2))
+              )
+              println(cheapest(graph, "US", "CA"))
+          }
+        expected_output: |
+          3
+        explanation: The direct US-to-CA edge costs 3, which is cheaper than going through GB.
+      - type: multiple_choice
+        id: kotlin-ch06-graphs-mc-priority
+        prompt: 'What should a Dijkstra implementation do with a queue entry whose cost is greater than `best[node]`?'
+        options:
+          - Skip it because it is stale.
+          - Replace the best cost with the larger cost.
+          - Add the same entry forever.
+        correct_index: 0
+        explanation: A later, cheaper route may have already been found; stale entries can be ignored.
+      - type: cloze
+        id: kotlin-ch06-graphs-cloze-map
+        prompt: Add an edge to an adjacency map, creating the destination list when needed.
+        template: |
+          graph.____1("US") { mutableListOf() }.add(Edge("CA", 3))
+        blanks:
+          - placeholder: "____1"
+            accepted: ["getOrPut"]
+            case_sensitive: true
+        explanation: '`getOrPut` returns the existing mutable list or creates it once.'
+      - type: write_function
+        id: kotlin-ch06-graphs-write-path
+        prompt: 'Parse edges written as `FROM:TO:COST` and return the cheapest path from `start` to `goal`. Return null when no path exists. The example `A:B:4,B:C:1,A:C:7` must return cost 5 and path `[A, B, C]`.'
+        starter_code: |
+          data class PathResult(val cost: Int, val path: List<String>)
+
+          fun cheapestPath(spec: String, start: String, goal: String): PathResult? = TODO()
+        hidden_tests: |
+          import org.junit.Test
+          import org.junit.Assert.assertEquals
+          import org.junit.Assert.assertNull
+
+          class CheapestPathTest {
+              @Test fun usesTheCheapestRoute() {
+                  assertEquals(
+                      PathResult(5, listOf("A", "B", "C")),
+                      cheapestPath("A:B:4,B:C:1,A:C:7", "A", "C")
+                  )
+              }
+
+              @Test fun returnsNullWhenGoalIsUnreachable() {
+                  assertNull(cheapestPath("A:B:4", "A", "C"))
+              }
+
+              @Test fun startEqualsGoalHasZeroCost() {
+                  assertEquals(PathResult(0, listOf("A")), cheapestPath("A:B:4", "A", "A"))
+              }
+          }
+        reference_solution: |
+          data class PathResult(val cost: Int, val path: List<String>)
+
+          fun cheapestPath(spec: String, start: String, goal: String): PathResult? {
+              val graph = mutableMapOf<String, MutableList<Pair<String, Int>>>()
+              for (part in spec.split(",").filter { it.isNotBlank() }) {
+                  val (from, to, costText) = part.split(":")
+                  graph.getOrPut(from) { mutableListOf() }.add(to to costText.toInt())
+              }
+              val best = mutableMapOf(start to 0)
+              val previous = mutableMapOf<String, String?>()
+              val queue = java.util.PriorityQueue<Pair<Int, String>>(compareBy { it.first })
+              queue.add(0 to start)
+              while (queue.isNotEmpty()) {
+                  val (cost, node) = queue.poll()
+                  if (cost > best.getValue(node)) continue
+                  if (node == goal) {
+                      val path = generateSequence(goal) { previous[it] }.toList().reversed()
+                      return PathResult(cost, path)
+                  }
+                  for ((next, edgeCost) in graph[node].orEmpty()) {
+                      val nextCost = cost + edgeCost
+                      if (nextCost < (best[next] ?: Int.MAX_VALUE)) {
+                          best[next] = nextCost
+                          previous[next] = node
+                          queue.add(nextCost to next)
+                      }
+                  }
+              }
+              return null
+          }
+        hints:
+          - Build an adjacency map, then keep a best-known cost and predecessor for each node.
+          - 'Use `PriorityQueue<Pair<Int, String>>` ordered by the first value.'
+          - 'When the goal is popped, follow `previous` backward and reverse the resulting list.'
+        explanation: The returned path makes the cheapest route inspectable, not just its total cost.

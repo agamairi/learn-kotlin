@@ -1,0 +1,18 @@
+id: kotlin-stripe
+language: kotlin
+title: Kotlin for the Stripe Android screen
+description: |
+  A practical Kotlin course for solving Stripe-style Android screen problems with clear syntax, reliable parsing, useful collection operations, and small testable functions. You will move from Swift and Dart patterns to idiomatic Kotlin while keeping money in Long cents and every important result easy to verify.
+chapters:
+  - ch01-syntax
+  - ch02-strings
+  - ch03-collections
+  - ch04-testing
+  - ch05-modeling
+  - ch06-time-queues-graphs
+  - ch07-idioms
+  - ch08-mobile-kotlin
+  - ch09-mobile-terminal
+  - ch10-stripe-classics
+  - ch11-more-practice
+  - ch12-rapid-review
