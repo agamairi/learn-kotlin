@@ -1,0 +1,1 @@
+{"args": "", "files": [{"name": "Main.kt", "text": "fun main() {\n    while (true) println(\"x\".repeat(100))\n}\n"}], "compilerArguments": {}}

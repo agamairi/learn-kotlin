@@ -1,0 +1,1 @@
+{"errors":{"Solution.kt":[{"interval":{"start":{"line":2,"ch":4},"end":{"line":2,"ch":16}},"message":"Unreachable code.","severity":"WARNING","className":"WARNING"}],"SumTest.kt":[]},"text":"<errStream>Evaluation stopped while it's taking too long️</errStream>"}

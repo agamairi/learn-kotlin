@@ -1,0 +1,1 @@
+{"args": "", "files": [{"name": "Solution.kt", "text": "fun sum(a: Int, b: Int): Int = a + b\n"}], "compilerArguments": {}}

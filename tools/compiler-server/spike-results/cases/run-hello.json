@@ -1,0 +1,10 @@
+{
+  "args": "",
+  "files": [
+    {
+      "name": "Main.kt",
+      "text": "fun main() {\n    println(\"Hello from /run\")\n}\n"
+    }
+  ],
+  "compilerArguments": {}
+}

@@ -1,0 +1,1 @@
+{"args": "", "files": [{"name": "Solution.kt", "text": "fun sum(a: Int, b: Int): Int = a + b\n"}, {"name": "SumTest.kt", "text": "import org.junit.jupiter.api.Test\nimport org.junit.jupiter.api.Assertions.assertEquals\n\nclass SumTest {\n    @Test fun addsTwoNumbers() { assertEquals(5, sum(2, 3)) }\n}\n"}], "compilerArguments": {}}

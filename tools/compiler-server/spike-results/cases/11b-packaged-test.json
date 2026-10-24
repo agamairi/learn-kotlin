@@ -1,0 +1,1 @@
+{"args": "", "files": [{"name": "Solution.kt", "text": "package sums\n\nfun sum(a: Int, b: Int): Int = a + b\n"}, {"name": "SumTest.kt", "text": "package sums\n\nimport kotlin.test.*\n\nclass SumTest {\n    @Test fun addsTwoNumbers() { assertEquals(5, sum(2, 3)) }\n}\n"}], "compilerArguments": {}}

@@ -1,0 +1,9 @@
+{
+  "args": "",
+  "files": [
+    {
+      "name": "Solution.kt",
+      "text": "fun sum(a: Int, b: Int): Int {\n    val unused = 3\n    val s: Int = \"text\"\n    return a + undefinedName\n}\n"
+    }
+  ]
+}
