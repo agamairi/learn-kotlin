@@ -10,6 +10,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CancellationException
 
 /**
  * Creates the HTTP client used by the AI provider clients. Requests and responses are JSON.
@@ -34,7 +35,7 @@ class AiTutorImpl(
     }
 
     /** Tests the configured provider's inexpensive models endpoint. */
-    suspend fun testConnection(): AiResult<Unit> {
+    override suspend fun testConnection(): AiResult<Unit> {
         val blocked = blockedResult()
         if (blocked != null) return blocked
         return withClient { client, apiKey ->
@@ -94,12 +95,16 @@ class AiTutorImpl(
     ): AiResult<T> {
         val apiKey = try {
             secretStore.get()
-        } catch (_: Throwable) {
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
             null
         }?.takeIf { it.isNotBlank() } ?: return AiResult.Error("Add your API key in Settings")
         return try {
             block(createClient(), apiKey)
-        } catch (_: Throwable) {
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
             AiResult.Error("No connection")
         }
     }

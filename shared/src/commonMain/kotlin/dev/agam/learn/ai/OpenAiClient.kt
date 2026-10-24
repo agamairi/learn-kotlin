@@ -5,6 +5,7 @@ import io.ktor.client.call.body
 import io.ktor.client.request.header
 import io.ktor.client.request.setBody
 import io.ktor.http.HttpMethod
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -41,7 +42,9 @@ internal class OpenAiClient(
         return try {
             val parsed = response.body<OpenAiResponse>()
             AiClientResult.Text(parsed.output.firstOrNull()?.content?.firstOrNull()?.text.orEmpty())
-        } catch (_: Throwable) {
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
             AiClientResult.Failure(networkFailure = true)
         }
     }

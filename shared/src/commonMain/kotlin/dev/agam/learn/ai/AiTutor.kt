@@ -6,6 +6,10 @@ import dev.agam.learn.model.Exercise
  * Contract for the optional AI tutor assistant.
  */
 interface AiTutor {
+    /** Tests provider connectivity without generating a response. */
+    suspend fun testConnection(): AiResult<Unit> =
+        AiResult.Error("Testing the AI connection is not supported")
+
     /**
      * Explains why an answer was incorrect in plain language.
      */

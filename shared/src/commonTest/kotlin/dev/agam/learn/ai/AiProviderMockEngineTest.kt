@@ -18,12 +18,17 @@ import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -131,6 +136,98 @@ class AiProviderMockEngineTest {
             assertTrue(request!!.headers[expectedHeader] != null)
             client.close()
         }
+    }
+
+    @Test
+    fun tutorConnectionTestSucceedsWithoutGenerating() = runTest {
+        for (provider in AiProvider.entries) {
+            var request: HttpRequestData? = null
+            val client = mockClient { data ->
+                request = data
+                respondJson("{}")
+            }
+            val tutor = AiTutorImpl(
+                settings = AiSettings(provider = provider),
+                secretStore = StaticSecretStore("test-key"),
+                httpClient = client
+            )
+
+            assertIs<AiResult.Success<Unit>>(tutor.testConnection())
+            assertEquals(HttpMethod.Get, request!!.method, "$provider must use GET")
+            client.close()
+        }
+    }
+
+    @Test
+    fun tutorConnectionTestMapsBadKey() = runTest {
+        val client = mockClient { respondJson("{}", status = 401) }
+        val tutor = AiTutorImpl(
+            settings = AiSettings(provider = AiProvider.OPENAI),
+            secretStore = StaticSecretStore("bad-key"),
+            httpClient = client
+        )
+
+        assertEquals(AiResult.Error("API key rejected"), tutor.testConnection())
+        client.close()
+    }
+
+    @Test
+    fun tutorConnectionTestRefusesInterviewModeWithoutRequest() = runTest {
+        var requestCount = 0
+        val client = mockClient {
+            requestCount++
+            respondJson("{}")
+        }
+        val tutor = AiTutorImpl(
+            settings = AiSettings(provider = AiProvider.OPENAI, interviewMode = true),
+            secretStore = StaticSecretStore("test-key"),
+            httpClient = client
+        )
+
+        assertEquals(
+            AiResult.Error("AI tutor is unavailable in interview mode"),
+            tutor.testConnection()
+        )
+        assertEquals(0, requestCount)
+        client.close()
+    }
+
+    @Test
+    fun tutorConnectionTestRequiresKeyWithoutRequest() = runTest {
+        var requestCount = 0
+        val client = mockClient {
+            requestCount++
+            respondJson("{}")
+        }
+        val tutor = AiTutorImpl(
+            settings = AiSettings(provider = AiProvider.OPENAI),
+            secretStore = StaticSecretStore(null),
+            httpClient = client
+        )
+
+        assertEquals(AiResult.Error("Add your API key in Settings"), tutor.testConnection())
+        assertEquals(0, requestCount)
+        client.close()
+    }
+
+    @Test
+    fun cancellingTutorCallPropagatesCancellationException() = runTest {
+        val requestStarted = CompletableDeferred<Unit>()
+        val client = mockClient {
+            requestStarted.complete(Unit)
+            awaitCancellation()
+        }
+        val tutor = AiTutorImpl(
+            settings = AiSettings(provider = AiProvider.OPENAI),
+            secretStore = StaticSecretStore("test-key"),
+            httpClient = client
+        )
+        val call = async { tutor.hint(sampleExercise(), 1) }
+
+        requestStarted.await()
+        call.cancel()
+        assertFailsWith<CancellationException> { call.await() }
+        client.close()
     }
 
     @Test
