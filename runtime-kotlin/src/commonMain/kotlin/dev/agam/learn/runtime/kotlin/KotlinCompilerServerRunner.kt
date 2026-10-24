@@ -177,7 +177,7 @@ class KotlinCompilerServerRunner(
 
     private companion object {
         const val MAX_PAYLOAD_BYTES = 200 * 1024
-        const val REQUEST_TIMEOUT_MILLIS = 15_000L
+        const val REQUEST_TIMEOUT_MILLIS = 30_000L
         const val OK_STATUS = "OK"
         const val INVALID_RESPONSE = "Compiler server returned an invalid response."
         val json = Json { ignoreUnknownKeys = true }

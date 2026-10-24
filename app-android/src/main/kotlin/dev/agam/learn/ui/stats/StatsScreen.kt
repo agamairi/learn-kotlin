@@ -17,6 +17,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.agam.learn.di.LocalAppContainer
 
 /**
  * State for the Stats screen.
@@ -39,6 +42,20 @@ data class StatsUiState(
     val chapterAccuracies: List<ChapterAccuracy> = emptyList(),
     val isLoading: Boolean = false
 )
+
+@Composable
+fun StatsScreen(
+    modifier: Modifier = Modifier,
+    viewModel: StatsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = StatsViewModel.provideFactory(LocalAppContainer.current)
+    )
+) {
+    val state by viewModel.uiState.collectAsState()
+    StatsScreen(
+        state = state,
+        modifier = modifier
+    )
+}
 
 /**
  * Stateless screen displaying learner stats: XP history chart, streak calendar, and per-chapter accuracy.

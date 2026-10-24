@@ -1,23 +1,32 @@
 package dev.agam.learn.ai
 
+import dev.agam.learn.data.SecretStore
 import dev.agam.learn.model.Blank
 import dev.agam.learn.model.Exercise
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import io.ktor.client.HttpClient
+import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 
-private fun createDefaultHttpClient(): HttpClient = HttpClient {
-    install(ContentNegotiation) { json() }
-}
+/**
+ * Creates the HTTP client used by the AI provider clients. Requests and responses are JSON.
+ * Pass [engine] to route traffic through a specific engine, such as a mock engine in tests.
+ */
+fun createAiHttpClient(engine: HttpClientEngine? = null): HttpClient =
+    if (engine == null) {
+        HttpClient { install(ContentNegotiation) { json() } }
+    } else {
+        HttpClient(engine) { install(ContentNegotiation) { json() } }
+    }
 
 /** Default provider-agnostic implementation of [AiTutor]. */
 class AiTutorImpl(
     private val settings: AiSettings,
     private val secretStore: SecretStore,
-    private val httpClient: HttpClient = createDefaultHttpClient()
+    private val httpClient: HttpClient = createAiHttpClient()
 ) : AiTutor {
     private val json = Json {
         ignoreUnknownKeys = false
@@ -83,14 +92,11 @@ class AiTutorImpl(
     private suspend fun <T> withClient(
         block: suspend (AiChatClient, String) -> AiResult<T>
     ): AiResult<T> {
-        val suppliedKey = try {
-            secretStore.getApiKey()
+        val apiKey = try {
+            secretStore.get()
         } catch (_: Throwable) {
             null
-        }
-        val apiKey = suppliedKey?.takeIf { it.isNotBlank() }
-            ?: settings.apiKey.takeIf { it.isNotBlank() }
-            ?: return AiResult.Error("API key missing")
+        }?.takeIf { it.isNotBlank() } ?: return AiResult.Error("Add your API key in Settings")
         return try {
             block(createClient(), apiKey)
         } catch (_: Throwable) {

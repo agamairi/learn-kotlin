@@ -41,6 +41,13 @@ data class LessonUiState(
     val correctExercisesCount: Int = 0,
     val totalExercisesCount: Int = 0
 ) {
+    /** True when the current exercise is completed in a studio screen instead of on this screen. */
+    val isStudioExercise: Boolean
+        get() {
+            val exercise = (step as? LessonStep.ExercisePlaying)?.exercise ?: return false
+            return exercise is Exercise.WriteFunction || exercise is Exercise.MultiPartProblem
+        }
+
     val canCheckAnswer: Boolean
         get() {
             if (isAnswerChecked) return false
@@ -54,8 +61,8 @@ data class LessonUiState(
                     }
                 }
                 is Exercise.PredictOutput -> predictOutputText.isNotBlank()
-                is Exercise.WriteFunction -> true
-                is Exercise.MultiPartProblem -> true
+                // Studio exercises are completed in their own screen, never checked here.
+                is Exercise.WriteFunction, is Exercise.MultiPartProblem -> false
             }
         }
 

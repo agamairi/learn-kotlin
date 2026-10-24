@@ -27,6 +27,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.agam.learn.di.LocalAppContainer
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.model.ReviewCard
 import dev.agam.learn.ui.code.MarkdownText
@@ -68,6 +71,34 @@ data class ReviewUiState(
     val totalCorrect: Int = 0,
     val xpEarned: Int = 0
 )
+
+@Composable
+fun ReviewScreen(
+    onNavigateBack: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    viewModel: ReviewViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = ReviewViewModel.provideFactory(LocalAppContainer.current)
+    )
+) {
+    val state by viewModel.uiState.collectAsState()
+    ReviewScreen(
+        state = state,
+        onStartSession = viewModel::startSession,
+        onSelectOption = viewModel::selectOption,
+        onClozeAnswerChange = viewModel::onClozeAnswerChange,
+        onTextAnswerChange = viewModel::onTextAnswerChange,
+        onCheckAnswer = viewModel::checkAnswer,
+        onNextCard = viewModel::nextCard,
+        onExitSession = {
+            if (state.isInSession) {
+                viewModel.exitSession()
+            } else {
+                onNavigateBack()
+            }
+        },
+        modifier = modifier
+    )
+}
 
 /**
  * Stateless Leitner spaced repetition review screen.

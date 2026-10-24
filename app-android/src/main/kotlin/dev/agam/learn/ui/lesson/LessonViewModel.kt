@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import dev.agam.learn.content.CourseRepository
 import dev.agam.learn.data.ProgressRepository
+import dev.agam.learn.data.SettingsRepository
 import dev.agam.learn.di.AppContainer
 import dev.agam.learn.domain.AnswerGrader
 import dev.agam.learn.domain.XpPolicy
@@ -13,6 +14,7 @@ import dev.agam.learn.model.Exercise
 import dev.agam.learn.model.ExerciseResult
 import dev.agam.learn.model.Lesson
 import dev.agam.learn.runner.LanguageSupport
+import dev.agam.learn.ui.navigation.Screen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +31,7 @@ import kotlinx.datetime.toLocalDateTime
 class LessonViewModel(
     private val courseRepository: CourseRepository,
     private val progressRepository: ProgressRepository,
+    private val settingsRepository: SettingsRepository,
     private val answerGrader: AnswerGrader,
     private val xpPolicy: XpPolicy,
     val languageSupport: LanguageSupport
@@ -37,6 +40,7 @@ class LessonViewModel(
     constructor(appContainer: AppContainer) : this(
         courseRepository = appContainer.courseRepository,
         progressRepository = appContainer.progressRepository,
+        settingsRepository = appContainer.settingsRepository,
         answerGrader = appContainer.answerGrader,
         xpPolicy = appContainer.xpPolicy,
         languageSupport = appContainer.languageSupport
@@ -49,9 +53,18 @@ class LessonViewModel(
     private var exercises: List<Exercise> = emptyList()
 
     /**
+     * Route of the studio screen that completes [exercise], or null for exercises the lesson grades itself.
+     */
+    fun routeForExercise(exercise: Exercise): String? = when (exercise) {
+        is Exercise.WriteFunction -> Screen.CodeExercise.createRoute(exercise.id)
+        is Exercise.MultiPartProblem -> Screen.Problem.createRoute(exercise.id)
+        else -> null
+    }
+
+    /**
      * Loads the target lesson from the curriculum by identifier.
      */
-    fun loadLesson(lessonId: String, courseId: String = "kotlin-foundations") {
+    fun loadLesson(lessonId: String, courseId: String = "kotlin-stripe") {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val courses = courseRepository.listCourses()
@@ -167,6 +180,9 @@ class LessonViewModel(
         if (_uiState.value.isAnswerChecked) return
 
         val exercise = currentStep.exercise
+        // Code and problem exercises are graded in their studio screens; the lesson records their result.
+        if (routeForExercise(exercise) != null) return
+
         val (isCorrect, explanation) = when (exercise) {
             is Exercise.MultipleChoice -> {
                 val selected = _uiState.value.selectedOptionIndex ?: -1
@@ -181,13 +197,7 @@ class LessonViewModel(
                 val correct = answerGrader.gradePredictOutput(exercise, _uiState.value.predictOutputText)
                 correct to exercise.explanation
             }
-            is Exercise.WriteFunction -> {
-                // Non-code cards are graded locally; code exercises pass to code runner in code view
-                true to (exercise.explanation ?: "Completed code function.")
-            }
-            is Exercise.MultiPartProblem -> {
-                true to "Completed problem step."
-            }
+            is Exercise.WriteFunction, is Exercise.MultiPartProblem -> return
         }
 
         val xp = if (isCorrect) xpPolicy.xpForExercise(exercise, isFirstAttempt = true) else 0
@@ -211,6 +221,42 @@ class LessonViewModel(
                 xpEarnedInLesson = it.xpEarnedInLesson + xp,
                 correctExercisesCount = if (isCorrect) it.correctExercisesCount + 1 else it.correctExercisesCount
             )
+        }
+    }
+
+    /**
+     * Records the outcome of a studio exercise (a code drill or multi-part problem) when the learner
+     * returns from it. This is the only place such a result is recorded.
+     */
+    fun recordExternalExerciseResult(exerciseId: String, isCorrect: Boolean) {
+        val currentStep = _uiState.value.step as? LessonStep.ExercisePlaying ?: return
+        // A checked exercise already has its result recorded; a repeat call must not record it again.
+        if (currentStep.exercise.id == exerciseId && !_uiState.value.isAnswerChecked) {
+            val xp = if (isCorrect) xpPolicy.xpForExercise(currentStep.exercise, isFirstAttempt = true) else 0
+            viewModelScope.launch {
+                progressRepository.recordExerciseResult(
+                    ExerciseResult(
+                        exerciseId = exerciseId,
+                        correct = isCorrect,
+                        xpAwarded = xp,
+                        epochMillis = Clock.System.now().toEpochMilliseconds(),
+                        lessonId = activeLesson?.id
+                    )
+                )
+            }
+            _uiState.update {
+                it.copy(
+                    isAnswerChecked = true,
+                    isAnswerCorrect = isCorrect,
+                    currentExplanation = when (val exercise = currentStep.exercise) {
+                        is Exercise.WriteFunction -> exercise.explanation ?: "Completed code function."
+                        is Exercise.MultiPartProblem -> "Completed problem."
+                        else -> "Exercise completed."
+                    },
+                    xpEarnedInLesson = it.xpEarnedInLesson + xp,
+                    correctExercisesCount = if (isCorrect) it.correctExercisesCount + 1 else it.correctExercisesCount
+                )
+            }
         }
     }
 
@@ -249,7 +295,7 @@ class LessonViewModel(
                 val existingActivity = progressRepository.getDailyActivity(todayEpochDay)
                 val newXp = (existingActivity?.xpEarned ?: 0) + finalXp
                 val newCompleted = (existingActivity?.exercisesCompleted ?: 0) + totalCount
-                val target = 50 // default daily target
+                val target = settingsRepository.getSettings().dailyGoalXp
 
                 progressRepository.recordDailyActivity(
                     DailyActivity(

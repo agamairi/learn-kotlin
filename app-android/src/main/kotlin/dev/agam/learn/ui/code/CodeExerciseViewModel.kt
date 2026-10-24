@@ -25,6 +25,8 @@ class CodeExerciseViewModel(
     private val codeRunner: CodeRunner,
     private val aiTutor: AiTutor? = null,
     val isInterviewMode: Boolean = false,
+    /** False when no API key is saved; the AI controls then show the add-key hint and do nothing. */
+    val hasApiKey: Boolean = false,
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
@@ -39,7 +41,8 @@ class CodeExerciseViewModel(
             hints = exercise.hints,
             revealedHintsCount = 0,
             isAiAvailable = aiTutor != null,
-            isInterviewMode = isInterviewMode
+            isInterviewMode = isInterviewMode,
+            hasApiKey = hasApiKey
         )
     )
     val uiState: StateFlow<CodeExerciseUiState> = _uiState.asStateFlow()
@@ -111,7 +114,7 @@ class CodeExerciseViewModel(
 
     fun askAiExplainMistake() {
         val tutor = aiTutor ?: return
-        if (isInterviewMode) return
+        if (isInterviewMode || !hasApiKey) return
 
         val currentCode = _uiState.value.code.text
         _uiState.update {
@@ -135,7 +138,7 @@ class CodeExerciseViewModel(
 
     fun askAiHint() {
         val tutor = aiTutor ?: return
-        if (isInterviewMode) return
+        if (isInterviewMode || !hasApiKey) return
 
         val currentLevel = (_uiState.value.revealedHintsCount + 1).coerceIn(1, 3)
         _uiState.update {
@@ -155,7 +158,7 @@ class CodeExerciseViewModel(
 
     fun askAiReview() {
         val tutor = aiTutor ?: return
-        if (isInterviewMode) return
+        if (isInterviewMode || !hasApiKey) return
 
         val currentCode = _uiState.value.code.text
         _uiState.update {

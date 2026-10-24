@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -24,6 +26,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedFilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -37,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.agam.learn.ai.AI_API_KEY_MISSING_MESSAGE
 import dev.agam.learn.model.FaqItem
 import dev.agam.learn.model.ProblemPart
 import dev.agam.learn.runner.RunOutcome
@@ -65,6 +70,7 @@ data class MultiPartProblemUiState(
     val isCurrentPartPassed: Boolean = false,
     val isInterviewMode: Boolean = false,
     val isAiAvailable: Boolean = false,
+    val hasApiKey: Boolean = false,
     val timerSeconds: Int = 45 * 60,
     val isTimerRunning: Boolean = false,
     val aiDialogState: AiDialogState? = null
@@ -90,6 +96,8 @@ fun MultiPartProblemScreen(
     onReviewCodeClick: () -> Unit,
     onDismissOutcome: () -> Unit,
     onDismissAiDialog: () -> Unit,
+    onNavigateBack: (() -> Unit)? = null,
+    onFinish: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -105,6 +113,26 @@ fun MultiPartProblemScreen(
                 .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
+            if (onNavigateBack != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                    Text(
+                        text = "Problem Studio",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
             // Header: Timer & Interview Mode Toggle
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -300,24 +328,44 @@ fun MultiPartProblemScreen(
                         Text("🔓 Reveal Part ${state.currentPartIndex + 2}")
                     }
                 } else if (!hasNextPart && state.isCurrentPartPassed) {
-                    Text(
-                        text = "🎉 All parts completed!",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "🎉 All parts completed!",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        if (onFinish != null) {
+                            Button(
+                                onClick = onFinish,
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Complete & Return to Lesson")
+                            }
+                        }
+                    }
                 }
 
-                // AI Tutor Menu (Hidden when interview mode is on!)
+                // AI Tutor Menu (hidden in interview mode; disabled with a hint until a key is saved)
                 if (state.isAiAvailable && !state.isInterviewMode) {
                     AiTutorMenuButton(
                         onExplainMistake = onExplainMistakeClick,
                         onAskHint = onAskHintClick,
                         onReviewCode = onReviewCodeClick,
-                        enabled = !state.isRunning && !state.isChecking
+                        enabled = !state.isRunning && !state.isChecking && state.hasApiKey
                     )
                 }
+            }
+            if (state.isAiAvailable && !state.isInterviewMode && !state.hasApiKey) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = AI_API_KEY_MISSING_MESSAGE,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             // Results Panel
@@ -373,7 +421,8 @@ private fun MultiPartProblemScreenPreview() {
                 unlockedPartCount = 1,
                 currentCode = TextFieldValue("fun parseTransactions(lines: List<String>): List<Transaction> {\n    return emptyList()\n}"),
                 isInterviewMode = false,
-                isAiAvailable = true
+                isAiAvailable = true,
+                hasApiKey = true
             ),
             onCodeChange = {},
             onSelectPart = {},

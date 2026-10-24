@@ -38,6 +38,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +55,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.agam.learn.ai.AiProvider
+import dev.agam.learn.di.LocalAppContainer
 
 /**
  * UI state for the Settings screen.
@@ -101,6 +103,32 @@ val DAILY_GOAL_PRESETS: List<Pair<Int, String>> = listOf(
 /**
  * Stateless settings composable screen.
  */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun SettingsScreen(
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = SettingsViewModel.provideFactory(LocalAppContainer.current)
+    )
+) {
+    val state by viewModel.uiState.collectAsState()
+    SettingsScreen(
+        state = state,
+        onDailyGoalSelected = viewModel::onDailyGoalSelected,
+        onAiProviderSelected = viewModel::onAiProviderSelected,
+        onAiModelSelected = viewModel::onAiModelSelected,
+        onApiKeyChange = viewModel::onApiKeyChange,
+        onTestAiConnection = viewModel::testAiConnection,
+        onRemoveApiKey = viewModel::removeApiKey,
+        onSaveAiSettings = viewModel::saveAiSettings,
+        onCompilerUrlChange = viewModel::onCompilerUrlChange,
+        onCompilerTokenChange = viewModel::onCompilerTokenChange,
+        onSaveCompilerSettings = viewModel::saveCompilerSettings,
+        onToggleInterviewModeDefault = viewModel::toggleInterviewModeDefault,
+        modifier = modifier
+    )
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
@@ -289,7 +317,7 @@ fun SettingsScreen(
                 ) {
                     OutlinedButton(
                         onClick = onTestAiConnection,
-                        enabled = state.apiKey.isNotBlank() && !state.isTestingAiConnection,
+                        enabled = state.apiKey.isNotBlank() && !state.isTestingAiConnection && !state.isInterviewModeDefault,
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.weight(1f)
                     ) {

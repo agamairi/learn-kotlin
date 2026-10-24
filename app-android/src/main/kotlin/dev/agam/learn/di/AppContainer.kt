@@ -1,7 +1,10 @@
 package dev.agam.learn.di
 
+import dev.agam.learn.ai.AiTutor
 import dev.agam.learn.content.CourseRepository
 import dev.agam.learn.data.ProgressRepository
+import dev.agam.learn.data.SecretStore
+import dev.agam.learn.data.SettingsRepository
 import dev.agam.learn.domain.AnswerGrader
 import dev.agam.learn.domain.DailyGoalTracker
 import dev.agam.learn.domain.ReviewScheduler
@@ -15,10 +18,13 @@ import dev.agam.learn.runner.LanguageSupport
 interface AppContainer {
     val courseRepository: CourseRepository
     val progressRepository: ProgressRepository
+    val settingsRepository: SettingsRepository
+    val secretStore: SecretStore
     val streakCalculator: StreakCalculator
     val xpPolicy: XpPolicy
     val dailyGoalTracker: DailyGoalTracker
     val reviewScheduler: ReviewScheduler
     val answerGrader: AnswerGrader
     val languageSupport: LanguageSupport
+    val aiTutor: AiTutor
 }

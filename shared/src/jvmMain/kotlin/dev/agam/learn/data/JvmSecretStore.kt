@@ -21,12 +21,22 @@ class InMemorySecretStore : SecretStore {
 /** Creates a JVM SQLite driver and initializes the SQLDelight schema. */
 actual class LearnDatabaseDriverFactory actual constructor(context: Any?) {
     actual fun createDriver(databaseName: String): SqlDriver {
+        val isNew = if (databaseName == ":memory:") {
+            true
+        } else {
+            val file = java.io.File(databaseName)
+            !file.exists() || file.length() == 0L
+        }
         val url = if (databaseName == ":memory:") {
             "jdbc:sqlite::memory:"
         } else {
             "jdbc:sqlite:$databaseName"
         }
-        return JdbcSqliteDriver(url).also { LearnDatabase.Schema.create(it) }
+        val driver = JdbcSqliteDriver(url)
+        if (isNew) {
+            LearnDatabase.Schema.create(driver)
+        }
+        return driver
     }
 }
 

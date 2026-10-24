@@ -1,6 +1,8 @@
 package dev.agam.learn.ui.problem
 
 import androidx.compose.ui.text.input.TextFieldValue
+import dev.agam.learn.ai.AiResult
+import dev.agam.learn.ai.AiTutor
 import dev.agam.learn.model.FaqItem
 import dev.agam.learn.model.ProblemPart
 import dev.agam.learn.model.Exercise
@@ -12,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -129,6 +132,86 @@ class MultiPartProblemViewModelTest {
         viewModel.resetTimer()
         assertEquals(45 * 60, viewModel.uiState.value.timerSeconds)
         assertFalse(viewModel.uiState.value.isTimerRunning)
+    }
+
+    @Test
+    fun withoutAnApiKeyTheAiControlsShowTheHintAndNeverCallTheTutor() {
+        val tutor = FakeAiTutor()
+        val viewModel = MultiPartProblemViewModel(
+            problem = problem,
+            codeRunner = fakeRunner,
+            aiTutor = tutor,
+            isInterviewModeDefault = false,
+            hasApiKey = false,
+            coroutineScope = testScope
+        )
+
+        assertTrue(viewModel.uiState.value.isAiAvailable)
+        assertFalse(viewModel.uiState.value.hasApiKey)
+
+        viewModel.askAiExplainMistake()
+        viewModel.askAiHint()
+        viewModel.askAiReview()
+
+        assertNull(viewModel.uiState.value.aiDialogState)
+        assertEquals(0, tutor.calls)
+    }
+
+    @Test
+    fun interviewModeHidesTheAiTutorEvenWithAKey() {
+        val tutor = FakeAiTutor()
+        val viewModel = MultiPartProblemViewModel(
+            problem = problem,
+            codeRunner = fakeRunner,
+            aiTutor = tutor,
+            isInterviewModeDefault = true,
+            hasApiKey = true,
+            coroutineScope = testScope
+        )
+
+        viewModel.askAiHint()
+
+        assertNull(viewModel.uiState.value.aiDialogState)
+        assertEquals(0, tutor.calls)
+    }
+
+    @Test
+    fun withAnApiKeyTheHintControlReachesTheTutor() {
+        val tutor = FakeAiTutor()
+        val viewModel = MultiPartProblemViewModel(
+            problem = problem,
+            codeRunner = fakeRunner,
+            aiTutor = tutor,
+            hasApiKey = true,
+            coroutineScope = testScope
+        )
+
+        viewModel.askAiHint()
+
+        assertEquals(1, tutor.calls)
+        assertEquals("Mock hint", viewModel.uiState.value.aiDialogState?.content)
+    }
+
+    private class FakeAiTutor : AiTutor {
+        var calls = 0
+
+        override suspend fun explainMistake(exercise: Exercise, userAnswer: String, expectedResult: String): AiResult<String> {
+            calls++
+            return AiResult.Success("Mock explanation")
+        }
+
+        override suspend fun hint(exercise: Exercise, level: Int): AiResult<String> {
+            calls++
+            return AiResult.Success("Mock hint")
+        }
+
+        override suspend fun generateCards(topic: String, count: Int): AiResult<List<Exercise>> =
+            AiResult.Success(emptyList())
+
+        override suspend fun reviewCode(exercise: Exercise, code: String): AiResult<String> {
+            calls++
+            return AiResult.Success("Mock review")
+        }
     }
 
     private class FakeCodeRunner : CodeRunner {

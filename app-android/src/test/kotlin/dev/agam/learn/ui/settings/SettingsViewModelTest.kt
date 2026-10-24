@@ -1,11 +1,20 @@
 package dev.agam.learn.ui.settings
 
 import dev.agam.learn.ai.AiProvider
+import dev.agam.learn.ai.AiProviderConfig
 import dev.agam.learn.ai.AiResult
 import dev.agam.learn.ai.AiTutor
+import dev.agam.learn.data.AppSettings
+import dev.agam.learn.data.SecretStore
+import dev.agam.learn.data.SettingsRepository
 import dev.agam.learn.model.Exercise
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -16,17 +25,21 @@ import org.junit.Test
 
 class SettingsViewModelTest {
 
-    private lateinit var fakeRepo: InMemorySettingsRepository
+    private lateinit var fakeRepo: FakeSharedSettingsRepository
+    private lateinit var fakeSecretStore: FakeSecretStore
     private lateinit var fakeAiTutor: FakeAiTutor
     private val testScope = CoroutineScope(Dispatchers.Unconfined)
 
     @Before
     fun setup() {
-        fakeRepo = InMemorySettingsRepository(
-            initialGoal = 50,
-            initialServerUrl = "http://10.0.2.2:8080",
-            initialInterviewDefault = false
+        fakeRepo = FakeSharedSettingsRepository(
+            initialSettings = AppSettings(
+                dailyGoalXp = 50,
+                compilerServerUrl = "http://10.0.2.2:8080",
+                interviewMode = false
+            )
         )
+        fakeSecretStore = FakeSecretStore()
         fakeAiTutor = FakeAiTutor()
     }
 
@@ -34,6 +47,7 @@ class SettingsViewModelTest {
     fun testInitialLoadFromRepository() {
         val viewModel = SettingsViewModel(
             settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
             aiTutor = fakeAiTutor,
             coroutineScope = testScope
         )
@@ -49,6 +63,7 @@ class SettingsViewModelTest {
     fun testDailyGoalSelectionAndPersistence() {
         val viewModel = SettingsViewModel(
             settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
             coroutineScope = testScope
         )
 
@@ -56,11 +71,7 @@ class SettingsViewModelTest {
 
         assertEquals(75, viewModel.uiState.value.dailyGoalXp)
 
-        val checkScope = CoroutineScope(Dispatchers.Unconfined)
-        var persistedGoal = 0
-        kotlinx.coroutines.runBlocking {
-            persistedGoal = fakeRepo.getDailyGoal()
-        }
+        val persistedGoal = runBlocking { fakeRepo.getSettings().dailyGoalXp }
         assertEquals(75, persistedGoal)
     }
 
@@ -68,18 +79,19 @@ class SettingsViewModelTest {
     fun testAiProviderAndModelSelection() {
         val viewModel = SettingsViewModel(
             settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
             coroutineScope = testScope
         )
 
         // Select OpenAI
         viewModel.onAiProviderSelected(AiProvider.OPENAI)
         assertEquals(AiProvider.OPENAI, viewModel.uiState.value.aiProvider)
-        assertEquals("gpt-6-luna", viewModel.uiState.value.aiModel)
+        assertEquals(AiProviderConfig.OPENAI_DEFAULT_MODEL, viewModel.uiState.value.aiModel)
 
         // Select Gemini
         viewModel.onAiProviderSelected(AiProvider.GEMINI)
         assertEquals(AiProvider.GEMINI, viewModel.uiState.value.aiProvider)
-        assertEquals("gemini-3.5-flash-lite", viewModel.uiState.value.aiModel)
+        assertEquals(AiProviderConfig.GEMINI_DEFAULT_MODEL, viewModel.uiState.value.aiModel)
 
         // Custom model selection
         viewModel.onAiModelSelected("gemini-4-argon")
@@ -90,6 +102,7 @@ class SettingsViewModelTest {
     fun testApiKeySaveAndRemoveFlow() {
         val viewModel = SettingsViewModel(
             settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
             coroutineScope = testScope
         )
 
@@ -100,24 +113,22 @@ class SettingsViewModelTest {
         // Save AI settings
         viewModel.saveAiSettings()
 
-        var savedSettings = kotlinx.coroutines.runBlocking { fakeRepo.getAiSettings() }
-        assertNotNull(savedSettings)
-        assertEquals("sk-ant-api03-secret-key-12345", savedSettings?.apiKey)
-        assertTrue(savedSettings!!.enabled)
+        val savedKey = runBlocking { fakeSecretStore.get() }
+        assertEquals("sk-ant-api03-secret-key-12345", savedKey)
 
         // Remove key flow
         viewModel.removeApiKey()
         assertEquals("", viewModel.uiState.value.apiKey)
 
-        savedSettings = kotlinx.coroutines.runBlocking { fakeRepo.getAiSettings() }
-        assertEquals("", savedSettings?.apiKey)
-        assertFalse(savedSettings!!.enabled)
+        val afterRemoveKey = runBlocking { fakeSecretStore.get() }
+        assertNull(afterRemoveKey)
     }
 
     @Test
     fun testCompilerServerSettingsSave() {
         val viewModel = SettingsViewModel(
             settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
             coroutineScope = testScope
         )
 
@@ -125,24 +136,24 @@ class SettingsViewModelTest {
         viewModel.onCompilerTokenChange("bearer-token-abc")
         viewModel.saveCompilerSettings()
 
-        val url = kotlinx.coroutines.runBlocking { fakeRepo.getCompilerServerUrl() }
-        val token = kotlinx.coroutines.runBlocking { fakeRepo.getCompilerServerToken() }
+        val settings = runBlocking { fakeRepo.getSettings() }
 
-        assertEquals("https://compiler.internal.lan", url)
-        assertEquals("bearer-token-abc", token)
+        assertEquals("https://compiler.internal.lan", settings.compilerServerUrl)
+        assertEquals("bearer-token-abc", settings.compilerServerToken)
     }
 
     @Test
     fun testInterviewModeDefaultToggle() {
         val viewModel = SettingsViewModel(
             settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
             coroutineScope = testScope
         )
 
         viewModel.toggleInterviewModeDefault(true)
         assertTrue(viewModel.uiState.value.isInterviewModeDefault)
 
-        val persisted = kotlinx.coroutines.runBlocking { fakeRepo.isInterviewModeDefault() }
+        val persisted = runBlocking { fakeRepo.getSettings().interviewMode }
         assertTrue(persisted)
     }
 
@@ -150,6 +161,7 @@ class SettingsViewModelTest {
     fun testConnectionTestWithEmptyKeyFails() {
         val viewModel = SettingsViewModel(
             settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
             aiTutor = fakeAiTutor,
             coroutineScope = testScope
         )
@@ -167,6 +179,47 @@ class SettingsViewModelTest {
         fakeAiTutor.hintResult = AiResult.Success("OK")
         val viewModel = SettingsViewModel(
             settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
+            aiTutor = fakeAiTutor,
+            coroutineScope = testScope
+        )
+
+        viewModel.onApiKeyChange("sk-ant-test-key-long-enough")
+        viewModel.saveAiSettings()
+        viewModel.testAiConnection()
+
+        val result = viewModel.uiState.value.aiConnectionTestResult
+        assertNotNull(result)
+        assertTrue(result!!.isSuccess)
+    }
+
+    @Test
+    fun testConnectionOnlyChecksSavedSettings() {
+        fakeAiTutor.hintResult = AiResult.Success("OK")
+        val viewModel = SettingsViewModel(
+            settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
+            aiTutor = fakeAiTutor,
+            coroutineScope = testScope
+        )
+
+        // A key typed but not saved must not be reported as a working connection.
+        viewModel.onApiKeyChange("sk-ant-unsaved-key-value")
+        viewModel.testAiConnection()
+
+        val result = viewModel.uiState.value.aiConnectionTestResult
+        assertNotNull(result)
+        assertFalse(result!!.isSuccess)
+        assertEquals(0, fakeAiTutor.hintCalls)
+    }
+
+    @Test
+    fun testConnectionIsRefusedInInterviewModeWithoutCallingTheTutor() {
+        fakeRepo = FakeSharedSettingsRepository(AppSettings(interviewMode = true))
+        fakeAiTutor.hintResult = AiResult.Success("OK")
+        val viewModel = SettingsViewModel(
+            settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
             aiTutor = fakeAiTutor,
             coroutineScope = testScope
         )
@@ -176,11 +229,13 @@ class SettingsViewModelTest {
 
         val result = viewModel.uiState.value.aiConnectionTestResult
         assertNotNull(result)
-        assertTrue(result!!.isSuccess)
+        assertFalse(result!!.isSuccess)
+        assertEquals(0, fakeAiTutor.hintCalls)
     }
 
     private class FakeAiTutor : AiTutor {
         var hintResult: AiResult<String> = AiResult.Success("OK")
+        var hintCalls = 0
 
         override suspend fun explainMistake(
             exercise: Exercise,
@@ -188,12 +243,47 @@ class SettingsViewModelTest {
             expectedResult: String
         ): AiResult<String> = AiResult.Success("OK")
 
-        override suspend fun hint(exercise: Exercise, level: Int): AiResult<String> = hintResult
+        override suspend fun hint(exercise: Exercise, level: Int): AiResult<String> {
+            hintCalls++
+            return hintResult
+        }
 
         override suspend fun generateCards(topic: String, count: Int): AiResult<List<Exercise>> =
             AiResult.Success(emptyList())
 
         override suspend fun reviewCode(exercise: Exercise, code: String): AiResult<String> =
             AiResult.Success("OK")
+    }
+
+    private class FakeSharedSettingsRepository(
+        initialSettings: AppSettings = AppSettings()
+    ) : SettingsRepository {
+        private val state = MutableStateFlow(initialSettings)
+
+        override suspend fun getSettings(): AppSettings = state.value
+
+        override fun observeSettings(): Flow<AppSettings> = state.asStateFlow()
+
+        override suspend fun setDailyGoalXp(xp: Int) {
+            state.update { it.copy(dailyGoalXp = xp) }
+        }
+
+        override suspend fun setAiProvider(provider: AiProvider, model: String?) {
+            state.update { it.copy(selectedAiProvider = provider, selectedAiModel = model) }
+        }
+
+        override suspend fun setCompilerServer(url: String, token: String?) {
+            state.update { it.copy(compilerServerUrl = url, compilerServerToken = token) }
+        }
+
+        override suspend fun setInterviewMode(enabled: Boolean) {
+            state.update { it.copy(interviewMode = enabled) }
+        }
+    }
+
+    private class FakeSecretStore(private var key: String? = null) : SecretStore {
+        override suspend fun get(): String? = key
+        override suspend fun set(value: String) { key = value }
+        override suspend fun delete() { key = null }
     }
 }
