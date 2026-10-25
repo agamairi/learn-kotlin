@@ -15,7 +15,8 @@ import javax.crypto.spec.GCMParameterSpec
 /** Android Keystore-backed AES-256-GCM implementation of [SecretStore]. */
 class AndroidSecretStore(
     private val database: LearnDatabase,
-    private val keyProvider: (() -> SecretKey)? = null
+    private val keyProvider: (() -> SecretKey)? = null,
+    private val keyAlias: String = DEFAULT_KEY_ALIAS
 ) : SecretStore {
     private val settings = database.settingsKvQueries
     private val lock = Any()
@@ -44,9 +45,11 @@ class AndroidSecretStore(
     }
 
     override suspend fun set(value: String) = synchronized(lock) {
-        val iv = ByteArray(GCM_IV_BYTES).also(SecureRandomHolder.random::nextBytes)
         val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, key(), GCMParameterSpec(GCM_TAG_BITS, iv))
+        // Android Keystore keys require randomized encryption. Let the provider generate
+        // the GCM IV and persist that IV alongside the ciphertext for subsequent decrypts.
+        cipher.init(Cipher.ENCRYPT_MODE, key())
+        val iv = cipher.iv
         val ciphertext = cipher.doFinal(value.encodeToByteArray())
         val encoded = Base64.getEncoder().encodeToString(iv) + "." +
             Base64.getEncoder().encodeToString(ciphertext)
@@ -57,8 +60,8 @@ class AndroidSecretStore(
         settings.deleteSetting(AI_API_KEY_SETTING)
         try {
             val keyStore = keyStore()
-            if (keyStore.containsAlias(KEY_ALIAS)) {
-                keyStore.deleteEntry(KEY_ALIAS)
+            if (keyStore.containsAlias(keyAlias)) {
+                keyStore.deleteEntry(keyAlias)
             }
         } catch (_: Exception) {
             // Ignore Keystore errors on entry deletion
@@ -67,12 +70,12 @@ class AndroidSecretStore(
 
     private fun key(): SecretKey = keyProvider?.invoke() ?: run {
         val keyStore = keyStore()
-        (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        (keyStore.getKey(keyAlias, null) as? SecretKey)?.let { return it }
 
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
         generator.init(
             KeyGenParameterSpec.Builder(
-                KEY_ALIAS,
+                keyAlias,
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
             )
                 .setKeySize(KEY_SIZE_BITS)
@@ -85,17 +88,12 @@ class AndroidSecretStore(
 
     private fun keyStore(): KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
 
-    private object SecureRandomHolder {
-        val random = java.security.SecureRandom()
-    }
-
     private companion object {
         const val ANDROID_KEYSTORE = "AndroidKeyStore"
-        const val KEY_ALIAS = "dev.agam.learn.ai_key"
+        const val DEFAULT_KEY_ALIAS = "dev.agam.learn.ai_key"
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val KEY_SIZE_BITS = 256
         const val GCM_TAG_BITS = 128
-        const val GCM_IV_BYTES = 12
     }
 }
 

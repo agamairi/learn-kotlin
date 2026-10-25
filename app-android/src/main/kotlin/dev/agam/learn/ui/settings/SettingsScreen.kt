@@ -52,6 +52,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,6 +75,9 @@ data class SettingsUiState(
     val compilerServerUrl: String = "http://10.0.2.2:8080",
     val compilerToken: String = "",
     val isInterviewModeDefault: Boolean = false,
+    val soundEffectsEnabled: Boolean = true,
+    val hapticsEnabled: Boolean = true,
+    val reducedMotionEnabled: Boolean = false,
     val isSavedMessageVisible: Boolean = false
 )
 
@@ -129,6 +134,9 @@ fun SettingsScreen(
         onCompilerTokenChange = viewModel::onCompilerTokenChange,
         onSaveCompilerSettings = viewModel::saveCompilerSettings,
         onToggleInterviewModeDefault = viewModel::toggleInterviewModeDefault,
+        onSoundEffectsChanged = viewModel::setSoundEffectsEnabled,
+        onHapticsChanged = viewModel::setHapticsEnabled,
+        onReducedMotionChanged = viewModel::setReducedMotionEnabled,
         modifier = modifier
     )
 }
@@ -148,6 +156,9 @@ fun SettingsScreen(
     onCompilerTokenChange: (String) -> Unit,
     onSaveCompilerSettings: () -> Unit,
     onToggleInterviewModeDefault: (Boolean) -> Unit,
+    onSoundEffectsChanged: (Boolean) -> Unit,
+    onHapticsChanged: (Boolean) -> Unit,
+    onReducedMotionChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -176,6 +187,31 @@ fun SettingsScreen(
             )
 
             Spacer(modifier = Modifier.height(20.dp))
+
+            SettingsSectionCard(title = "✨ Learning experience") {
+                PreferenceSwitchRow(
+                    title = "Sound effects",
+                    description = "Hear a soft cue for correct answers and milestones, with a gentle tone for mistakes.",
+                    checked = state.soundEffectsEnabled,
+                    onCheckedChange = onSoundEffectsChanged
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                PreferenceSwitchRow(
+                    title = "Haptics",
+                    description = "Feel a light confirmation for correct answers and a stronger pattern for mistakes.",
+                    checked = state.hapticsEnabled,
+                    onCheckedChange = onHapticsChanged
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                PreferenceSwitchRow(
+                    title = "Reduce motion",
+                    description = "Use calmer transitions and respect your device’s reduced-motion setting.",
+                    checked = state.reducedMotionEnabled,
+                    onCheckedChange = onReducedMotionChanged
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // 1. Daily Goal Picker Section
             SettingsSectionCard(title = "🎯 Daily Goal") {
@@ -565,6 +601,41 @@ private fun SettingsSectionCard(
     }
 }
 
+@Composable
+private fun PreferenceSwitchRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.semantics {
+                contentDescription = "$title. $description"
+            }
+        )
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun SettingsScreenPreview() {
@@ -576,7 +647,10 @@ private fun SettingsScreenPreview() {
                 aiModel = "claude-haiku-5-5",
                 apiKey = "sk-ant-test-key",
                 compilerServerUrl = "http://10.0.2.2:8080",
-                isInterviewModeDefault = false
+                isInterviewModeDefault = false,
+                soundEffectsEnabled = true,
+                hapticsEnabled = true,
+                reducedMotionEnabled = false
             ),
             onDailyGoalSelected = {},
             onAiProviderSelected = {},
@@ -588,7 +662,10 @@ private fun SettingsScreenPreview() {
             onCompilerUrlChange = {},
             onCompilerTokenChange = {},
             onSaveCompilerSettings = {},
-            onToggleInterviewModeDefault = {}
+            onToggleInterviewModeDefault = {},
+            onSoundEffectsChanged = {},
+            onHapticsChanged = {},
+            onReducedMotionChanged = {}
         )
     }
 }

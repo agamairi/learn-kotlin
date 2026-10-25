@@ -228,6 +228,34 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun experiencePreferencesPersistIndependentlyAndReload() {
+        val viewModel = SettingsViewModel(
+            settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
+            coroutineScope = testScope
+        )
+
+        viewModel.setSoundEffectsEnabled(false)
+        viewModel.setReducedMotionEnabled(true)
+        viewModel.setHapticsEnabled(false)
+
+        val saved = runBlocking { fakeRepo.getSettings() }
+        assertFalse(saved.soundEffectsEnabled)
+        assertFalse(saved.hapticsEnabled)
+        assertTrue(saved.reducedMotionEnabled)
+        assertFalse(saved.interviewMode)
+
+        val reloaded = SettingsViewModel(
+            settingsRepository = fakeRepo,
+            secretStore = fakeSecretStore,
+            coroutineScope = testScope
+        ).uiState.value
+        assertFalse(reloaded.soundEffectsEnabled)
+        assertFalse(reloaded.hapticsEnabled)
+        assertTrue(reloaded.reducedMotionEnabled)
+    }
+
+    @Test
     fun testConnectionTestWithEmptyKeyFails() {
         val viewModel = SettingsViewModel(
             settingsRepository = fakeRepo,
@@ -426,6 +454,18 @@ class SettingsViewModelTest {
 
         override suspend fun setInterviewMode(enabled: Boolean) {
             state.update { it.copy(interviewMode = enabled) }
+        }
+
+        override suspend fun setSoundEffectsEnabled(enabled: Boolean) {
+            state.update { it.copy(soundEffectsEnabled = enabled) }
+        }
+
+        override suspend fun setHapticsEnabled(enabled: Boolean) {
+            state.update { it.copy(hapticsEnabled = enabled) }
+        }
+
+        override suspend fun setReducedMotionEnabled(enabled: Boolean) {
+            state.update { it.copy(reducedMotionEnabled = enabled) }
         }
     }
 

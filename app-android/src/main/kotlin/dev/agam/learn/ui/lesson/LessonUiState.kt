@@ -56,6 +56,24 @@ data class AiPracticeState(
 }
 
 /**
+ * Payload for an in-flight 5-in-a-row (or 10, 15, ...) milestone celebration.
+ */
+data class MilestoneCelebration(
+    val id: Long,
+    val streakCount: Int
+)
+
+/**
+ * One-shot feedback event to play sound/haptic cues exactly once without recomposition replays.
+ */
+data class LessonFeedbackEvent(
+    val id: Long,
+    val correct: Boolean,
+    val isMilestone: Boolean,
+    val streak: Int
+)
+
+/**
  * UI state for the lesson player.
  */
 data class LessonUiState(
@@ -78,8 +96,13 @@ data class LessonUiState(
     val isAiAvailable: Boolean = false,
     val isInterviewMode: Boolean = false,
     val hasApiKey: Boolean = false,
-    val aiPracticeState: AiPracticeState = AiPracticeState()
+    val aiPracticeState: AiPracticeState = AiPracticeState(),
+    val consecutiveCorrectStreak: Int = 0,
+    val activeMilestone: MilestoneCelebration? = null,
+    val feedbackEvent: LessonFeedbackEvent? = null
 ) {
+    val consecutiveStreak: Int
+        get() = consecutiveCorrectStreak
     /** True when the current exercise is completed in a studio screen instead of on this screen. */
     val isStudioExercise: Boolean
         get() {

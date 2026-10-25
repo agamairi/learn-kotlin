@@ -14,8 +14,11 @@ import dev.agam.learn.domain.DefaultAnswerGrader
 import dev.agam.learn.model.Exercise
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -41,6 +44,9 @@ class ReviewViewModel(
 
     private val _uiState = MutableStateFlow(ReviewUiState(isLoading = true))
     val uiState: StateFlow<ReviewUiState> = _uiState.asStateFlow()
+    private val _feedbackEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+    /** One-shot result events; no replay means a restored card cannot repeat feedback. */
+    val feedbackEvents: SharedFlow<Boolean> = _feedbackEvents.asSharedFlow()
 
     init {
         loadInitialData()
@@ -158,6 +164,7 @@ class ReviewViewModel(
                 totalCorrect = it.totalCorrect + if (isCorrect) 1 else 0
             )
         }
+        _feedbackEvents.tryEmit(isCorrect)
 
         scope.launch {
             val outcome = progressRecorder.record(

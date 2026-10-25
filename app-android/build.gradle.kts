@@ -11,8 +11,8 @@ android {
         applicationId = "dev.agam.learn"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.1.3"
+        versionCode = 8
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -69,6 +69,10 @@ dependencies {
     testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("org.robolectric:robolectric:4.17")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    androidTestImplementation(libs.sqldelight.driver.android)
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
 }
 
 tasks.named("preBuild") {

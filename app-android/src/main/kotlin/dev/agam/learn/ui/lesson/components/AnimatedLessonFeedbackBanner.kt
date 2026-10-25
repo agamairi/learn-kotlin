@@ -1,6 +1,8 @@
 package dev.agam.learn.ui.lesson.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
@@ -9,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import dev.agam.learn.ui.experience.LocalReducedMotion
 
 /**
  * Shows answer feedback with a slide transition while retaining the outgoing result until it exits.
@@ -46,11 +49,12 @@ internal fun AnimatedLessonFeedbackBanner(
     }
 
     val resultToShow = if (visible) FeedbackResult(isCorrect, explanation) else cachedResult
+    val reducedMotion = LocalReducedMotion.current
 
     AnimatedVisibility(
         visible = visible,
-        enter = slideInVertically(initialOffsetY = { it }),
-        exit = slideOutVertically(targetOffsetY = { it })
+        enter = if (reducedMotion) fadeIn() else slideInVertically(initialOffsetY = { it }),
+        exit = if (reducedMotion) fadeOut() else slideOutVertically(targetOffsetY = { it })
     ) {
         resultToShow?.let { result ->
             FeedbackBanner(

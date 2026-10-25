@@ -19,8 +19,11 @@ import dev.agam.learn.ui.code.AiDialogState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -87,6 +90,9 @@ class MultiPartProblemViewModel(
     }
 
     val uiState: StateFlow<MultiPartProblemUiState> = _uiState.asStateFlow()
+    private val _feedbackEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+    /** One-shot feedback for graded part checks, with no replay when the screen is revisited. */
+    val feedbackEvents: SharedFlow<Boolean> = _feedbackEvents.asSharedFlow()
 
     /**
      * Any edit to a part clears that part's pass, so the pass always belongs to the source on screen.
@@ -195,6 +201,11 @@ class MultiPartProblemViewModel(
             }
 
             val passed = outcome is RunOutcome.Passed
+            when (outcome) {
+                is RunOutcome.Passed -> _feedbackEvents.tryEmit(true)
+                is RunOutcome.TestsFailed, is RunOutcome.CompileError -> _feedbackEvents.tryEmit(false)
+                else -> Unit
+            }
             if (passed || outcome is RunOutcome.TestsFailed || outcome is RunOutcome.CompileError) {
                 progressRecorder.record(
                     ProblemPartAttempt(

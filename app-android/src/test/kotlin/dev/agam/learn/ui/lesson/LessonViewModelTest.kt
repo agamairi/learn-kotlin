@@ -519,6 +519,251 @@ class LessonViewModelTest {
         assertEquals(0, fakeTutor.generateCardsCalls)
     }
 
+    @Test
+    fun consecutiveStreakIncrementsAndTriggersMilestoneAtMultiplesOfFive() = runTest(testDispatcher) {
+        viewModel.loadLesson("lesson-01-syntax")
+        advanceUntilIdle()
+        viewModel.onStartPractice()
+        advanceUntilIdle()
+
+        // Initial streak is 0
+        assertEquals(0, viewModel.uiState.value.consecutiveCorrectStreak)
+        assertNull(viewModel.uiState.value.activeMilestone)
+
+        // Question 1: correct -> streak = 1
+        viewModel.onOptionSelected(0)
+        viewModel.onCheckAnswer()
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.consecutiveCorrectStreak)
+        assertEquals(1, viewModel.uiState.value.consecutiveStreak)
+        assertNull(viewModel.uiState.value.activeMilestone)
+        val event1 = viewModel.uiState.value.feedbackEvent
+        assertEquals(true, event1?.correct)
+        assertEquals(false, event1?.isMilestone)
+        assertEquals(1, event1?.streak)
+
+        // Acknowledge event 1
+        viewModel.acknowledgeFeedbackEvent(event1!!.id)
+        assertNull(viewModel.uiState.value.feedbackEvent)
+
+        // Question 2: correct -> streak = 2
+        viewModel.onContinueNext()
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.consecutiveCorrectStreak) // streak retained across continue
+        viewModel.onClozeAnswerChanged("____1", "\$name")
+        viewModel.onCheckAnswer()
+        advanceUntilIdle()
+        assertEquals(2, viewModel.uiState.value.consecutiveCorrectStreak)
+
+        // Question 3: correct -> streak = 3
+        viewModel.onContinueNext()
+        advanceUntilIdle()
+        viewModel.onPredictOutputChanged("Sum is 15")
+        viewModel.onCheckAnswer()
+        advanceUntilIdle()
+        assertEquals(3, viewModel.uiState.value.consecutiveCorrectStreak)
+
+        // Question 4: studio drill pass -> streak = 4
+        viewModel.onContinueNext()
+        advanceUntilIdle()
+        val drillStep = viewModel.uiState.value.step as LessonStep.ExercisePlaying
+        recorder.record(ExerciseAttempt(newAttemptId(), drillStep.exercise.id, correct = true))
+        viewModel.onStudioExerciseCompleted(drillStep.exercise.id)
+        advanceUntilIdle()
+        assertEquals(4, viewModel.uiState.value.consecutiveCorrectStreak)
+        assertNull(viewModel.uiState.value.activeMilestone)
+
+        // Question 5: studio problem pass -> streak = 5 -> MILESTONE!
+        viewModel.onContinueNext()
+        advanceUntilIdle()
+        val problemStep = viewModel.uiState.value.step as LessonStep.ExercisePlaying
+        recorder.record(ExerciseAttempt(newAttemptId(), problemStep.exercise.id, correct = true))
+        viewModel.onStudioExerciseCompleted(problemStep.exercise.id)
+        advanceUntilIdle()
+
+        assertEquals(5, viewModel.uiState.value.consecutiveCorrectStreak)
+        val milestone = viewModel.uiState.value.activeMilestone
+        assertTrue("Milestone should be triggered at 5 consecutive correct", milestone != null)
+        assertEquals(5, milestone?.streakCount)
+
+        val milestoneEvent = viewModel.uiState.value.feedbackEvent
+        assertTrue("Feedback event should report milestone fanfare", milestoneEvent?.isMilestone == true)
+        assertEquals(5, milestoneEvent?.streak)
+
+        // A stale screen callback cannot consume a newer one-shot presentation event.
+        val milestoneId = milestone!!.id
+        viewModel.acknowledgeMilestonePresentation(milestoneId + 1)
+        assertEquals(milestone, viewModel.uiState.value.activeMilestone)
+
+        // The screen consumes the event as soon as it captures it for local animation.
+        viewModel.acknowledgeMilestonePresentation(milestoneId)
+        assertNull(viewModel.uiState.value.activeMilestone)
+    }
+
+    @Test
+    fun consecutiveStreakResetsToZeroOnWrongAnswer() = runTest(testDispatcher) {
+        viewModel.loadLesson("lesson-01-syntax")
+        advanceUntilIdle()
+        viewModel.onStartPractice()
+        advanceUntilIdle()
+
+        // Answer 1: correct -> streak = 1
+        viewModel.onOptionSelected(0)
+        viewModel.onCheckAnswer()
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.consecutiveCorrectStreak)
+
+        // Answer 2: wrong -> streak resets to 0
+        viewModel.onContinueNext()
+        advanceUntilIdle()
+        viewModel.onClozeAnswerChanged("____1", "wrong_answer")
+        viewModel.onCheckAnswer()
+        advanceUntilIdle()
+
+        assertEquals(0, viewModel.uiState.value.consecutiveCorrectStreak)
+        assertNull(viewModel.uiState.value.activeMilestone)
+        val wrongEvent = viewModel.uiState.value.feedbackEvent
+        assertEquals(false, wrongEvent?.correct)
+        assertEquals(false, wrongEvent?.isMilestone)
+        assertEquals(0, wrongEvent?.streak)
+
+        // Answer 3: correct -> streak restarts at 1
+        viewModel.onContinueNext()
+        advanceUntilIdle()
+        viewModel.onPredictOutputChanged("Sum is 15")
+        viewModel.onCheckAnswer()
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.consecutiveCorrectStreak)
+    }
+
+    @Test
+    fun loadingNewLessonResetsStreakAndMilestone() = runTest(testDispatcher) {
+        viewModel.loadLesson("lesson-01-syntax")
+        advanceUntilIdle()
+        viewModel.onStartPractice()
+        advanceUntilIdle()
+
+        viewModel.onOptionSelected(0)
+        viewModel.onCheckAnswer()
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.consecutiveCorrectStreak)
+
+        // Load new lesson -> resets session streak
+        viewModel.loadLesson("lesson-01-syntax")
+        advanceUntilIdle()
+
+        assertEquals(0, viewModel.uiState.value.consecutiveCorrectStreak)
+        assertNull(viewModel.uiState.value.activeMilestone)
+        assertNull(viewModel.uiState.value.feedbackEvent)
+    }
+
+    @Test
+    fun studioExercisePassIncrementsStreakOnlyOnceAndAwardsNoExtraXp() = runTest(testDispatcher) {
+        val vm = viewModelFor(courseWith(drill()))
+        vm.loadLesson("lesson-studio")
+        advanceUntilIdle()
+        vm.onStartPractice()
+        advanceUntilIdle()
+
+        recorder.record(ExerciseAttempt(newAttemptId(), "drill-sum", correct = true))
+        vm.onStudioExerciseCompleted("drill-sum")
+        advanceUntilIdle()
+
+        assertEquals(1, vm.uiState.value.consecutiveCorrectStreak)
+        assertEquals(25, vm.uiState.value.xpEarnedInLesson)
+
+        // Call again for the same exercise
+        vm.onStudioExerciseCompleted("drill-sum")
+        advanceUntilIdle()
+
+        assertEquals(1, vm.uiState.value.consecutiveCorrectStreak)
+        assertEquals(25, vm.uiState.value.xpEarnedInLesson)
+    }
+
+    @Test
+    fun aiPracticeDoesNotAffectConsecutiveStreakOrTriggerMilestone() = runTest(testDispatcher) {
+        val fakeTutor = FakeAiTutor()
+        val vm = viewModelFor(
+            course = SampleCourseData.defaultCourse,
+            aiTutor = fakeTutor,
+            isInterviewMode = false,
+            hasApiKey = true
+        )
+        vm.loadLesson("lesson-01-syntax")
+        advanceUntilIdle()
+        vm.onStartPractice()
+        advanceUntilIdle()
+
+        // 1 real correct answer -> streak = 1
+        vm.onOptionSelected(0)
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+        assertEquals(1, vm.uiState.value.consecutiveCorrectStreak)
+
+        // Open AI practice
+        vm.requestMoreLikeThis()
+        advanceUntilIdle()
+
+        // Answer AI practice card correctly
+        vm.onAiPracticeOptionSelected(0)
+        vm.checkAiPracticeAnswer()
+        advanceUntilIdle()
+
+        // Real session streak remains untouched!
+        assertEquals("AI practice must not change real lesson streak", 1, vm.uiState.value.consecutiveCorrectStreak)
+        assertNull("AI practice must never trigger milestone celebration", vm.uiState.value.activeMilestone)
+        assertEquals("AI practice awards no XP", 10, vm.uiState.value.xpEarnedInLesson)
+    }
+
+    @Test
+    fun continueNextDismissesActiveMilestoneSafely() = runTest(testDispatcher) {
+        viewModel.loadLesson("lesson-01-syntax")
+        advanceUntilIdle()
+        viewModel.onStartPractice()
+        advanceUntilIdle()
+
+        // Complete 5 questions
+        viewModel.onOptionSelected(0)
+        viewModel.onCheckAnswer()
+        advanceUntilIdle()
+
+        viewModel.onContinueNext()
+        advanceUntilIdle()
+        viewModel.onClozeAnswerChanged("____1", "\$name")
+        viewModel.onCheckAnswer()
+        advanceUntilIdle()
+
+        viewModel.onContinueNext()
+        advanceUntilIdle()
+        viewModel.onPredictOutputChanged("Sum is 15")
+        viewModel.onCheckAnswer()
+        advanceUntilIdle()
+
+        viewModel.onContinueNext()
+        advanceUntilIdle()
+        val drill = (viewModel.uiState.value.step as LessonStep.ExercisePlaying).exercise
+        recorder.record(ExerciseAttempt(newAttemptId(), drill.id, correct = true))
+        viewModel.onStudioExerciseCompleted(drill.id)
+        advanceUntilIdle()
+
+        viewModel.onContinueNext()
+        advanceUntilIdle()
+        val problem = (viewModel.uiState.value.step as LessonStep.ExercisePlaying).exercise
+        recorder.record(ExerciseAttempt(newAttemptId(), problem.id, correct = true))
+        viewModel.onStudioExerciseCompleted(problem.id)
+        advanceUntilIdle()
+
+        // Milestone is present at 5
+        assertTrue(viewModel.uiState.value.activeMilestone != null)
+
+        // Continuing to summary clears active milestone
+        viewModel.onContinueNext()
+        advanceUntilIdle()
+        assertNull(viewModel.uiState.value.activeMilestone)
+        assertTrue(viewModel.uiState.value.step is LessonStep.Completed)
+    }
+
     private class FakeAiTutor : AiTutor {
         var generateCardsResult: AiResult<List<Exercise>> = AiResult.Success(
             listOf(

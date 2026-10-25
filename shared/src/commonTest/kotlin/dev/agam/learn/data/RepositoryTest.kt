@@ -83,6 +83,9 @@ class RepositoryTest {
             repository.setAiProvider(AiProvider.OPENAI, "gpt-test")
             repository.setCompilerServer("http://localhost:8080", "token")
             repository.setInterviewMode(true)
+            repository.setSoundEffectsEnabled(false)
+            repository.setHapticsEnabled(false)
+            repository.setReducedMotionEnabled(true)
 
             assertEquals(
                 AppSettings(
@@ -91,7 +94,10 @@ class RepositoryTest {
                     selectedAiModel = "gpt-test",
                     compilerServerUrl = "http://localhost:8080",
                     compilerServerToken = "token",
-                    interviewMode = true
+                    interviewMode = true,
+                    soundEffectsEnabled = false,
+                    hapticsEnabled = false,
+                    reducedMotionEnabled = true
                 ),
                 repository.observeSettings().first()
             )

@@ -74,6 +74,9 @@ class LessonViewModel(
     /** When this visit started. The lesson's XP is the XP recorded for it since then. */
     private var runStartedAtMillis: Long = 0L
 
+    private var nextEventId: Long = 1L
+    private fun generateEventId(): Long = nextEventId++
+
     /**
      * Route of the studio screen that completes [exercise], or null for exercises the lesson grades itself.
      */
@@ -136,7 +139,10 @@ class LessonViewModel(
                     lessonTitle = foundLesson.title,
                     chapterTitle = chapterTitle,
                     step = LessonStep.Explanation(foundLesson.explanation),
-                    totalExercisesCount = exercises.size
+                    totalExercisesCount = exercises.size,
+                    consecutiveCorrectStreak = 0,
+                    activeMilestone = null,
+                    feedbackEvent = null
                 )
             }
         }
@@ -223,13 +229,22 @@ class LessonViewModel(
             is Exercise.WriteFunction, is Exercise.MultiPartProblem -> return
         }
 
+        val newStreak = if (isCorrect) _uiState.value.consecutiveCorrectStreak + 1 else 0
+        val isMilestone = isCorrect && newStreak > 0 && (newStreak % 5 == 0)
+        val eventId = generateEventId()
+        val milestone = if (isMilestone) MilestoneCelebration(id = eventId, streakCount = newStreak) else null
+        val feedbackEvent = LessonFeedbackEvent(id = eventId, correct = isCorrect, isMilestone = isMilestone, streak = newStreak)
+
         // Mark the answer checked before recording, so a second tap cannot record it again.
         _uiState.update {
             it.copy(
                 isAnswerChecked = true,
                 isAnswerCorrect = isCorrect,
                 currentExplanation = explanation,
-                correctExercisesCount = if (isCorrect) it.correctExercisesCount + 1 else it.correctExercisesCount
+                correctExercisesCount = if (isCorrect) it.correctExercisesCount + 1 else it.correctExercisesCount,
+                consecutiveCorrectStreak = newStreak,
+                activeMilestone = milestone ?: it.activeMilestone,
+                feedbackEvent = feedbackEvent
             )
         }
 
@@ -263,6 +278,12 @@ class LessonViewModel(
                 if (playing == null || playing.exercise.id != exerciseId || state.isAnswerChecked) {
                     return@update state
                 }
+                val newStreak = state.consecutiveCorrectStreak + 1
+                val isMilestone = newStreak > 0 && (newStreak % 5 == 0)
+                val eventId = generateEventId()
+                val milestone = if (isMilestone) MilestoneCelebration(id = eventId, streakCount = newStreak) else null
+                val feedbackEvent = LessonFeedbackEvent(id = eventId, correct = true, isMilestone = isMilestone, streak = newStreak)
+
                 state.copy(
                     isAnswerChecked = true,
                     isAnswerCorrect = true,
@@ -272,7 +293,10 @@ class LessonViewModel(
                         else -> "Exercise completed."
                     },
                     xpEarnedInLesson = xp,
-                    correctExercisesCount = state.correctExercisesCount + 1
+                    correctExercisesCount = state.correctExercisesCount + 1,
+                    consecutiveCorrectStreak = newStreak,
+                    activeMilestone = milestone ?: state.activeMilestone,
+                    feedbackEvent = feedbackEvent
                 )
             }
         }
@@ -317,7 +341,9 @@ class LessonViewModel(
                     predictOutputText = "",
                     isAnswerChecked = false,
                     isAnswerCorrect = null,
-                    currentExplanation = ""
+                    currentExplanation = "",
+                    activeMilestone = null,
+                    feedbackEvent = null
                 )
             }
         } else {
@@ -333,7 +359,9 @@ class LessonViewModel(
                         correctCount = correctCount,
                         totalCount = totalCount
                     ),
-                    isAnswerChecked = false
+                    isAnswerChecked = false,
+                    activeMilestone = null,
+                    feedbackEvent = null
                 )
             }
 
@@ -344,6 +372,32 @@ class LessonViewModel(
                 }
             }
         }
+    }
+
+    /**
+     * Acknowledges that a feedback event (sound/haptics) has been consumed, preventing replays.
+     */
+    fun acknowledgeFeedbackEvent(id: Long) {
+        _uiState.update { state ->
+            if (state.feedbackEvent?.id == id) state.copy(feedbackEvent = null) else state
+        }
+    }
+
+    /**
+     * Dismisses an active milestone celebration.
+     */
+    fun dismissMilestone(id: Long? = null) {
+        _uiState.update { state ->
+            if (id == null || state.activeMilestone?.id == id) state.copy(activeMilestone = null) else state
+        }
+    }
+
+    /**
+     * Consumes a milestone after the screen has captured it for local presentation.
+     * Clearing the state-backed event prevents screen recreation from replaying its animation.
+     */
+    fun acknowledgeMilestonePresentation(id: Long) {
+        dismissMilestone(id)
     }
 
     /**

@@ -45,7 +45,10 @@ fun MarkdownText(
                         style = style,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        softWrap = true
                     )
                 }
                 is MarkdownBlock.Paragraph -> {
@@ -53,11 +56,18 @@ fun MarkdownText(
                         text = formatInlineMarkdown(block.text, MaterialTheme.colorScheme.primary),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(vertical = 3.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 3.dp),
+                        softWrap = true
                     )
                 }
                 is MarkdownBlock.BulletItem -> {
-                    Row(modifier = Modifier.padding(vertical = 2.dp, horizontal = 4.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp, horizontal = 4.dp)
+                    ) {
                         Text(
                             text = "• ",
                             style = MaterialTheme.typography.bodyMedium,
@@ -67,7 +77,9 @@ fun MarkdownText(
                         Text(
                             text = formatInlineMarkdown(block.text, MaterialTheme.colorScheme.primary),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
+                            softWrap = true
                         )
                     }
                 }
@@ -85,12 +97,15 @@ fun MarkdownText(
                                 color = MaterialTheme.colorScheme.outlineVariant,
                                 shape = RoundedCornerShape(6.dp)
                             )
+                            .fillMaxWidth()
                             .padding(8.dp)
                     ) {
                         Text(
                             text = block.code,
                             style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            softWrap = true,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }

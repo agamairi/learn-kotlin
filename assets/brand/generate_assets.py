@@ -43,6 +43,21 @@ CLOSED_EYE_R = "M 73,60 Q 78,65 83,60"
 JOY_MOUTH = "M 56,77 Q 64,73 72,77 C 71,85 68,88 64,88 C 60,88 57,85 56,77 Z"
 TONGUE = "M 60,83 Q 64,80 68,83 Q 67,87 64,87 Q 61,87 60,83 Z"
 
+# A compact open-arm leap, with feet and amber trails kept inside the same 128 px artboard.
+FLY_BODY = "M 43,82 C 43,94 48,108 64,113 C 80,108 85,94 85,82 Z"
+FLY_ARM_L = "M 39,83 C 30,81 23,75 19,65 L 11,48 C 9,43 12,39 16,40 C 20,41 22,46 24,51 L 31,65 C 34,68 39,70 46,72 Z"
+FLY_ARM_R = "M 89,83 C 98,81 105,75 109,65 L 117,48 C 119,43 116,39 112,40 C 108,41 106,46 104,51 L 97,65 C 94,68 89,70 82,72 Z"
+FLY_HAND_L = "M 11,49 C 8,46 5,42 7,38 C 9,35 13,37 16,40 C 15,35 19,33 22,36 C 24,39 22,43 20,46 L 17,51 Z"
+FLY_HAND_R = "M 117,49 C 120,46 123,42 121,38 C 119,35 115,37 112,40 C 113,35 109,33 106,36 C 104,39 106,43 108,46 L 111,51 Z"
+FLY_FOOT_L = "M 44,105 C 44,100 49,98 54,101 L 61,108 C 64,112 61,118 56,118 L 48,116 C 44,114 42,110 44,105 Z"
+FLY_FOOT_R = "M 84,105 C 84,100 79,98 74,101 L 67,108 C 64,112 67,118 72,118 L 80,116 C 84,114 86,110 84,105 Z"
+FLY_SWISH_L = "M 16,91 C 9,94 7,99 9,104 M 21,103 C 16,108 16,113 20,116"
+FLY_SWISH_R = "M 112,91 C 119,94 121,99 119,104 M 107,103 C 112,108 112,113 108,116"
+THINK_ARM = "M 98,97 C 102,92 105,88 107,82 L 109,76 C 110,72 114,71 117,73 C 120,75 119,79 117,83 L 114,92 C 111,101 106,106 99,109 Z"
+THINK_PAW = "M 90,88 C 88,85 90,81 94,80 C 96,76 102,76 104,81 C 108,83 108,88 105,91 C 103,96 98,98 94,95 C 91,94 89,91 90,88 Z"
+THINK_BUBBLE = "M 3,6 C 3,2 7,0 13,1 C 20,2 24,7 24,13 C 24,19 20,23 14,23 L 10,23 L 6,28 L 7,22 C 4,20 2,16 2,12 Z"
+QUESTION_MARK = "M 8,9 C 8,6 11,5 14,6 C 18,7 19,11 16,14 C 14,16 11,17 11,20 M 11,23 L 11,24"
+
 
 def p(d, fill, stroke=None, sw=0):
     return {"d": d, "fill": C.get(fill, fill), "stroke": C.get(stroke, stroke) if stroke else None, "sw": sw}
@@ -61,6 +76,14 @@ def mascot_layers(expression="open", arms="wave", tail=True, extra=()):
     elif arms == "celebrate":
         layers += [p(LEFT_ARM, "teal", "ink", 4), p(LEFT_HAND, "mint", "ink", 3.5),
                    p(WAVE_ARM, "teal", "ink", 4), p(WAVE_HAND, "mint", "ink", 3.5)]
+    elif arms == "fly":
+        layers += [line(FLY_SWISH_L, "amber", 4), line(FLY_SWISH_R, "amber", 4),
+                   p(FLY_FOOT_L, "mint", "ink", 3.5), p(FLY_FOOT_R, "mint", "ink", 3.5),
+                   p(FLY_BODY, "teal", "ink", 4),
+                   p(FLY_ARM_L, "teal", "ink", 4), p(FLY_HAND_L, "mint", "ink", 3.5),
+                   p(FLY_ARM_R, "teal", "ink", 4), p(FLY_HAND_R, "mint", "ink", 3.5)]
+    elif arms == "think":
+        layers += [p(THINK_ARM, "teal", "ink", 4)]
     # Silhouette and ear insets
     layers += [p(HEAD, "teal", "ink", 4.5), p(EAR_L, "amber"), p(EAR_R, "mint")]
     layers += [p(MASK, "cream")]
@@ -71,6 +94,10 @@ def mascot_layers(expression="open", arms="wave", tail=True, extra=()):
         layers += [line(CLOSED_EYE_L, "ink", 3.3), line(CLOSED_EYE_R, "ink", 3.3),
                    p(BLUSH_L, "coral"), p(BLUSH_R, "coral"), p(JOY_MOUTH, "ink"), p(TONGUE, "coral")]
     layers.extend(extra)
+    if arms == "think":
+        # Paw and question bubble sit in front of the face to make the guide pose clear.
+        layers += [p(THINK_PAW, "mint", "ink", 3), p(THINK_BUBBLE, "white", "indigo", 2.8),
+                   line(QUESTION_MARK, "indigo", 2.8)]
     return layers
 
 
@@ -79,6 +106,8 @@ ASSETS["mascot_wave"] = mascot_layers()
 ASSETS["mascot_celebrate"] = mascot_layers("joy", "celebrate", True, [
     p("M 11.5,24 L 13.4,28.6 L 18,30 L 13.4,31.4 L 11.5,36 L 10,31.4 L 5,30 L 10,28.6 Z", "amber", "ink", 1.6),
 ])
+ASSETS["mascot_fly"] = mascot_layers("joy", "fly")
+ASSETS["mascot_think"] = mascot_layers("open", "think")
 # Review illustration: stacked lesson cards sit behind Koda; the check badge is foremost.
 ASSETS["review_done"] = [
     p("M 11,77 Q 11,72 16,72 L 77,72 Q 82,72 82,77 L 82,112 Q 82,117 77,117 L 16,117 Q 11,117 11,112 Z", "white", "indigo", 3.5),
@@ -166,11 +195,46 @@ for name, layers in ASSETS.items():
     write_svg(name, layers)
     write_vector("brand_" + name, layers)
 
+
+def write_preview():
+    """Write a vector contact sheet from the same paths used for production artwork."""
+    width, height = 1280, 844
+    card_width, card_height, gap = 296, 232, 16
+    x_margin, first_y, row_gap = 24, 88, 24
+    names = ["app_icon", *ASSETS.keys()]
+    parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        '<rect width="100%" height="100%" fill="#F1F5F9"/>',
+        '<text x="32" y="42" fill="#1E1B4B" font-family="system-ui, sans-serif" font-size="28" font-weight="700">KODA / Kotlin learning companion</text>',
+        '<text x="32" y="66" fill="#475569" font-family="system-ui, sans-serif" font-size="14">A playful trail guide for learning Kotlin, built from original vector artwork.</text>',
+    ]
+    for index, name in enumerate(names):
+        column, row = index % 4, index // 4
+        x = x_margin + column * (card_width + gap)
+        y = first_y + row * (card_height + row_gap)
+        parts.append(f'<rect x="{x}" y="{y}" width="{card_width}" height="{card_height}" rx="24" fill="#FFFFFF"/>')
+        if name == "app_icon":
+            parts.append(f'<rect x="{x + 84}" y="{y + 13}" width="128" height="128" rx="28" fill="{C["indigo"]}"/>')
+            parts.append(f'<g transform="translate({x + 84} {y + 13})">')
+            parts.extend(svg_path(layer) for layer in ICON_CORE)
+            parts.append('</g>')
+        else:
+            parts.append(f'<g transform="translate({x + 64} {y + 8}) scale(1.25)">')
+            parts.extend(svg_path(layer) for layer in ASSETS[name])
+            parts.append('</g>')
+        parts.append(
+            f'<text x="{x + 18}" y="{y + card_height - 20}" fill="#1E1B4B" '
+            f'font-family="system-ui, sans-serif" font-size="20" font-weight="600">{name.replace("_", " ")}</text>'
+        )
+    parts.append('</svg>')
+    (BRAND / "preview.svg").write_text("\n".join(parts) + "\n", encoding="utf-8")
+
 # Source and Android launcher foreground use Koda's compact core inside the adaptive safe zone.
 ICON_CORE = [p(TAIL, "amber", "ink", 4), line(TAIL_CHEVRON, "ink", 3.4),
              p(HEAD, "teal", "ink", 4.5), p(EAR_L, "amber"), p(EAR_R, "mint"), p(MASK, "cream"),
              p(EYE_L, "white"), p(EYE_R, "white"), p(PUPIL_L, "ink"), p(PUPIL_R, "ink"),
              p(BLUSH_L, "coral"), p(BLUSH_R, "coral"), p(NOSE, "ink"), line(SMILE, "ink", 2.7)]
+write_preview()
 write_svg("app_icon_foreground", ICON_CORE, width=108, transform="translate(23.44 25.44) scale(0.44)")
 write_vector("ic_launcher_foreground", ICON_CORE, width=108, height=108, group=(0.44, 0.44, 23.44, 25.44))
 write_svg("app_icon", ICON_CORE, width=72, background=C["indigo"], transform="translate(23.44 25.44) scale(0.44)", viewbox="18 18 72 72", background_rect=(18, 18, 72, 72, 14))

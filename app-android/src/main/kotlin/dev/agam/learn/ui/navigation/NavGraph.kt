@@ -30,6 +30,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -45,6 +46,7 @@ import dev.agam.learn.di.LocalAppContainer
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.ui.code.CodeExerciseScreen
 import dev.agam.learn.ui.code.CodeExerciseViewModel
+import dev.agam.learn.ui.experience.LocalLearningFeedback
 import dev.agam.learn.ui.home.HomeScreen
 import dev.agam.learn.ui.lesson.LessonScreen
 import dev.agam.learn.ui.lesson.LessonViewModel
@@ -54,6 +56,7 @@ import dev.agam.learn.ui.problem.MultiPartProblemViewModel
 import dev.agam.learn.ui.review.ReviewScreen
 import dev.agam.learn.ui.settings.SettingsScreen
 import dev.agam.learn.ui.stats.StatsScreen
+import kotlinx.coroutines.flow.collect
 
 /** Saved-state key the studio screens use to tell the lesson which exercise was completed. */
 private const val COMPLETED_EXERCISE_KEY = "completed_exercise_id"
@@ -122,7 +125,14 @@ fun LearnAppNavHost(
                                     contentDescription = item.title
                                 )
                             },
-                            label = { Text(text = item.title) },
+                            label = {
+                                Text(
+                                    text = item.title,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.primary,
                                 selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -247,6 +257,12 @@ fun LearnAppNavHost(
                         }
                     )
                     val state by viewModel.uiState.collectAsState()
+                    val learningFeedback = LocalLearningFeedback.current
+                    LaunchedEffect(viewModel, learningFeedback) {
+                        viewModel.feedbackEvents.collect { correct ->
+                            learningFeedback.onAnswer(correct)
+                        }
+                    }
 
                     CodeExerciseScreen(
                         state = state,
@@ -315,6 +331,12 @@ fun LearnAppNavHost(
                         }
                     )
                     val state by viewModel.uiState.collectAsState()
+                    val learningFeedback = LocalLearningFeedback.current
+                    LaunchedEffect(viewModel, learningFeedback) {
+                        viewModel.feedbackEvents.collect { correct ->
+                            learningFeedback.onAnswer(correct)
+                        }
+                    }
 
                     MultiPartProblemScreen(
                         state = state,

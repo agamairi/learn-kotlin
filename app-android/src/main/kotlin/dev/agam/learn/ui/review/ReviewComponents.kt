@@ -89,7 +89,9 @@ fun MultipleChoiceCard(
                 ) {
                     Text(
                         text = exercise.code!!,
-                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                        softWrap = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -209,7 +211,9 @@ fun ClozeCard(
             ) {
                 Text(
                     text = exercise.template,
-                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    softWrap = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 

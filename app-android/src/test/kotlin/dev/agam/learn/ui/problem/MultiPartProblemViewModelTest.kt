@@ -22,7 +22,10 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import dev.agam.learn.ai.createAiHttpClient
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -319,6 +322,48 @@ class MultiPartProblemViewModelTest {
     }
 
     @Test
+    fun onlyGradedPartChecksEmitOneShotFeedback() = runBlocking {
+        val viewModel = MultiPartProblemViewModel(
+            problem = problem,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            coroutineScope = testScope
+        )
+        val feedback = mutableListOf<Boolean>()
+        val collection = launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+            viewModel.feedbackEvents.collect { feedback += it }
+        }
+
+        fakeRunner.runOutcome = RunOutcome.TestsFailed(
+            failures = emptyList(),
+            stdout = "plain run output"
+        )
+        viewModel.runCode()
+        assertTrue(feedback.isEmpty())
+
+        fakeRunner.testOutcome = RunOutcome.Passed(testsRun = 1, stdout = "")
+        viewModel.checkPart()
+        assertEquals(listOf(true), feedback)
+        viewModel.revealNextPart()
+
+        fakeRunner.testOutcome = RunOutcome.TestsFailed(
+            failures = emptyList(),
+            stdout = ""
+        )
+        viewModel.checkPart()
+        assertEquals(listOf(true, false), feedback)
+
+        fakeRunner.testOutcome = RunOutcome.Timeout(seconds = 10)
+        viewModel.checkPart()
+        fakeRunner.testOutcome = RunOutcome.Unavailable(reason = "Compiler offline")
+        viewModel.checkPart()
+
+        assertEquals(listOf(true, false), feedback)
+        assertTrue(viewModel.feedbackEvents.replayCache.isEmpty())
+        collection.cancel()
+    }
+
+    @Test
     fun editingAPassedPartClearsItsPassAndTheProblemCompletion() {
         val viewModel = MultiPartProblemViewModel(
             problem = problem,
@@ -402,7 +447,8 @@ class MultiPartProblemViewModelTest {
 
     private class FakeCodeRunner : CodeRunner {
         var testOutcome: RunOutcome = RunOutcome.Passed(1, "")
-        override suspend fun run(files: List<SourceFile>): RunOutcome = RunOutcome.Passed(1, "")
+        var runOutcome: RunOutcome = RunOutcome.Passed(1, "")
+        override suspend fun run(files: List<SourceFile>): RunOutcome = runOutcome
         override suspend fun test(files: List<SourceFile>, tests: List<SourceFile>): RunOutcome = testOutcome
         override suspend fun diagnostics(files: List<SourceFile>): List<Diagnostic> = emptyList()
     }

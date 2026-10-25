@@ -29,6 +29,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -42,9 +43,11 @@ import androidx.compose.ui.unit.sp
 import dev.agam.learn.di.LocalAppContainer
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.model.ReviewCard
+import dev.agam.learn.ui.experience.LocalLearningFeedback
 import dev.agam.learn.ui.code.MarkdownText
 import dev.agam.learn.ui.components.BrandArtwork
 import dev.agam.learn.ui.components.BrandAsset
+import kotlinx.coroutines.flow.collect
 
 /**
  * An item in the active review session, bundling the Leitner card with its corresponding exercise.
@@ -86,6 +89,12 @@ fun ReviewScreen(
     )
 ) {
     val state by viewModel.uiState.collectAsState()
+    val learningFeedback = LocalLearningFeedback.current
+    LaunchedEffect(viewModel, learningFeedback) {
+        viewModel.feedbackEvents.collect { correct ->
+            learningFeedback.onAnswer(correct)
+        }
+    }
     ReviewScreen(
         state = state,
         onStartSession = viewModel::startSession,
@@ -438,7 +447,9 @@ private fun ActiveReviewSessionView(
                             text = exercise.code,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp,
-                            color = Color(0xFFE0E0E0)
+                            color = Color(0xFFE0E0E0),
+                            softWrap = true,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
 
@@ -456,7 +467,9 @@ private fun ActiveReviewSessionView(
                         Text(
                             text = if (state.isAnswerCorrect) "✓ Correct" else "Expected output:\n${exercise.expectedOutput}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (state.isAnswerCorrect) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
+                            color = if (state.isAnswerCorrect) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                            softWrap = true,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }

@@ -1,5 +1,9 @@
 package dev.agam.learn.ui.lesson
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,6 +47,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,10 +61,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.agam.learn.di.LocalAppContainer
 import dev.agam.learn.model.Exercise
+import dev.agam.learn.ui.components.BrandArtwork
+import dev.agam.learn.ui.components.BrandAsset
 import dev.agam.learn.ui.components.CodeBlock
+import dev.agam.learn.ui.experience.LocalLearningFeedback
+import dev.agam.learn.ui.experience.LocalReducedMotion
 import dev.agam.learn.ui.lesson.components.ClozeCard
 import dev.agam.learn.ui.lesson.components.AnimatedLessonFeedbackBanner
 import dev.agam.learn.ui.lesson.components.LessonExplanation
+import dev.agam.learn.ui.lesson.components.LessonMilestoneOverlay
+import dev.agam.learn.ui.lesson.components.LessonQuestionHeader
 import dev.agam.learn.ui.lesson.components.LessonSummary
 import dev.agam.learn.ui.lesson.components.MultipleChoiceCard
 import dev.agam.learn.ui.lesson.components.PredictOutputCard
@@ -76,9 +90,35 @@ fun LessonScreen(
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var presentedMilestone by remember(lessonId) { mutableStateOf<MilestoneCelebration?>(null) }
+    val learningFeedback = LocalLearningFeedback.current
+    val reducedMotion = LocalReducedMotion.current
 
     LaunchedEffect(lessonId) {
+        presentedMilestone = null
         viewModel.loadLesson(lessonId)
+    }
+
+    val activeMilestone = uiState.activeMilestone
+    LaunchedEffect(lessonId, uiState.lessonId, uiState.isLoading, activeMilestone?.id) {
+        val milestone = activeMilestone ?: return@LaunchedEffect
+        if (uiState.isLoading || uiState.lessonId != lessonId) return@LaunchedEffect
+
+        // Capture locally before acknowledging the one-shot event in the ViewModel. The UI
+        // can finish its animation, while a recreated screen sees no pending event to replay.
+        presentedMilestone = milestone
+        viewModel.acknowledgeMilestonePresentation(milestone.id)
+    }
+
+    val activeFeedbackEvent = uiState.feedbackEvent
+    LaunchedEffect(activeFeedbackEvent?.id) {
+        val event = activeFeedbackEvent ?: return@LaunchedEffect
+        if (event.isMilestone) {
+            learningFeedback.onMilestone()
+        } else {
+            learningFeedback.onAnswer(event.correct)
+        }
+        viewModel.acknowledgeFeedbackEvent(event.id)
     }
 
     Scaffold(
@@ -88,8 +128,13 @@ fun LessonScreen(
                 TopAppBar(
                     title = {
                         if (uiState.step is LessonStep.ExercisePlaying) {
+                            val animatedProgress by animateFloatAsState(
+                                targetValue = uiState.progressFraction,
+                                animationSpec = if (reducedMotion) snap() else tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                                label = "lessonProgressFraction"
+                            )
                             LinearProgressIndicator(
-                                progress = { uiState.progressFraction },
+                                progress = { animatedProgress },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(8.dp)
@@ -115,28 +160,58 @@ fun LessonScreen(
                     },
                     actions = {
                         if (uiState.step is LessonStep.ExercisePlaying) {
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(end = 12.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                if (uiState.consecutiveCorrectStreak > 1) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.85f),
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            BrandArtwork(
+                                                asset = BrandAsset.StreakFlame,
+                                                contentDescription = "Consecutive correct streak",
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Text(
+                                                text = "${uiState.consecutiveCorrectStreak}",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.tertiaryContainer
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Star,
-                                        contentDescription = "XP",
-                                        tint = MaterialTheme.colorScheme.tertiary,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        text = "+${uiState.xpEarnedInLesson}",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = "XP",
+                                            tint = MaterialTheme.colorScheme.tertiary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = "+${uiState.xpEarnedInLesson}",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -187,6 +262,11 @@ fun LessonScreen(
                                 .padding(top = 12.dp, bottom = 100.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
+                            LessonQuestionHeader(
+                                exercise = step.exercise,
+                                consecutiveStreak = uiState.consecutiveCorrectStreak
+                            )
+
                             when (val exercise = step.exercise) {
                                 is Exercise.MultipleChoice -> {
                                     MultipleChoiceCard(
@@ -286,6 +366,9 @@ fun LessonScreen(
                                         onClick = viewModel::onCheckAnswer,
                                         enabled = uiState.canCheckAnswer,
                                         shape = RoundedCornerShape(12.dp),
+                                        elevation = ButtonDefaults.buttonElevation(
+                                            defaultElevation = if (uiState.canCheckAnswer) 4.dp else 0.dp
+                                        ),
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = MaterialTheme.colorScheme.primary,
                                             disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -312,7 +395,10 @@ fun LessonScreen(
                                 .orEmpty(),
                             isCorrect = uiState.isAnswerCorrect == true,
                             explanation = uiState.currentExplanation,
-                            onContinue = viewModel::onContinueNext,
+                            onContinue = {
+                                presentedMilestone = null
+                                viewModel.onContinueNext()
+                            },
                             isAiAvailable = uiState.isAiAvailable,
                             isInterviewMode = uiState.isInterviewMode,
                             hasApiKey = uiState.hasApiKey,
@@ -328,6 +414,22 @@ fun LessonScreen(
                         correctCount = step.correctCount,
                         totalCount = step.totalCount,
                         onFinish = onNavigateBack
+                    )
+                }
+            }
+
+            presentedMilestone?.let { milestone ->
+                key(milestone.id) {
+                    LessonMilestoneOverlay(
+                        streakCount = milestone.streakCount,
+                        onDismiss = {
+                            if (presentedMilestone?.id == milestone.id) {
+                                presentedMilestone = null
+                                viewModel.dismissMilestone(milestone.id)
+                            }
+                        },
+                        reducedMotion = reducedMotion,
+                        modifier = Modifier.align(Alignment.TopCenter)
                     )
                 }
             }

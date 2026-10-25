@@ -11,7 +11,10 @@ import dev.agam.learn.model.Blank
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.model.ReviewCard
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -138,6 +141,44 @@ class ReviewViewModelTest {
         assertEquals(10, storedActivities().single().xpEarned)
         assertEquals(1, viewModel.uiState.value.totalAnswered)
         assertEquals(10, viewModel.uiState.value.xpEarned)
+    }
+
+    @Test
+    fun checkedReviewAnswersEmitOneShotCorrectAndWrongFeedbackOnceEach() = runBlocking {
+        val secondExercise = mcExercise.copy(id = "item-mc-second")
+        seed(
+            ReviewCard("item-mc", 1, 100),
+            ReviewCard("item-mc-second", 1, 100)
+        )
+        val viewModel = viewModel(
+            listOf(mcExercise, secondExercise),
+            exerciseLookup = { itemId ->
+                when (itemId) {
+                    mcExercise.id -> mcExercise
+                    secondExercise.id -> secondExercise
+                    else -> null
+                }
+            }
+        )
+        val feedback = mutableListOf<Boolean>()
+        val collection = launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+            viewModel.feedbackEvents.collect { feedback += it }
+        }
+
+        viewModel.startSession()
+        viewModel.selectOption(0)
+        viewModel.checkAnswer()
+        viewModel.checkAnswer()
+        assertEquals(listOf(true), feedback)
+
+        viewModel.nextCard()
+        viewModel.selectOption(1)
+        viewModel.checkAnswer()
+        viewModel.checkAnswer()
+
+        assertEquals(listOf(true, false), feedback)
+        assertTrue(viewModel.feedbackEvents.replayCache.isEmpty())
+        collection.cancel()
     }
 
     @Test

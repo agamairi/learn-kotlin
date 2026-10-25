@@ -32,4 +32,16 @@ class FakeSettingsRepository(initial: AppSettings = AppSettings()) : SettingsRep
     override suspend fun setInterviewMode(enabled: Boolean) {
         state.update { it.copy(interviewMode = enabled) }
     }
+
+    override suspend fun setSoundEffectsEnabled(enabled: Boolean) {
+        state.update { it.copy(soundEffectsEnabled = enabled) }
+    }
+
+    override suspend fun setHapticsEnabled(enabled: Boolean) {
+        state.update { it.copy(hapticsEnabled = enabled) }
+    }
+
+    override suspend fun setReducedMotionEnabled(enabled: Boolean) {
+        state.update { it.copy(reducedMotionEnabled = enabled) }
+    }
 }

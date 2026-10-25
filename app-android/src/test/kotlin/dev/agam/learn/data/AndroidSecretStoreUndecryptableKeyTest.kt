@@ -16,8 +16,11 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.Base64
+import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 
 class AndroidSecretStoreUndecryptableKeyTest {
 
@@ -77,6 +80,34 @@ class AndroidSecretStoreUndecryptableKeyTest {
     }
 
     @Test
+    fun encryptionRoundTripsAndGeneratesANewIvForEveryWrite() = runBlocking {
+        val store = AndroidSecretStore(database, keyProvider = { key1 })
+
+        store.set("synthetic-first-value")
+        val firstRecord = storedRecord()
+        store.set("synthetic-second-value")
+        val secondRecord = storedRecord()
+
+        assertFalse("Each encryption must use a fresh IV", firstRecord.iv.contentEquals(secondRecord.iv))
+        assertTrue(firstRecord.ciphertext.isNotEmpty())
+        assertEquals("synthetic-second-value", store.get())
+    }
+
+    @Test
+    fun existingIvAndCiphertextRecordFormatRemainsReadable() = runBlocking {
+        val iv = ByteArray(12) { index -> (index + 1).toByte() }
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, key1, GCMParameterSpec(128, iv))
+        val ciphertext = cipher.doFinal("synthetic-legacy-value".encodeToByteArray())
+        val legacyRecord = Base64.getEncoder().encodeToString(iv) + "." +
+            Base64.getEncoder().encodeToString(ciphertext)
+        database.settingsKvQueries.insertSetting(AI_API_KEY_SETTING, legacyRecord)
+
+        val store = AndroidSecretStore(database, keyProvider = { key1 })
+        assertEquals("synthetic-legacy-value", store.get())
+    }
+
+    @Test
     fun undecryptableKeyDegradesToMissingKeyInAiAccessAndTutor() = runBlocking {
         val originalStore = AndroidSecretStore(database, keyProvider = { key1 })
         originalStore.set("sk-ant-test-key")
@@ -105,4 +136,19 @@ class AndroidSecretStoreUndecryptableKeyTest {
         assertTrue(errorResult is AiResult.Error)
         assertEquals(AI_API_KEY_MISSING_MESSAGE, (errorResult as AiResult.Error).message)
     }
+
+    private fun storedRecord(): StoredRecord {
+        val stored = database.settingsKvQueries
+            .selectSettingByKey(AI_API_KEY_SETTING)
+            .executeAsOneOrNull()
+        requireNotNull(stored)
+        val separator = stored.indexOf('.')
+        assertTrue("Encrypted value keeps the existing IV.ciphertext format", separator > 0)
+        return StoredRecord(
+            iv = Base64.getDecoder().decode(stored.substring(0, separator)),
+            ciphertext = Base64.getDecoder().decode(stored.substring(separator + 1))
+        )
+    }
+
+    private data class StoredRecord(val iv: ByteArray, val ciphertext: ByteArray)
 }

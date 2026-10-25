@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
 import dev.agam.learn.di.LocalAppContainer
 import dev.agam.learn.ui.navigation.LearnAppNavHost
+import dev.agam.learn.ui.experience.LearningExperienceProvider
 import dev.agam.learn.ui.theme.LearnKotlinTheme
 
 /**
@@ -22,7 +23,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             LearnKotlinTheme {
                 CompositionLocalProvider(LocalAppContainer provides appContainer) {
-                    LearnAppNavHost()
+                    LearningExperienceProvider(
+                        settingsRepository = appContainer.settingsRepository
+                    ) {
+                        LearnAppNavHost()
+                    }
                 }
             }
         }

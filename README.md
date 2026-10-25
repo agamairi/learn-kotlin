@@ -14,6 +14,8 @@ v0.1.1 adds Koda, an original fox mascot, an adaptive launcher icon with Android
 
 v0.1.3 fixes lesson feedback briefly turning red when advancing after a correct answer, and prevents repeated Continue taps from skipping a question.
 
+v0.2.0 adds a curved learning path with tactile lesson nodes, more Koda poses, question guides, and a flying-mascot celebration every five consecutive correct lesson answers. Code blocks and the code editor wrap within the screen while preserving the original code. Settings now includes independent **Sound effects**, **Haptics**, and **Reduce motion** switches; the app also respects the device's animation setting. Correct answers use a light vibration and mistakes use a stronger pattern. This release fixes Android Keystore rejecting an AI key save with “Caller-provided IV not permitted.”
+
 The app needs Android 8.0 (API 26) or newer. Install the APK by sideloading it. When Android asks, allow installs from the app you opened the file with, such as your browser or file manager.
 
 Lessons and review work offline. Code exercises need the compiler server, and the AI tutor needs internet access and your own API key. Sections 3 and 4 explain both.
@@ -65,6 +67,8 @@ Open **Settings**, then **AI Tutor (Bring Your Own Key)**. Choose a provider and
 For **OpenRouter**, the default model is `openrouter/auto`. You can enter any model slug from the OpenRouter catalog, such as `openai/gpt-6-luna`. Save after changing the model, provider or key before testing the connection. A successful key test does not guarantee model access or sufficient credits for a completion.
 
 The key is encrypted with an AES-256-GCM key in the Android Keystore. The encrypted copy is stored in the app's database. The Keystore key never leaves the device. Android backup is on in the app manifest, so a backup can include the encrypted copy. A restored backup cannot decrypt it, so you add the key again on a new device.
+
+If an earlier version could not save your key, update to v0.2.0 and save it again. Existing encrypted keys and progress retain their format; no database migration is needed for this update.
 
 Requests use your key and go to the provider you chose. When you choose OpenRouter, it also routes requests to the model providers it selects. OpenRouter's and those providers' data policies apply. Each request includes this text:
 

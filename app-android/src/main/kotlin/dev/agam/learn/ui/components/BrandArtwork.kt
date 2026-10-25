@@ -11,6 +11,8 @@ import dev.agam.learn.R
 enum class BrandAsset(@DrawableRes val resourceId: Int) {
     MascotWave(R.drawable.brand_mascot_wave),
     MascotCelebrate(R.drawable.brand_mascot_celebrate),
+    MascotFly(R.drawable.brand_mascot_fly),
+    MascotThink(R.drawable.brand_mascot_think),
     ReviewDone(R.drawable.brand_review_done),
     ReviewCards(R.drawable.brand_review_cards),
     StreakFlame(R.drawable.brand_streak_flame),

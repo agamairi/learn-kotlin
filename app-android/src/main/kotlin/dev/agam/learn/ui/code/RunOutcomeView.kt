@@ -132,14 +132,19 @@ fun RunOutcomeView(
                                 text = "• ${failure.testName}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = contentColor
+                                color = contentColor,
+                                softWrap = true,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             if (failure.message.isNotBlank()) {
                                 Text(
                                     text = failure.message,
                                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                                     color = contentColor.copy(alpha = 0.9f),
-                                    modifier = Modifier.padding(start = 12.dp, top = 2.dp)
+                                    softWrap = true,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 12.dp, top = 2.dp)
                                 )
                             }
                         }
@@ -179,7 +184,8 @@ fun RunOutcomeView(
                                     text = "[${diag.severity.uppercase()}] ${diag.message}",
                                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                                     color = contentColor,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    softWrap = true
                                 )
                             }
                         }
@@ -216,7 +222,9 @@ private fun TerminalOutputBox(output: String) {
         Text(
             text = output,
             style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-            color = Color(0xFFE0E0E0)
+            color = Color(0xFFE0E0E0),
+            softWrap = true,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

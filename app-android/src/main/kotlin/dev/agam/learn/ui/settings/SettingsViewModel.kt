@@ -66,7 +66,10 @@ class SettingsViewModel(
                     apiKey = apiKey,
                     compilerServerUrl = appSettings.compilerServerUrl.ifBlank { "http://10.0.2.2:8080" },
                     compilerToken = appSettings.compilerServerToken.orEmpty(),
-                    isInterviewModeDefault = appSettings.interviewMode
+                    isInterviewModeDefault = appSettings.interviewMode,
+                    soundEffectsEnabled = appSettings.soundEffectsEnabled,
+                    hapticsEnabled = appSettings.hapticsEnabled,
+                    reducedMotionEnabled = appSettings.reducedMotionEnabled
                 )
             }
         }
@@ -256,6 +259,21 @@ class SettingsViewModel(
         scope.launch {
             settingsRepository.setInterviewMode(enabled)
         }
+    }
+
+    fun setSoundEffectsEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(soundEffectsEnabled = enabled) }
+        scope.launch { settingsRepository.setSoundEffectsEnabled(enabled) }
+    }
+
+    fun setHapticsEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(hapticsEnabled = enabled) }
+        scope.launch { settingsRepository.setHapticsEnabled(enabled) }
+    }
+
+    fun setReducedMotionEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(reducedMotionEnabled = enabled) }
+        scope.launch { settingsRepository.setReducedMotionEnabled(enabled) }
     }
 
     private fun normalizedAiModel(provider: AiProvider, model: String?): String =

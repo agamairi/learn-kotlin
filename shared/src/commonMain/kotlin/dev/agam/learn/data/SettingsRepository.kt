@@ -14,7 +14,10 @@ data class AppSettings(
     val selectedAiModel: String? = null,
     val compilerServerUrl: String = "",
     val compilerServerToken: String? = null,
-    val interviewMode: Boolean = false
+    val interviewMode: Boolean = false,
+    val soundEffectsEnabled: Boolean = true,
+    val hapticsEnabled: Boolean = true,
+    val reducedMotionEnabled: Boolean = false
 ) {
     public companion object {
         public const val DEFAULT_DAILY_GOAL_XP: Int = 50
@@ -40,6 +43,15 @@ interface SettingsRepository {
 
     /** Enables or disables interview mode. */
     suspend fun setInterviewMode(enabled: Boolean)
+
+    /** Enables or disables short answer and milestone sound effects. */
+    suspend fun setSoundEffectsEnabled(enabled: Boolean)
+
+    /** Enables or disables answer and milestone haptics. */
+    suspend fun setHapticsEnabled(enabled: Boolean)
+
+    /** Enables or disables reduced-motion presentation throughout the app. */
+    suspend fun setReducedMotionEnabled(enabled: Boolean)
 }
 
 /** SQLDelight-backed implementation of [SettingsRepository]. */
@@ -79,6 +91,18 @@ class SqlDelightSettingsRepository(
         put(SettingKey.INTERVIEW_MODE, enabled.toString())
     }
 
+    override suspend fun setSoundEffectsEnabled(enabled: Boolean) {
+        put(SettingKey.SOUND_EFFECTS_ENABLED, enabled.toString())
+    }
+
+    override suspend fun setHapticsEnabled(enabled: Boolean) {
+        put(SettingKey.HAPTICS_ENABLED, enabled.toString())
+    }
+
+    override suspend fun setReducedMotionEnabled(enabled: Boolean) {
+        put(SettingKey.REDUCED_MOTION_ENABLED, enabled.toString())
+    }
+
     private suspend fun put(key: String, value: String) {
         settings.insertSetting(key, value)
     }
@@ -106,7 +130,10 @@ class SqlDelightSettingsRepository(
             selectedAiModel = values[SettingKey.AI_MODEL]?.takeIf { it.isNotEmpty() },
             compilerServerUrl = values[SettingKey.COMPILER_URL].orEmpty(),
             compilerServerToken = values[SettingKey.COMPILER_TOKEN]?.takeIf { it.isNotEmpty() },
-            interviewMode = values[SettingKey.INTERVIEW_MODE].toBoolean()
+            interviewMode = values[SettingKey.INTERVIEW_MODE].toBoolean(),
+            soundEffectsEnabled = values[SettingKey.SOUND_EFFECTS_ENABLED]?.toBooleanStrictOrNull() ?: true,
+            hapticsEnabled = values[SettingKey.HAPTICS_ENABLED]?.toBooleanStrictOrNull() ?: true,
+            reducedMotionEnabled = values[SettingKey.REDUCED_MOTION_ENABLED]?.toBooleanStrictOrNull() ?: false
         )
     }
 }
@@ -118,4 +145,7 @@ private object SettingKey {
     const val COMPILER_URL = "compiler_server_url"
     const val COMPILER_TOKEN = "compiler_server_token"
     const val INTERVIEW_MODE = "interview_mode"
+    const val SOUND_EFFECTS_ENABLED = "sound_effects_enabled"
+    const val HAPTICS_ENABLED = "haptics_enabled"
+    const val REDUCED_MOTION_ENABLED = "reduced_motion_enabled"
 }

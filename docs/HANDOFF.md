@@ -1,6 +1,6 @@
 # Handoff: learn-kotlin
 
-State as of 2026-10-25, updated for v0.1.3. Written for whoever picks the project up next, for example Codex working in this checkout.
+State as of 2026-10-25, updated for v0.2.0. Written for whoever picks the project up next, for example Codex working in this checkout.
 
 ## What it is
 
@@ -12,6 +12,11 @@ An Android app for learning Kotlin, Duolingo-style, aimed at the Stripe Android 
 - v0.1.1 adds Koda, an original teal fox mascot, seven in-app vector illustrations/icons, and adaptive color/monochrome launcher art. Source SVGs and the generator live in `assets/brand`; native vector resources are in `app-android/src/main/res`. `BrandArtwork.kt` draws them in Home, lesson completion and review. The launcher artwork fits the centered 66 dp circular safe area. Source/path parity, rendered light/dark artwork, and circular/themed launcher previews were checked. No phone was connected for a fresh v0.1.1 device test.
 - v0.1.2 keeps the streak flame's three tips while removing the thin dark extension above its left side. SVG, Android vector and preview are regenerated from the shared source; the other artwork is unchanged.
 - v0.1.3 fixes correct lesson feedback briefly turning red on Continue. The animated banner retains the checked result and explanation through its exit, uses new results immediately, keeps AI access flags current, and prevents repeated Continue taps. Three Compose/Robolectric regression tests run in the existing unit-test/CI task; the original live-result behavior fails the exit test. The signed release passed fresh installation and launch on API 35 arm64 AOSP ATD, plus a v0.1.2-to-v0.1.3 update that retained a real correct-answer result, its 10 XP, and all existing database rows. No physical phone was connected for v0.1.3 testing.
+- v0.2.0 adds a curved chapter path with status-aware tactile nodes, an expressive Home card, thinking/flying Koda vector poses, question guides, and a brief celebration at 5, 10, 15, … consecutive correct lesson answers. It keeps real progress/unlock rules and the v0.1.3 feedback-dismissal fix. Milestone presentations and sound/haptic events are consumed once; returning to a screen does not replay them. Accessibility services can extend the celebration timeout, and reduced motion uses a static badge.
+- Learning-experience settings persist sound, haptics, and reduced motion independently in `settings_kv` (defaults on/on/off). `ui/experience/LearningExperienceProvider.kt` owns audio/vibrator lifecycle and combines the saved reduced-motion choice with the system animator setting. Original WAV cues are bundled in `res/raw`. Review and studio Check results have feedback; plain Run and infrastructure failures stay quiet.
+- Code blocks, fenced Markdown, review snippets, output, and the editable source soft-wrap. The editor gutter follows logical source lines across wrapped visual rows. The raw source and selection remain intact; do not insert invisible characters to force wrapping. Wrapping tests require Robolectric native graphics for real font measurement.
+- Android Keystore now generates the encryption IV itself, fixing **Caller-provided IV not permitted**. AES-GCM, randomized encryption, the existing key alias and the `base64(IV).base64(ciphertext)` record format are preserved. Two instrumented tests exercise the real Android Keystore with isolated aliases/databases and synthetic values. A Settings save on API 35 was also checked with a synthetic key, then removed; no real provider credentials were used in tests.
+- Design reference: a private Google Stitch concept informed the path; production artwork is original SVG/native vector code. The supplied Stitch credential belongs only in local tool configuration, never in source, docs, app configuration, APKs, or release assets. Source/APK credential scans passed. Antigravity Gemini 3.8 Flash and Luna xhigh implemented this upgrade; their output was reviewed and verified locally.
 - Plan and rules: `docs/PLAN.md`. Content contract: `docs/CONTENT_SCHEMA.md`. Compiler server findings: `docs/spike-report.md`. AI API facts: `docs/AI_PROVIDERS.md`. Setup for users: `README.md`.
 
 ## Modules
@@ -38,7 +43,7 @@ Run from the repo root. JDK 21 is needed, and `local.properties` must have `sdk.
 ./gradlew :shared:verifySqlDelightMigration
 ```
 
-The v0.1.3 full build and lint passed: 114 app (including three Compose animation regressions), 74 shared JVM, 71 shared Android host, 14 runtime JVM, 14 runtime Android host and 35 content tests (322 test executions, no failures). SQLDelight migration verification also passed. All 82 live content checks passed on stable Kotlin 2.4.21 for v0.1.0 (21 cloze warnings that only need surrounding context); content and runtime are unchanged in this feedback fix.
+The v0.2.0 full build and lint passed: 137 app (including feedback-exit, milestone, accessibility, raw-code wrapping and preferences regressions), 74 shared JVM, 71 shared Android host, 14 runtime JVM, 14 runtime Android host and 35 content tests (345 test executions, no failures). Both Android Keystore instrumented tests passed on API 35 arm64 AOSP. SQLDelight migration verification also passed. All 82 live content checks were rerun and passed on stable Kotlin 2.4.21 (21 cloze warnings that only need surrounding context). Visual checks covered Home, Path, lesson questions, the five-answer celebration, completion and Settings in dark mode, plus light mode at 320 dp with 1.5× text. Physical audio/vibration feel still needs a phone check.
 
 ## Compiler server (needed for code exercises)
 
@@ -86,8 +91,9 @@ The v0.1.3 full build and lint passed: 114 app (including three Compose animatio
 
 ## Not done / next steps
 
-1. **Installation issue resolved.** Agam confirmed v0.1.2 installed on his physical phone after the duplicate scan/install dialog issue. The earlier alpha physical-device smoke test is complete. API 35 ATD fresh-install, launch, and Home hierarchy checks passed for v0.1.3; updating from v0.1.2 retained a correct-answer result, 10 XP, and all existing database rows. A full stable physical-device smoke test, visual emulator review, and the seven-day soak test have not been recorded.
+1. **Installation issue resolved; reported physical-device test complete.** Agam confirmed the app works locally on his phone and v0.1.2 installed after the duplicate scan/install dialog issue. API 35 ATD fresh-install, launch, and Home hierarchy checks passed for v0.1.3; updating from v0.1.2 retained a correct-answer result, 10 XP, and all existing database rows. The v0.2.0 visual emulator review is complete. Check the new sound/vibration strength on a physical phone and record a seven-day soak test when practical.
 2. **Stable compiler migration complete.** The server runs Kotlin 2.4.21. Re-run `:content:verifyContent` whenever content or the compiler version changes.
 3. **Optional:** a hosted runner (the plan mentions Cloud Run with a token). It needs real isolation first; see the security bullet above.
 4. **Optional:** swap Leitner for FSRS behind `ReviewScheduler`, or add a second language pack (`docs/PLAN.md`, "Adding a language later").
 5. **Housekeeping:** the merged `feat/*` local branches still exist; delete them with `git branch -d` if you like. `allowBackup` is on by design (progress backs up; the key doesn't survive a restore).
+6. **Optional local AI:** no model download/runtime was added in v0.2.0. If pursued, keep it an opt-in explanation assistant, clearly label generated output, and preserve deterministic course/compiler grading. Evaluate Kotlin accuracy and device memory/latency before selecting a model; never let a local model redefine correct answers.

@@ -31,9 +31,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.runner.LanguageSupport
 import dev.agam.learn.ui.components.CodeBlock
+import dev.agam.learn.ui.experience.LocalReducedMotion
 import dev.agam.learn.ui.theme.extendedColors
 
 /**
@@ -50,6 +55,7 @@ fun MultipleChoiceCard(
     languageSupport: LanguageSupport? = null
 ) {
     val extendedColors = MaterialTheme.extendedColors
+    val reducedMotion = LocalReducedMotion.current
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -89,8 +95,17 @@ fun MultipleChoiceCard(
                 else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
             }
 
-            val containerColor by animateColorAsState(targetContainerColor, label = "optionContainerColor")
-            val borderColor by animateColorAsState(targetBorderColor, label = "optionBorderColor")
+            val containerColor = if (reducedMotion) {
+                targetContainerColor
+            } else {
+                animateColorAsState(targetContainerColor, label = "optionContainerColor").value
+            }
+
+            val borderColor = if (reducedMotion) {
+                targetBorderColor
+            } else {
+                animateColorAsState(targetBorderColor, label = "optionBorderColor").value
+            }
 
             Surface(
                 modifier = Modifier
@@ -99,9 +114,14 @@ fun MultipleChoiceCard(
                     .clip(RoundedCornerShape(14.dp))
                     .clickable(enabled = !isAnswerChecked) {
                         onOptionSelected(index)
+                    }
+                    .semantics {
+                        role = Role.RadioButton
+                        selected = isSelected
                     },
                 shape = RoundedCornerShape(14.dp),
                 color = containerColor,
+                shadowElevation = if (isSelected && !isAnswerChecked) 2.dp else 0.dp,
                 border = BorderStroke(if (isSelected || (isAnswerChecked && isOptionCorrect)) 2.dp else 1.dp, borderColor)
             ) {
                 Row(

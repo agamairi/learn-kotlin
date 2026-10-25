@@ -1,9 +1,18 @@
 package dev.agam.learn.ui.path
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,11 +20,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -38,23 +49,41 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.geometry.Offset
 import dev.agam.learn.di.LocalAppContainer
+import dev.agam.learn.ui.components.BrandArtwork
+import dev.agam.learn.ui.components.BrandAsset
+import dev.agam.learn.ui.experience.LocalReducedMotion
 import dev.agam.learn.ui.theme.extendedColors
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/**
- * Screen rendering the chapters and lessons roadmap with visual locked/unlocked states.
- */
+/** Screen rendering chapters as a winding, tappable trail of circular lesson stones. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PathScreen(
@@ -67,7 +96,12 @@ fun PathScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-    val extendedColors = MaterialTheme.extendedColors
+    val reducedMotion = LocalReducedMotion.current
+    val courseProgress by animateFloatAsState(
+        targetValue = uiState.overallProgressFraction.coerceIn(0f, 1f),
+        animationSpec = if (reducedMotion) snap() else tween(durationMillis = 550),
+        label = "course-progress"
+    )
 
     LaunchedEffect(Unit) {
         viewModel.loadPath()
@@ -105,236 +139,506 @@ fun PathScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
-                // Course overview card
-                item {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(18.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Text(
-                                text = uiState.courseTitle,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = uiState.courseDescription,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "${uiState.completedLessons} of ${uiState.totalLessons} lessons completed",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = "${(uiState.overallProgressFraction * 100).toInt()}%",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-
-                            LinearProgressIndicator(
-                                progress = { uiState.overallProgressFraction },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(8.dp)
-                                    .clip(RoundedCornerShape(4.dp)),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.surface,
-                                strokeCap = StrokeCap.Round
-                            )
-                        }
-                    }
+                item(key = "course-overview") {
+                    CourseProgressCard(
+                        courseTitle = uiState.courseTitle,
+                        completed = uiState.completedLessons,
+                        total = uiState.totalLessons,
+                        progress = courseProgress
+                    )
                 }
 
-                // Chapters & Lessons
-                items(uiState.chapters, key = { it.id }) { chapter ->
+                itemsIndexed(uiState.chapters, key = { _, chapter -> chapter.id }) { index, chapter ->
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Chapter Header
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = chapter.title,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = chapter.summary,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-
-                                Surface(
-                                    shape = CircleShape,
-                                    color = if (chapter.completedLessonsCount == chapter.totalLessonsCount) extendedColors.successContainer else MaterialTheme.colorScheme.surface,
-                                    modifier = Modifier.padding(start = 8.dp)
-                                ) {
-                                    Text(
-                                        text = "${chapter.completedLessonsCount}/${chapter.totalLessonsCount}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (chapter.completedLessonsCount == chapter.totalLessonsCount) extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        // Lesson items
-                        chapter.lessons.forEach { lesson ->
-                            val isCompleted = lesson.status == LessonStatus.COMPLETED
-                            val isUnlocked = lesson.status == LessonStatus.UNLOCKED
-                            val isLocked = lesson.status == LessonStatus.LOCKED
-
-                            val cardBg = when {
-                                isCompleted -> extendedColors.successContainer.copy(alpha = 0.35f)
-                                isUnlocked -> MaterialTheme.colorScheme.surface
-                                else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                            }
-
-                            val borderStroke = when {
-                                isCompleted -> BorderStroke(1.dp, extendedColors.success.copy(alpha = 0.4f))
-                                isUnlocked -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
-                                else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                            }
-
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .clickable {
-                                        if (isLocked) {
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar("Complete previous lessons to unlock this lesson.")
-                                            }
-                                        } else {
-                                            onLessonClick(lesson.id)
-                                        }
-                                    },
-                                shape = RoundedCornerShape(14.dp),
-                                color = cardBg,
-                                border = borderStroke
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // Status icon badge
-                                    val iconContainerColor = when {
-                                        isCompleted -> extendedColors.success
-                                        isUnlocked -> MaterialTheme.colorScheme.primary
-                                        else -> MaterialTheme.colorScheme.outline
-                                    }
-
-                                    Surface(
-                                        modifier = Modifier.size(36.dp),
-                                        shape = CircleShape,
-                                        color = iconContainerColor
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            when {
-                                                isCompleted -> Icon(
-                                                    imageVector = Icons.Default.Check,
-                                                    contentDescription = "Completed",
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                                isUnlocked -> Icon(
-                                                    imageVector = Icons.Default.PlayArrow,
-                                                    contentDescription = "Start Lesson",
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(22.dp)
-                                                )
-                                                else -> Icon(
-                                                    imageVector = Icons.Default.Lock,
-                                                    contentDescription = "Locked",
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.width(14.dp))
-
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = lesson.title,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = if (isUnlocked) FontWeight.Bold else FontWeight.Medium,
-                                            color = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "${lesson.exerciseCount} exercises",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ChapterProgressCard(
+                            number = index + 1,
+                            chapterCount = uiState.chapters.size,
+                            chapter = chapter
+                        )
+                        WindingTrail(
+                            lessons = chapter.lessons,
+                            onLessonClick = { lesson ->
+                                if (lesson.status == LessonStatus.LOCKED) {
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            "Complete previous lessons to unlock this lesson."
                                         )
                                     }
-
-                                    // Action / Status label
-                                    val statusText = when {
-                                        isCompleted -> "Done"
-                                        isUnlocked -> "Start"
-                                        else -> "Locked"
-                                    }
-                                    val statusColor = when {
-                                        isCompleted -> extendedColors.success
-                                        isUnlocked -> MaterialTheme.colorScheme.primary
-                                        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                    }
-
-                                    Text(
-                                        text = statusText,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = statusColor
-                                    )
+                                } else {
+                                    onLessonClick(lesson.id)
                                 }
                             }
-                        }
+                        )
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun CourseProgressCard(
+    courseTitle: String,
+    completed: Int,
+    total: Int,
+    progress: Float
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BrandArtwork(
+                    asset = BrandAsset.MascotThink,
+                    modifier = Modifier.size(52.dp),
+                    contentDescription = null
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Text(
+                        text = "YOUR KOTLIN TRAIL",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = courseTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "$completed of $total lessons",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    text = "${(progress * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = MaterialTheme.colorScheme.secondary,
+                trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                strokeCap = StrokeCap.Round
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChapterProgressCard(
+    number: Int,
+    chapterCount: Int,
+    chapter: ChapterUiModel
+) {
+    val extendedColors = MaterialTheme.extendedColors
+    val progress = if (chapter.totalLessonsCount > 0) {
+        chapter.completedLessonsCount.toFloat() / chapter.totalLessonsCount
+    } else {
+        0f
+    }
+    val reducedMotion = LocalReducedMotion.current
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = if (reducedMotion) snap() else tween(durationMillis = 450),
+        label = "chapter-progress-$number"
+    )
+    val isComplete = chapter.totalLessonsCount > 0 &&
+        chapter.completedLessonsCount == chapter.totalLessonsCount
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shadowElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 15.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Text(
+                        text = "CHAPTER $number / $chapterCount",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = "${chapter.completedLessonsCount}/${chapter.totalLessonsCount}",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isComplete) extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = chapter.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (chapter.summary.isNotBlank()) {
+                Text(
+                    text = chapter.summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            LinearProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp)),
+                color = if (isComplete) extendedColors.success else MaterialTheme.colorScheme.secondary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                strokeCap = StrokeCap.Round
+            )
+        }
+    }
+}
+
+@Composable
+private fun WindingTrail(
+    lessons: List<LessonUiModel>,
+    onLessonClick: (LessonUiModel) -> Unit
+) {
+    val nodeCoordinates = remember(lessons.map { it.id }) {
+        mutableStateListOf<LayoutCoordinates?>().apply {
+            repeat(lessons.size) { add(null) }
+        }
+    }
+    var trailCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val secondary = MaterialTheme.colorScheme.secondary
+    val trackShadow = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.14f)
+    val lockedTrack = MaterialTheme.colorScheme.outlineVariant
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { trailCoordinates = it }
+    ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            val parentCoordinates = trailCoordinates
+            if (parentCoordinates != null && lessons.size > 1) {
+                val points = nodeCoordinates.map { coordinates ->
+                    if (coordinates == null || !coordinates.isAttached) {
+                        null
+                    } else {
+                        parentCoordinates.localPositionOf(
+                            sourceCoordinates = coordinates,
+                            relativeToSource = Offset(
+                                coordinates.size.width / 2f,
+                                coordinates.size.height / 2f
+                            )
+                        )
+                    }
+                }
+                for (index in 0 until points.lastIndex) {
+                    val from = points[index] ?: continue
+                    val to = points[index + 1] ?: continue
+                    val deltaY = (to.y - from.y).coerceAtLeast(0f)
+                    val path = Path().apply {
+                        moveTo(from.x, from.y)
+                        cubicTo(
+                            from.x,
+                            from.y + deltaY * 0.43f,
+                            to.x,
+                            to.y - deltaY * 0.43f,
+                            to.x,
+                            to.y
+                        )
+                    }
+                    drawPath(
+                        path = path,
+                        color = trackShadow,
+                        style = Stroke(width = 13.dp.toPx(), cap = StrokeCap.Round)
+                    )
+                    val isLockedSegment = lessons[index + 1].status == LessonStatus.LOCKED
+                    drawPath(
+                        path = path,
+                        color = if (isLockedSegment) lockedTrack else secondary,
+                        style = Stroke(
+                            width = if (isLockedSegment) 5.dp.toPx() else 7.dp.toPx(),
+                            cap = StrokeCap.Round,
+                            pathEffect = if (isLockedSegment) {
+                                PathEffect.dashPathEffect(
+                                    intervals = floatArrayOf(9.dp.toPx(), 9.dp.toPx())
+                                )
+                            } else {
+                                null
+                            }
+                        )
+                    )
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            lessons.forEachIndexed { index, lesson ->
+                WindingLessonStep(
+                    lesson = lesson,
+                    index = index,
+                    onNodePositioned = { nodeCoordinates[index] = it },
+                    onClick = { onLessonClick(lesson) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WindingLessonStep(
+    lesson: LessonUiModel,
+    index: Int,
+    onNodePositioned: (LayoutCoordinates) -> Unit,
+    onClick: () -> Unit
+) {
+    val reducedMotion = LocalReducedMotion.current
+    var arrivalFinished by remember(lesson.id, reducedMotion) {
+        mutableStateOf(reducedMotion)
+    }
+    LaunchedEffect(lesson.id, reducedMotion) {
+        if (!reducedMotion) {
+            delay((index % 6) * 32L)
+            arrivalFinished = true
+        }
+    }
+    val arrivalScale by animateFloatAsState(
+        targetValue = if (arrivalFinished) 1f else 0.94f,
+        animationSpec = if (reducedMotion) snap() else tween(durationMillis = 220),
+        label = "lesson-arrival-scale-${lesson.id}"
+    )
+    val arrivalOffset by animateDpAsState(
+        targetValue = if (arrivalFinished) 0.dp else 7.dp,
+        animationSpec = if (reducedMotion) snap() else tween(durationMillis = 220),
+        label = "lesson-arrival-offset-${lesson.id}"
+    )
+    val interactionSource = remember(lesson.id) { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (!reducedMotion && isPressed) 0.95f else 1f,
+        animationSpec = if (reducedMotion) snap() else tween(durationMillis = 100),
+        label = "lesson-press-scale-${lesson.id}"
+    )
+    val pressOffset by animateDpAsState(
+        targetValue = if (!reducedMotion && isPressed) 3.dp else 0.dp,
+        animationSpec = if (reducedMotion) snap() else tween(durationMillis = 100),
+        label = "lesson-press-offset-${lesson.id}"
+    )
+    val isCompleted = lesson.status == LessonStatus.COMPLETED
+    val isUnlocked = lesson.status == LessonStatus.UNLOCKED
+    val extendedColors = MaterialTheme.extendedColors
+    val faceColor = when {
+        isCompleted -> extendedColors.success
+        isUnlocked -> MaterialTheme.colorScheme.secondary
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val faceContentColor = when {
+        isCompleted -> extendedColors.onSuccess
+        isUnlocked -> MaterialTheme.colorScheme.onSecondary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val bevelColor = when {
+        isCompleted -> extendedColors.success.copy(alpha = 0.7f)
+        isUnlocked -> Color(0xFF0F766E)
+        else -> MaterialTheme.colorScheme.outlineVariant
+    }
+    val labelSurface = when {
+        isCompleted -> extendedColors.successContainer
+        isUnlocked -> MaterialTheme.colorScheme.secondaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val labelColor = MaterialTheme.colorScheme.onSurface
+    val statusLabel = when {
+        isCompleted -> "Completed"
+        isUnlocked -> "Ready"
+        else -> "Locked"
+    }
+    val accessibleLabel = "$statusLabel: ${lesson.title}, ${lesson.exerciseCount} exercises"
+    val labelWidthFraction = 0.48f
+    val laneFraction = laneFraction(index)
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 144.dp)
+    ) {
+        val labelWidth = minOf(148.dp, maxWidth * labelWidthFraction)
+        val horizontalShift = (maxWidth * (laneFraction - 0.5f))
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(x = horizontalShift)
+                .width(labelWidth),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier.size(70.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .offset(y = 6.dp)
+                        .size(64.dp),
+                    shape = CircleShape,
+                    color = bevelColor
+                ) {}
+                Surface(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .graphicsLayer {
+                            val scale = arrivalScale * pressScale
+                            scaleX = scale
+                            scaleY = scale
+                            translationY = arrivalOffset.toPx() + pressOffset.toPx()
+                        }
+                        .onGloballyPositioned(onNodePositioned)
+                        .semantics {
+                            contentDescription = accessibleLabel
+                            role = Role.Button
+                        }
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = LocalIndication.current,
+                            role = Role.Button,
+                            onClick = onClick
+                        ),
+                    shape = CircleShape,
+                    color = faceColor,
+                    contentColor = faceContentColor,
+                    border = BorderStroke(
+                        width = if (isUnlocked) 2.dp else 1.dp,
+                        color = if (isUnlocked) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+                        else faceContentColor.copy(alpha = 0.22f)
+                    ),
+                    shadowElevation = if (isUnlocked) 3.dp else 1.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        when {
+                            isCompleted -> Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(31.dp)
+                            )
+                            isUnlocked -> Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            else -> Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                modifier = Modifier.size(25.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(5.dp))
+            SpeechBubbleTail(color = labelSurface)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(15.dp),
+                color = labelSurface,
+                border = BorderStroke(1.dp, faceContentColor.copy(alpha = 0.15f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = lesson.title,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isUnlocked) FontWeight.Bold else FontWeight.SemiBold,
+                        color = labelColor,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "$statusLabel · ${lesson.exerciseCount} exercises",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = when {
+                            isCompleted -> extendedColors.success
+                            isUnlocked -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SpeechBubbleTail(color: Color) {
+    Canvas(modifier = Modifier.size(width = 13.dp, height = 7.dp)) {
+        val tail = Path().apply {
+            moveTo(size.width / 2f, 0f)
+            lineTo(0f, size.height)
+            lineTo(size.width, size.height)
+            close()
+        }
+        drawPath(path = tail, color = color)
+    }
+}
+
+private fun laneFraction(index: Int): Float = when (index % 6) {
+    0, 3 -> 0.5f
+    1, 4 -> 0.25f
+    else -> 0.75f
 }

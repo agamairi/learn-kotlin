@@ -11,7 +11,10 @@ import dev.agam.learn.runner.RunOutcome
 import dev.agam.learn.runner.SourceFile
 import dev.agam.learn.runner.TestFailure
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -530,6 +533,56 @@ class CodeExerciseViewModelTest {
         viewModel.checkCode()
 
         assertTrue(storedResults().isEmpty())
+    }
+
+    @Test
+    fun onlyGradedChecksEmitOneShotFeedbackAndRunOrInfrastructureResultsStayQuiet() = runBlocking {
+        val feedback = mutableListOf<Boolean>()
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            coroutineScope = testScope
+        )
+        val collection = launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+            viewModel.feedbackEvents.collect { feedback += it }
+        }
+
+        fakeRunner.testResult = RunOutcome.Passed(testsRun = 1, stdout = "")
+        viewModel.checkCode()
+        assertEquals(listOf(true), feedback)
+        assertTrue(viewModel.feedbackEvents.replayCache.isEmpty())
+
+        // Re-rendering/restoring the existing outcome or editing it does not emit another event.
+        viewModel.onCodeChange(TextFieldValue("fun sum(a: Int, b: Int): Int = a - b"))
+        assertEquals(listOf(true), feedback)
+
+        // A visible failure from plain Run is diagnostic output, not a graded answer.
+        fakeRunner.runResult = RunOutcome.TestsFailed(
+            failures = listOf(TestFailure("smoke", "exit code 1")),
+            stdout = ""
+        )
+        viewModel.runCode()
+        assertEquals(listOf(true), feedback)
+
+        fakeRunner.testResult = RunOutcome.TestsFailed(
+            failures = listOf(TestFailure("testSum", "expected 3 but was 0")),
+            stdout = ""
+        )
+        viewModel.checkCode()
+        fakeRunner.testResult = RunOutcome.CompileError(
+            diagnostics = listOf(Diagnostic(1, 1, "ERROR", "Unresolved reference"))
+        )
+        viewModel.checkCode()
+        assertEquals(listOf(true, false, false), feedback)
+
+        fakeRunner.testResult = RunOutcome.Timeout(seconds = 10)
+        viewModel.checkCode()
+        fakeRunner.testResult = RunOutcome.Unavailable(reason = "Compiler offline")
+        viewModel.checkCode()
+        assertEquals(listOf(true, false, false), feedback)
+
+        collection.cancel()
     }
 
     private class FakeCodeRunner : CodeRunner {

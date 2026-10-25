@@ -14,8 +14,11 @@ import dev.agam.learn.runner.RunOutcome
 import dev.agam.learn.runner.SourceFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -50,6 +53,9 @@ class CodeExerciseViewModel(
         )
     )
     val uiState: StateFlow<CodeExerciseUiState> = _uiState.asStateFlow()
+    private val _feedbackEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+    /** One-shot events for hidden-test checks, with no replay after edits or screen restoration. */
+    val feedbackEvents: SharedFlow<Boolean> = _feedbackEvents.asSharedFlow()
 
     private val aiHintsUsed = mutableSetOf<Int>()
 
@@ -135,6 +141,11 @@ class CodeExerciseViewModel(
             }
 
             val passed = outcome is RunOutcome.Passed
+            when (outcome) {
+                is RunOutcome.Passed -> _feedbackEvents.tryEmit(true)
+                is RunOutcome.TestsFailed, is RunOutcome.CompileError -> _feedbackEvents.tryEmit(false)
+                else -> Unit
+            }
             if (passed || outcome is RunOutcome.TestsFailed || outcome is RunOutcome.CompileError) {
                 progressRecorder.record(
                     ExerciseAttempt(
