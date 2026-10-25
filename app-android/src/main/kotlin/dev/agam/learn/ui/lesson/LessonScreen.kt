@@ -1,8 +1,5 @@
 package dev.agam.learn.ui.lesson
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -58,7 +55,7 @@ import dev.agam.learn.di.LocalAppContainer
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.ui.components.CodeBlock
 import dev.agam.learn.ui.lesson.components.ClozeCard
-import dev.agam.learn.ui.lesson.components.FeedbackBanner
+import dev.agam.learn.ui.lesson.components.AnimatedLessonFeedbackBanner
 import dev.agam.learn.ui.lesson.components.LessonExplanation
 import dev.agam.learn.ui.lesson.components.LessonSummary
 import dev.agam.learn.ui.lesson.components.MultipleChoiceCard
@@ -308,21 +305,19 @@ fun LessonScreen(
                             }
                         }
 
-                        AnimatedVisibility(
+                        AnimatedLessonFeedbackBanner(
                             visible = uiState.isAnswerChecked,
-                            enter = slideInVertically(initialOffsetY = { it }),
-                            exit = slideOutVertically(targetOffsetY = { it })
-                        ) {
-                            FeedbackBanner(
-                                isCorrect = uiState.isAnswerCorrect == true,
-                                explanation = uiState.currentExplanation,
-                                onContinue = viewModel::onContinueNext,
-                                isAiAvailable = uiState.isAiAvailable,
-                                isInterviewMode = uiState.isInterviewMode,
-                                hasApiKey = uiState.hasApiKey,
-                                onMoreLikeThis = viewModel::requestMoreLikeThis
-                            )
-                        }
+                            feedbackKey = (uiState.step as? LessonStep.ExercisePlaying)
+                                ?.let { "${it.exerciseIndex}:${it.exercise.id}" }
+                                .orEmpty(),
+                            isCorrect = uiState.isAnswerCorrect == true,
+                            explanation = uiState.currentExplanation,
+                            onContinue = viewModel::onContinueNext,
+                            isAiAvailable = uiState.isAiAvailable,
+                            isInterviewMode = uiState.isInterviewMode,
+                            hasApiKey = uiState.hasApiKey,
+                            onMoreLikeThis = viewModel::requestMoreLikeThis
+                        )
                     }
                 }
 

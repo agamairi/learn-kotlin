@@ -41,7 +41,8 @@ fun FeedbackBanner(
     isAiAvailable: Boolean = false,
     isInterviewMode: Boolean = false,
     hasApiKey: Boolean = false,
-    onMoreLikeThis: (() -> Unit)? = null
+    onMoreLikeThis: (() -> Unit)? = null,
+    continueEnabled: Boolean = true
 ) {
     val extendedColors = MaterialTheme.extendedColors
     val containerColor = if (isCorrect) extendedColors.successContainer else MaterialTheme.colorScheme.errorContainer
@@ -114,9 +115,12 @@ fun FeedbackBanner(
 
             Button(
                 onClick = onContinue,
+                enabled = continueEnabled,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = buttonColor,
-                    contentColor = Color.White
+                    contentColor = Color.White,
+                    disabledContainerColor = buttonColor,
+                    disabledContentColor = Color.White
                 ),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier

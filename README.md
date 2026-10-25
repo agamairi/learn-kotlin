@@ -12,6 +12,8 @@ v0.1.0 is the first stable release for personal use. Its release APK is non-debu
 
 v0.1.1 adds Koda, an original fox mascot, an adaptive launcher icon with Android 13 themed-icon support, and matching vector artwork for streaks, XP, lessons and review. Editable SVG masters and the shared SVG/Android-vector generator are in [`assets/brand`](assets/brand/README.md). Home, lesson completion and review use the new artwork. The release assets also include a downloadable vector pack and preview sheet.
 
+v0.1.3 fixes lesson feedback briefly turning red when advancing after a correct answer, and prevents repeated Continue taps from skipping a question.
+
 The app needs Android 8.0 (API 26) or newer. Install the APK by sideloading it. When Android asks, allow installs from the app you opened the file with, such as your browser or file manager.
 
 Lessons and review work offline. Code exercises need the compiler server, and the AI tutor needs internet access and your own API key. Sections 3 and 4 explain both.
