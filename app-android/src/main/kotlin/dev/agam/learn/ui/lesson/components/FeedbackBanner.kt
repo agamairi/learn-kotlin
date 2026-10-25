@@ -52,7 +52,7 @@ fun FeedbackBanner(
         modifier = modifier.fillMaxWidth(),
         color = containerColor,
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        shadowElevation = 8.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier

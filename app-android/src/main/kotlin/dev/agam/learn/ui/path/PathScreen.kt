@@ -191,9 +191,9 @@ private fun CourseProgressCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.primary,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f))
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(
             modifier = Modifier
@@ -208,7 +208,7 @@ private fun CourseProgressCard(
             ) {
                 BrandArtwork(
                     asset = BrandAsset.MascotThink,
-                    modifier = Modifier.size(52.dp),
+                    modifier = Modifier.size(48.dp),
                     contentDescription = null
                 )
                 Column(
@@ -216,16 +216,16 @@ private fun CourseProgressCard(
                     verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(
-                        text = "YOUR KOTLIN TRAIL",
+                        text = "KOTLIN PATH",
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = courseTitle,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -237,23 +237,23 @@ private fun CourseProgressCard(
                 Text(
                     text = "$completed of $total lessons",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = "${(progress * 100).toInt()}%",
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = MaterialTheme.colorScheme.tertiary,
-                trackColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.22f),
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(3.dp)),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = StrokeCap.Round
             )
         }
@@ -267,26 +267,6 @@ private fun ChapterProgressCard(
     chapter: ChapterUiModel
 ) {
     val extendedColors = MaterialTheme.extendedColors
-    val (chapterSurface, chapterContent, chapterAccent, chapterAccentContent) = when ((number - 1) % 3) {
-        0 -> listOf(
-            MaterialTheme.colorScheme.secondaryContainer,
-            MaterialTheme.colorScheme.onSecondaryContainer,
-            MaterialTheme.colorScheme.secondary,
-            MaterialTheme.colorScheme.onSecondary
-        )
-        1 -> listOf(
-            MaterialTheme.colorScheme.tertiaryContainer,
-            MaterialTheme.colorScheme.onTertiaryContainer,
-            MaterialTheme.colorScheme.tertiary,
-            MaterialTheme.colorScheme.onTertiary
-        )
-        else -> listOf(
-            MaterialTheme.colorScheme.primaryContainer,
-            MaterialTheme.colorScheme.onPrimaryContainer,
-            MaterialTheme.colorScheme.primary,
-            MaterialTheme.colorScheme.onPrimary
-        )
-    }
     val progress = if (chapter.totalLessonsCount > 0) {
         chapter.completedLessonsCount.toFloat() / chapter.totalLessonsCount
     } else {
@@ -303,10 +283,10 @@ private fun ChapterProgressCard(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = chapterSurface,
-        border = BorderStroke(1.dp, chapterAccent.copy(alpha = 0.28f)),
-        shadowElevation = 2.dp
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
@@ -319,37 +299,31 @@ private fun ChapterProgressCard(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = chapterAccent
-                ) {
-                    Text(
-                        text = "CHAPTER $number / $chapterCount",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = chapterAccentContent,
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
-                    )
-                }
+                Text(
+                    text = "CHAPTER $number / $chapterCount",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
                     text = "${chapter.completedLessonsCount}/${chapter.totalLessonsCount}",
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isComplete) extendedColors.success else chapterContent
+                    fontWeight = FontWeight.Medium,
+                    color = if (isComplete) extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Text(
                 text = chapter.title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = chapterContent
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
             if (chapter.summary.isNotBlank()) {
                 Text(
                     text = chapter.summary,
                     style = MaterialTheme.typography.bodySmall,
-                color = chapterContent
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             LinearProgressIndicator(
@@ -358,8 +332,8 @@ private fun ChapterProgressCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp)),
-                color = if (isComplete) extendedColors.success else chapterAccent,
-                trackColor = chapterContent.copy(alpha = 0.14f),
+                color = if (isComplete) extendedColors.success else MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = StrokeCap.Round
             )
         }
@@ -377,8 +351,8 @@ private fun WindingTrail(
         }
     }
     var trailCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-    val pathColor = MaterialTheme.colorScheme.primary
-    val trackShadow = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.14f)
+    val pathColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.84f)
+    val trackShadow = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f)
     val lockedTrack = MaterialTheme.colorScheme.outlineVariant
 
     Box(
@@ -420,14 +394,14 @@ private fun WindingTrail(
                     drawPath(
                         path = path,
                         color = trackShadow,
-                        style = Stroke(width = 13.dp.toPx(), cap = StrokeCap.Round)
+                        style = Stroke(width = 9.dp.toPx(), cap = StrokeCap.Round)
                     )
                     val isLockedSegment = lessons[index + 1].status == LessonStatus.LOCKED
                     drawPath(
                         path = path,
                         color = if (isLockedSegment) lockedTrack else pathColor,
                         style = Stroke(
-                            width = if (isLockedSegment) 5.dp.toPx() else 7.dp.toPx(),
+                            width = if (isLockedSegment) 3.dp.toPx() else 4.5.dp.toPx(),
                             cap = StrokeCap.Round,
                             pathEffect = if (isLockedSegment) {
                                 PathEffect.dashPathEffect(
@@ -499,32 +473,20 @@ private fun WindingLessonStep(
     )
     val isCompleted = lesson.status == LessonStatus.COMPLETED
     val isUnlocked = lesson.status == LessonStatus.UNLOCKED
-    val extendedColors = MaterialTheme.extendedColors
     val faceColor = when {
-        isCompleted -> extendedColors.success
-        isUnlocked -> MaterialTheme.colorScheme.primary
+        isCompleted || isUnlocked -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
     val faceContentColor = when {
-        isCompleted -> extendedColors.onSuccess
-        isUnlocked -> MaterialTheme.colorScheme.onPrimary
+        isCompleted || isUnlocked -> MaterialTheme.colorScheme.onPrimary
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    val bevelColor = when {
-        isCompleted -> darken(extendedColors.success, 0.72f)
-        isUnlocked -> darken(MaterialTheme.colorScheme.primary, 0.72f)
-        else -> MaterialTheme.colorScheme.outlineVariant
+    val bevelColor = if (isCompleted || isUnlocked) {
+        darken(MaterialTheme.colorScheme.primary, 0.84f)
+    } else {
+        MaterialTheme.colorScheme.outlineVariant
     }
-    val labelSurface = when {
-        isCompleted -> extendedColors.successContainer
-        isUnlocked -> MaterialTheme.colorScheme.primaryContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant
-    }
-    val labelColor = when {
-        isCompleted -> extendedColors.onSuccessContainer
-        isUnlocked -> MaterialTheme.colorScheme.onPrimaryContainer
-        else -> MaterialTheme.colorScheme.onSurface
-    }
+    val labelSurface = MaterialTheme.colorScheme.surface
     val statusLabel = when {
         isCompleted -> "Completed"
         isUnlocked -> "Ready"
@@ -549,12 +511,12 @@ private fun WindingLessonStep(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier = Modifier.size(70.dp),
+                modifier = Modifier.size(68.dp),
                 contentAlignment = Alignment.TopCenter
             ) {
                 Surface(
                     modifier = Modifier
-                        .offset(y = 6.dp)
+                        .offset(y = 3.dp)
                         .size(64.dp),
                     shape = CircleShape,
                     color = bevelColor
@@ -583,11 +545,11 @@ private fun WindingLessonStep(
                     color = faceColor,
                     contentColor = faceContentColor,
                     border = BorderStroke(
-                        width = if (isUnlocked) 2.dp else 1.dp,
-                        color = if (isUnlocked) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
-                        else faceContentColor.copy(alpha = 0.22f)
+                        width = 1.dp,
+                        color = if (isUnlocked) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                        else MaterialTheme.colorScheme.outlineVariant
                     ),
-                    shadowElevation = if (isUnlocked) 3.dp else 1.dp
+                    shadowElevation = 0.dp
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         when {
@@ -615,9 +577,9 @@ private fun WindingLessonStep(
             SpeechBubbleTail(color = labelSurface)
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(15.dp),
+                shape = RoundedCornerShape(12.dp),
                 color = labelSurface,
-                border = BorderStroke(1.dp, faceContentColor.copy(alpha = 0.15f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
@@ -627,19 +589,15 @@ private fun WindingLessonStep(
                     Text(
                         text = lesson.title,
                         style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (isUnlocked) FontWeight.Bold else FontWeight.SemiBold,
-                        color = labelColor,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center
                     )
                     Text(
                         text = "$statusLabel · ${lesson.exerciseCount} exercises",
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = when {
-                            isCompleted -> extendedColors.onSuccessContainer
-                            isUnlocked -> MaterialTheme.colorScheme.onPrimaryContainer
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        fontWeight = FontWeight.Normal,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
                 }

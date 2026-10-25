@@ -2,34 +2,37 @@ package dev.agam.learn.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 
 private val LightColorScheme = lightColorScheme(
-    primary = LightJadePrimary,
-    onPrimary = LightOnJadePrimary,
-    primaryContainer = LightJadeContainer,
-    onPrimaryContainer = LightOnJadeContainer,
-    inversePrimary = LightJadeInversePrimary,
-    secondary = LightCoralSecondary,
-    onSecondary = LightOnCoralSecondary,
-    secondaryContainer = LightPeachContainer,
-    onSecondaryContainer = LightOnPeachContainer,
-    tertiary = LightGoldTertiary,
-    onTertiary = LightOnGoldTertiary,
-    tertiaryContainer = LightGoldContainer,
-    onTertiaryContainer = LightOnGoldContainer,
-    background = LightWarmBackground,
-    onBackground = LightWarmInk,
-    surface = LightPaperSurface,
-    onSurface = LightOnPaperSurface,
-    surfaceVariant = LightSandSurfaceVariant,
-    onSurfaceVariant = LightOnSandSurfaceVariant,
-    surfaceTint = LightJadePrimary,
+    primary = LightSagePrimary,
+    onPrimary = LightOnSagePrimary,
+    primaryContainer = LightSageContainer,
+    onPrimaryContainer = LightOnSageContainer,
+    inversePrimary = LightSageInversePrimary,
+    secondary = LightClaySecondary,
+    onSecondary = LightOnClaySecondary,
+    secondaryContainer = LightClayContainer,
+    onSecondaryContainer = LightOnClayContainer,
+    tertiary = LightOchreTertiary,
+    onTertiary = LightOnOchreTertiary,
+    tertiaryContainer = LightOchreContainer,
+    onTertiaryContainer = LightOnOchreContainer,
+    background = LightIvoryBackground,
+    onBackground = LightWarmCharcoal,
+    surface = LightOffWhiteSurface,
+    onSurface = LightOnOffWhiteSurface,
+    surfaceVariant = LightNeutralSurfaceVariant,
+    onSurfaceVariant = LightOnNeutralSurfaceVariant,
+    surfaceTint = LightSagePrimary,
     inverseSurface = LightInverseSurface,
     inverseOnSurface = LightInverseOnSurface,
     error = LightError,
@@ -49,26 +52,26 @@ private val LightColorScheme = lightColorScheme(
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = DarkMintPrimary,
-    onPrimary = DarkOnMintPrimary,
-    primaryContainer = DarkJadeContainer,
-    onPrimaryContainer = DarkOnJadeContainer,
-    inversePrimary = DarkMintInversePrimary,
-    secondary = DarkCoralSecondary,
-    onSecondary = DarkOnCoralSecondary,
-    secondaryContainer = DarkCoralContainer,
-    onSecondaryContainer = DarkOnCoralContainer,
-    tertiary = DarkGoldTertiary,
-    onTertiary = DarkOnGoldTertiary,
-    tertiaryContainer = DarkGoldContainer,
-    onTertiaryContainer = DarkOnGoldContainer,
-    background = DarkTealBackground,
-    onBackground = DarkWarmInk,
-    surface = DarkTealSurface,
-    onSurface = DarkOnTealSurface,
-    surfaceVariant = DarkTealSurfaceVariant,
-    onSurfaceVariant = DarkOnTealSurfaceVariant,
-    surfaceTint = DarkMintPrimary,
+    primary = DarkSoftSagePrimary,
+    onPrimary = DarkOnSoftSagePrimary,
+    primaryContainer = DarkSageContainer,
+    onPrimaryContainer = DarkOnSageContainer,
+    inversePrimary = DarkSoftSageInversePrimary,
+    secondary = DarkClaySecondary,
+    onSecondary = DarkOnClaySecondary,
+    secondaryContainer = DarkClayContainer,
+    onSecondaryContainer = DarkOnClayContainer,
+    tertiary = DarkMutedOchreTertiary,
+    onTertiary = DarkOnMutedOchreTertiary,
+    tertiaryContainer = DarkOchreContainer,
+    onTertiaryContainer = DarkOnOchreContainer,
+    background = DarkCharcoalBackground,
+    onBackground = DarkWarmText,
+    surface = DarkCharcoalSurface,
+    onSurface = DarkOnCharcoalSurface,
+    surfaceVariant = DarkNeutralSurfaceVariant,
+    onSurfaceVariant = DarkOnNeutralSurfaceVariant,
+    surfaceTint = DarkSoftSagePrimary,
     inverseSurface = DarkInverseSurface,
     inverseOnSurface = DarkInverseOnSurface,
     error = DarkError,
@@ -85,6 +88,14 @@ private val DarkColorScheme = darkColorScheme(
     surfaceContainer = DarkSurfaceContainer,
     surfaceContainerHigh = DarkSurfaceContainerHigh,
     surfaceContainerHighest = DarkSurfaceContainerHighest
+)
+
+private val LearnShapes = Shapes(
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(16.dp),
+    extraLarge = RoundedCornerShape(20.dp)
 )
 
 @Immutable
@@ -156,6 +167,7 @@ fun LearnKotlinTheme(
         MaterialTheme(
             colorScheme = colorScheme,
             typography = AppTypography,
+            shapes = LearnShapes,
             content = content
         )
     }

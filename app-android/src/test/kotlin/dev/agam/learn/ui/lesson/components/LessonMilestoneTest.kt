@@ -125,7 +125,7 @@ class LessonMilestoneTest {
         }
 
         // Question header shows exercise category guide
-        compose.onNodeWithText("MULTIPLE CHOICE").assertExists()
+        compose.onNodeWithText("Multiple Choice").assertExists()
         compose.onNodeWithText("Choose the single best answer below").assertExists()
         compose.onNodeWithText("3 in a row").assertExists()
 
@@ -154,18 +154,18 @@ class LessonMilestoneTest {
         }
 
         val headerBounds = compose.onNodeWithContentDescription(
-            "Koda guide: Multiple Choice. Choose the single best answer below.",
+            "Koda guide: Multiple Choice. Choose the single best answer below. 12 correct in a row.",
             useUnmergedTree = true
         ).fetchSemanticsNode().boundsInRoot
-        val titleBounds = compose.onNodeWithText("MULTIPLE CHOICE", useUnmergedTree = true)
+        val titleBounds = compose.onNodeWithText("Multiple Choice", useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot
         val streakBounds = compose.onNodeWithText("12 in a row", useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot
         val maxRight = with(compose.density) { 320.dp.toPx() }
 
         assertTrue("header must remain inside its 320dp parent", headerBounds.right <= maxRight + 1f)
-        assertTrue("uppercase title must remain inside its parent", titleBounds.right <= maxRight + 1f)
-        assertTrue("streak chip must remain inside its parent", streakBounds.right <= maxRight + 1f)
+        assertTrue("exercise type must remain inside its parent", titleBounds.right <= maxRight + 1f)
+        assertTrue("streak label must remain inside its parent", streakBounds.right <= maxRight + 1f)
         compose.onNodeWithText("Choose the single best answer below").assertExists()
     }
 

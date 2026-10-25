@@ -40,7 +40,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -89,7 +88,7 @@ fun HomeScreen(
                 actions = {
                     Surface(
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier.padding(end = 16.dp)
                     ) {
                         Row(
@@ -105,8 +104,8 @@ fun HomeScreen(
                             Text(
                                 text = streakLabel(uiState.streakDays, uiState.heldStreakFreezes),
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -139,12 +138,9 @@ fun HomeScreen(
                     item(key = "continue-lesson") {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(24.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            border = BorderStroke(
-                                1.dp,
-                                MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)
-                            )
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                         ) {
                             Column(
                                 modifier = Modifier
@@ -157,22 +153,16 @@ fun HomeScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Surface(
-                                        shape = RoundedCornerShape(50),
-                                        color = MaterialTheme.colorScheme.primaryContainer
-                                    ) {
-                                        Text(
-                                            text = "UP NEXT",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                        )
-                                    }
+                                    Text(
+                                        text = "UP NEXT",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
                                     Text(
                                         text = "${continueInfo.exerciseCount} exercises",
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onPrimary
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
 
@@ -180,13 +170,13 @@ fun HomeScreen(
                                     Text(
                                         text = continueInfo.chapterTitle,
                                         style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.onPrimary
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                     Text(
                                         text = continueInfo.lessonTitle,
                                         style = MaterialTheme.typography.headlineSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimary
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
 
@@ -197,7 +187,7 @@ fun HomeScreen(
                                 ) {
                                     BrandArtwork(
                                         asset = if (uiState.isGoalMet) BrandAsset.MascotCelebrate else BrandAsset.MascotWave,
-                                        modifier = Modifier.size(58.dp),
+                                        modifier = Modifier.size(48.dp),
                                         contentDescription = null
                                     )
                                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -205,26 +195,26 @@ fun HomeScreen(
                                             text = if (uiState.isGoalMet) "Goal reached — nice work!" else "Koda is ready when you are.",
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onPrimary
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
                                         )
                                         Text(
                                             text = "A little practice goes a long way.",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onPrimary
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
                                         )
                                     }
                                 }
 
                                 Button(
                                     onClick = { onContinueLesson(continueInfo.lessonId) },
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.secondary,
-                                        contentColor = MaterialTheme.colorScheme.onSecondary
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .heightIn(min = 54.dp)
+                                        .heightIn(min = 52.dp)
                                 ) {
                                     Text(
                                         text = "Continue lesson",
@@ -240,9 +230,9 @@ fun HomeScreen(
                 item(key = "daily-goal") {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(22.dp),
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.24f))
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
                         Column(
                             modifier = Modifier
@@ -257,7 +247,7 @@ fun HomeScreen(
                             ) {
                                 BrandArtwork(
                                     asset = BrandAsset.XpSpark,
-                                    modifier = Modifier.size(34.dp),
+                                    modifier = Modifier.size(28.dp),
                                     contentDescription = null
                                 )
                                 Column(
@@ -267,36 +257,30 @@ fun HomeScreen(
                                     Text(
                                         text = "Daily goal",
                                         style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         text = if (uiState.isGoalMet) "You've reached today's target" else "${(uiState.dailyGoalXp - uiState.todayXp).coerceAtLeast(0)} XP to go",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = if (uiState.isGoalMet) extendedColors.success else MaterialTheme.colorScheme.onTertiaryContainer
+                                        color = if (uiState.isGoalMet) extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = if (uiState.isGoalMet) extendedColors.successContainer else MaterialTheme.colorScheme.primaryContainer
-                                ) {
-                                    Text(
-                                        text = "${uiState.todayXp}/${uiState.dailyGoalXp} XP",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (uiState.isGoalMet) extendedColors.success else MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
-                                    )
-                                }
+                                Text(
+                                    text = "${uiState.todayXp}/${uiState.dailyGoalXp} XP",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                             LinearProgressIndicator(
                                 progress = { goalProgress },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(10.dp)
-                                    .clip(RoundedCornerShape(5.dp)),
+                                    .height(5.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
                                 color = if (uiState.isGoalMet) extendedColors.success else MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.14f),
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
                                 strokeCap = StrokeCap.Round
                             )
                         }
@@ -317,9 +301,7 @@ fun HomeScreen(
                             detail = streakCardDetail(
                                 isActiveToday = uiState.isStreakActiveToday,
                                 heldFreezes = uiState.heldStreakFreezes
-                            ),
-                            containerColor = MaterialTheme.colorScheme.tertiary,
-                            contentColor = MaterialTheme.colorScheme.onTertiary
+                            )
                         )
                         ShortcutCard(
                             modifier = Modifier.weight(1f),
@@ -327,9 +309,7 @@ fun HomeScreen(
                             icon = BrandAsset.ReviewCards,
                             headline = uiState.reviewDueCount.toString(),
                             label = "cards due",
-                            detail = "Spaced review",
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = MaterialTheme.colorScheme.onSecondary
+                            detail = "Spaced review"
                         )
                     }
                 }
@@ -338,11 +318,11 @@ fun HomeScreen(
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(14.dp))
                             .clickable { onOpenPath() },
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.24f))
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
                         Row(
                             modifier = Modifier
@@ -351,20 +331,12 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Surface(
-                                modifier = Modifier.size(42.dp),
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.secondary
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.PlayArrow,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSecondary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
                             Column(
                                 modifier = Modifier.weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(3.dp)
@@ -372,13 +344,13 @@ fun HomeScreen(
                                 Text(
                                     text = "Explore the learning path",
                                     style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "Chapters, lessons, and checkpoints",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -396,54 +368,47 @@ private fun ShortcutCard(
     icon: BrandAsset,
     headline: String,
     label: String,
-    detail: String,
-    containerColor: Color,
-    contentColor: Color
+    detail: String
 ) {
     Surface(
         modifier = if (onClick == null) modifier else modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        color = containerColor,
-        contentColor = contentColor,
-        border = BorderStroke(1.dp, contentColor.copy(alpha = 0.18f)),
-        shadowElevation = 2.dp
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Surface(shape = CircleShape, color = contentColor.copy(alpha = 0.14f), modifier = Modifier.size(38.dp)) {
-                    Box(contentAlignment = Alignment.Center) {
-                        BrandArtwork(icon, Modifier.size(32.dp), contentDescription = null)
-                    }
-                }
+                BrandArtwork(icon, Modifier.size(28.dp), contentDescription = null)
                 Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
                     Text(
                         text = headline,
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = contentColor
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = label,
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = contentColor
+                        fontWeight = FontWeight.Normal,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
             Text(
                 text = detail,
                 style = MaterialTheme.typography.bodySmall,
-                color = contentColor
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

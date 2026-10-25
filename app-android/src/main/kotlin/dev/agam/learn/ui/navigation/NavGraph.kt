@@ -101,7 +101,7 @@ fun LearnAppNavHost(
         bottomBar = {
             if (isTopLevelDestination) {
                 NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    containerColor = MaterialTheme.colorScheme.surface,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ) {
                     BottomNavItems.forEach { item ->
@@ -134,9 +134,9 @@ fun LearnAppNavHost(
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                indicatorColor = MaterialTheme.colorScheme.secondaryContainer
+                                selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
                             )
                         )
                     }

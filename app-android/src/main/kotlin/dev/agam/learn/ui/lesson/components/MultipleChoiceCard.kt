@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -55,6 +54,7 @@ fun MultipleChoiceCard(
 ) {
     val extendedColors = MaterialTheme.extendedColors
     val reducedMotion = LocalReducedMotion.current
+    val optionShape = RoundedCornerShape(12.dp)
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -81,9 +81,13 @@ fun MultipleChoiceCard(
             val isOptionCorrect = index == exercise.correctIndex
 
             val targetContainerColor = when {
-                !isAnswerChecked -> if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-                isOptionCorrect -> extendedColors.successContainer
-                isSelected && !isOptionCorrect -> MaterialTheme.colorScheme.errorContainer
+                !isAnswerChecked -> if (isSelected) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.48f)
+                } else {
+                    MaterialTheme.colorScheme.surface
+                }
+                isOptionCorrect -> extendedColors.successContainer.copy(alpha = 0.56f)
+                isSelected && !isOptionCorrect -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.56f)
                 else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
             }
 
@@ -92,6 +96,13 @@ fun MultipleChoiceCard(
                 isOptionCorrect -> extendedColors.success
                 isSelected && !isOptionCorrect -> MaterialTheme.colorScheme.error
                 else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            }
+
+            val optionTextColor = when {
+                !isAnswerChecked -> MaterialTheme.colorScheme.onSurface
+                isOptionCorrect -> extendedColors.onSuccessContainer
+                isSelected && !isOptionCorrect -> MaterialTheme.colorScheme.onErrorContainer
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
             }
 
             val containerColor = if (reducedMotion) {
@@ -109,8 +120,8 @@ fun MultipleChoiceCard(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 54.dp)
-                    .clip(RoundedCornerShape(14.dp))
+                    .heightIn(min = 52.dp)
+                    .clip(optionShape)
                     .clickable(enabled = !isAnswerChecked) {
                         onOptionSelected(index)
                     }
@@ -118,75 +129,63 @@ fun MultipleChoiceCard(
                         role = Role.RadioButton
                         selected = isSelected
                     },
-                shape = RoundedCornerShape(14.dp),
+                shape = optionShape,
                 color = containerColor,
-                shadowElevation = if (isSelected && !isAnswerChecked) 2.dp else 0.dp,
-                border = BorderStroke(if (isSelected || (isAnswerChecked && isOptionCorrect)) 2.dp else 1.dp, borderColor)
+                border = BorderStroke(
+                    width = if (isSelected || (isAnswerChecked && isOptionCorrect)) 1.5.dp else 1.dp,
+                    color = borderColor
+                )
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val letter = ('A'.code + index).toChar().toString()
-                    val badgeColor = when {
-                        !isAnswerChecked -> if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                    val markerColor = when {
+                        !isAnswerChecked && isSelected -> MaterialTheme.colorScheme.primary
                         isOptionCorrect -> extendedColors.success
                         isSelected && !isOptionCorrect -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.surfaceVariant
-                    }
-                    val badgeTextColor = when {
-                        !isAnswerChecked -> if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                        isOptionCorrect -> extendedColors.onSuccess
-                        isSelected && !isOptionCorrect -> MaterialTheme.colorScheme.onError
                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                     }
 
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape),
+                            .width(24.dp)
+                            .heightIn(min = 28.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Surface(
-                            modifier = Modifier.size(32.dp),
-                            shape = CircleShape,
-                            color = badgeColor
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                if (isAnswerChecked && isOptionCorrect) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Correct",
-                                        tint = badgeTextColor,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                } else if (isAnswerChecked && isSelected && !isOptionCorrect) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Incorrect",
-                                        tint = badgeTextColor,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                } else {
-                                    Text(
-                                        text = letter,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = badgeTextColor
-                                    )
-                                }
-                            }
+                        if (isAnswerChecked && isOptionCorrect) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Correct",
+                                tint = markerColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        } else if (isAnswerChecked && isSelected && !isOptionCorrect) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Incorrect",
+                                tint = markerColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        } else {
+                            Text(
+                                text = letter,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = markerColor
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(14.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
 
                     Text(
                         text = optionText,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = optionTextColor,
                         modifier = Modifier.weight(1f)
                     )
                 }

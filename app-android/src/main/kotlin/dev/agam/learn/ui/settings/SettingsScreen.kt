@@ -188,7 +188,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            SettingsSectionCard(title = "✨ Learning experience") {
+            SettingsSectionCard(title = "Learning experience") {
                 PreferenceSwitchRow(
                     title = "Sound effects",
                     description = "Hear a soft cue for correct answers and milestones, with a gentle tone for mistakes.",
@@ -214,7 +214,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // 1. Daily Goal Picker Section
-            SettingsSectionCard(title = "🎯 Daily Goal") {
+            SettingsSectionCard(title = "Daily Goal") {
                 Text(
                     text = "Choose your target daily practice commitment.",
                     style = MaterialTheme.typography.bodySmall,
@@ -259,7 +259,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // 2. AI Tutor Section
-            SettingsSectionCard(title = "🤖 AI Tutor (Bring Your Own Key)") {
+            SettingsSectionCard(title = "AI Tutor (Bring Your Own Key)") {
                 Text(
                     text = "Configure your preferred AI provider to unlock interactive mistake explanations, progressive hints, and code reviews.",
                     style = MaterialTheme.typography.bodySmall,
@@ -492,7 +492,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // 3. Compiler Server URL & Token Fields
-            SettingsSectionCard(title = "⚙ Compiler Server") {
+            SettingsSectionCard(title = "Compiler Server") {
                 Text(
                     text = "Endpoint for self-hosted kotlin-compiler-server runtime execution.",
                     style = MaterialTheme.typography.bodySmall,
@@ -545,7 +545,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // 4. Interview Mode Default Section
-            SettingsSectionCard(title = "⏱ Interview Mode Default") {
+            SettingsSectionCard(title = "Interview Mode Default") {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -583,7 +583,8 @@ private fun SettingsSectionCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         )

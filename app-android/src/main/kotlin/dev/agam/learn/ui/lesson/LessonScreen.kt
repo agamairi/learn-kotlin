@@ -355,7 +355,7 @@ fun LessonScreen(
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
                                 color = MaterialTheme.colorScheme.background,
-                                shadowElevation = 6.dp
+                                shadowElevation = 0.dp
                             ) {
                                 Box(
                                     modifier = Modifier
@@ -367,7 +367,11 @@ fun LessonScreen(
                                         enabled = uiState.canCheckAnswer,
                                         shape = RoundedCornerShape(12.dp),
                                         elevation = ButtonDefaults.buttonElevation(
-                                            defaultElevation = if (uiState.canCheckAnswer) 4.dp else 0.dp
+                                            defaultElevation = 0.dp,
+                                            pressedElevation = 0.dp,
+                                            focusedElevation = 0.dp,
+                                            hoveredElevation = 0.dp,
+                                            disabledElevation = 0.dp
                                         ),
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = MaterialTheme.colorScheme.primary,
