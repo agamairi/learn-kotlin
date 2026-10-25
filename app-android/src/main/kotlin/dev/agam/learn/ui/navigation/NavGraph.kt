@@ -75,6 +75,21 @@ private val BottomNavItems = listOf(
     BottomNavItem(Screen.Settings.route, "Settings", Icons.Default.Settings)
 )
 
+/** Navigate between the five main destinations while keeping the inactive tab stacks saved. */
+internal fun NavHostController.navigateToTopLevel(route: String) {
+    if (currentDestination?.route == route) return
+
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) {
+            saveState = true
+        }
+        launchSingleTop = true
+        // Home must remain the canonical root. Restoring a saved Home stack can reopen a child
+        // shortcut destination such as Review instead of showing the Home screen itself.
+        restoreState = route != Screen.Home.route
+    }
+}
+
 /** Finds an exercise anywhere in the course catalogue. */
 private suspend fun findExercise(appContainer: AppContainer, exerciseId: String): Exercise? =
     appContainer.courseRepository.listCourses()
@@ -108,17 +123,7 @@ fun LearnAppNavHost(
                         val selected = currentRoute == item.route
                         NavigationBarItem(
                             selected = selected,
-                            onClick = {
-                                if (currentRoute != item.route) {
-                                    navController.navigate(item.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            },
+                            onClick = { navController.navigateToTopLevel(item.route) },
                             icon = {
                                 Icon(
                                     imageVector = item.icon,
@@ -156,10 +161,10 @@ fun LearnAppNavHost(
                         navController.navigate(Screen.Lesson.createRoute(lessonId))
                     },
                     onOpenPath = {
-                        navController.navigate(Screen.Path.route)
+                        navController.navigateToTopLevel(Screen.Path.route)
                     },
                     onOpenReview = {
-                        navController.navigate(Screen.Review.route)
+                        navController.navigateToTopLevel(Screen.Review.route)
                     }
                 )
             }

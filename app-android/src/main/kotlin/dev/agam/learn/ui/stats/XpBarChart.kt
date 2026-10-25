@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,150 +22,213 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 
-/**
- * Data item representing XP earned on a specific day for the chart.
- */
+/** XP earned on a specific day. */
 data class DailyXp(
     val dayLabel: String,
     val xp: Int,
     val goalMet: Boolean = false
 )
 
-/**
- * Custom bar chart drawn with Compose [Canvas] displaying recent daily XP history.
- */
+/** Recent XP history drawn as a compact, accessible bar chart. */
 @Composable
 fun XpBarChart(
     history: List<DailyXp>,
     dailyGoal: Int = 50,
     modifier: Modifier = Modifier
 ) {
-    if (history.isEmpty()) return
+    val colorScheme = MaterialTheme.colorScheme
+    val goal = dailyGoal.coerceAtLeast(0)
+    val goalDays = history.count { it.goalMet || (goal > 0 && it.xp >= goal) }
+    val chartSummary = buildString {
+        append("Daily practice, ${history.size} days. ")
+        if (history.isNotEmpty()) {
+            append(history.joinToString(separator = "; ") { "${it.dayLabel}: ${it.xp.coerceAtLeast(0)} XP" })
+            append(". ")
+        }
+        if (goal > 0) {
+            append("Daily goal: $goal XP, met on $goalDays days.")
+        } else {
+            append("No daily XP goal is set.")
+        }
+    }
+    val shape = RoundedCornerShape(14.dp)
 
-    val barColor = MaterialTheme.colorScheme.primary
-    val goalMetColor = Color(0xFF2E7D32) // Forest green
-    val axisColor = MaterialTheme.colorScheme.outlineVariant
-    val goalLineColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f)
-
-    val totalXp = history.sumOf { it.xp }
-    val daysMet = history.count { it.goalMet || it.xp >= dailyGoal }
-    val chartSummary = "XP history: $totalXp XP earned across ${history.size} days. Daily goal of $dailyGoal XP met on $daysMet days."
-
-    Card(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .semantics { contentDescription = chartSummary },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        )
+            .border(
+                width = 1.dp,
+                color = colorScheme.outlineVariant.copy(alpha = 0.55f),
+                shape = shape
+            ),
+        shape = shape,
+        color = colorScheme.surface
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = "XP History",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Goal: $dailyGoal XP/day",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Canvas Bar Chart
-            val maxY = maxOf(dailyGoal * 1.25f, (history.maxOfOrNull { it.xp } ?: dailyGoal).toFloat() * 1.15f)
-
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-            ) {
-                val canvasWidth = size.width
-                val canvasHeight = size.height
-                val bottomPadding = 4f
-                val chartHeight = canvasHeight - bottomPadding
-
-                // Draw baseline
-                drawLine(
-                    color = axisColor,
-                    start = Offset(0f, chartHeight),
-                    end = Offset(canvasWidth, chartHeight),
-                    strokeWidth = 2f
-                )
-
-                // Draw daily goal dashed line
-                val goalY = chartHeight - (dailyGoal / maxY * chartHeight)
-                if (goalY in 0f..chartHeight) {
-                    drawLine(
-                        color = goalLineColor,
-                        start = Offset(0f, goalY),
-                        end = Offset(canvasWidth, goalY),
-                        strokeWidth = 2f,
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Daily practice",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = if (goal > 0) "Goal: $goal XP per day" else "XP earned each day",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant
                     )
                 }
-
-                // Draw bars
-                val barCount = history.size
-                val slotWidth = canvasWidth / barCount
-                val barWidth = (slotWidth * 0.55f).coerceIn(12f, 40f)
-
-                history.forEachIndexed { index, item ->
-                    val barHeight = (item.xp / maxY * chartHeight).coerceIn(4f, chartHeight)
-                    val x = index * slotWidth + (slotWidth - barWidth) / 2f
-                    val y = chartHeight - barHeight
-
-                    val color = if (item.xp >= dailyGoal) goalMetColor else barColor
-
-                    drawRoundRect(
-                        color = color,
-                        topLeft = Offset(x, y),
-                        size = Size(barWidth, barHeight),
-                        cornerRadius = CornerRadius(6f, 6f)
+                if (goal > 0 && history.isNotEmpty()) {
+                    Text(
+                        text = "$goalDays / ${history.size} days",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colorScheme.primary,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.padding(start = 8.dp, top = 3.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(18.dp))
+            if (history.isEmpty()) {
+                Text(
+                    text = "Your daily XP will appear here after you practice.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+            } else {
+                val maxXp = history.maxOfOrNull { it.xp.coerceAtLeast(0) } ?: 0
+                val chartMax = maxOf(maxXp, goal).coerceAtLeast(1).toFloat() * 1.12f
+                val chartHeight = 104.dp
+                val targetLineColor = colorScheme.tertiary.copy(alpha = 0.8f)
+                val belowGoalColor = colorScheme.primaryContainer
+                val metGoalColor = colorScheme.primary
+                val emptyDayColor = colorScheme.surfaceContainerHigh
 
-            // X-axis day labels & values
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                history.forEach { item ->
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(chartHeight)
+                            .semantics { contentDescription = chartSummary }
                     ) {
-                        Text(
-                            text = "${item.xp}",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = if (item.xp >= dailyGoal) goalMetColor else MaterialTheme.colorScheme.onSurface
+                        val availableHeight = size.height - 3f
+                        val slotWidth = size.width / history.size
+                        val barWidth = (slotWidth * 0.52f).coerceIn(2f, 24.dp.toPx())
+
+                        drawLine(
+                            color = colorScheme.outlineVariant,
+                            start = Offset(0f, availableHeight),
+                            end = Offset(size.width, availableHeight),
+                            strokeWidth = 1.dp.toPx()
+                        )
+
+                        if (goal > 0) {
+                            val goalY = availableHeight - (goal / chartMax * availableHeight)
+                            if (goalY in 0f..availableHeight) {
+                                drawLine(
+                                    color = targetLineColor,
+                                    start = Offset(0f, goalY),
+                                    end = Offset(size.width, goalY),
+                                    strokeWidth = 1.dp.toPx(),
+                                    pathEffect = PathEffect.dashPathEffect(
+                                        floatArrayOf(5.dp.toPx(), 4.dp.toPx()),
+                                        0f
+                                    )
+                                )
+                            }
+                        }
+
+                        history.forEachIndexed { index, item ->
+                            val xp = item.xp.coerceAtLeast(0)
+                            val reachedGoal = item.goalMet || (goal > 0 && xp >= goal)
+                            val barHeight = if (xp == 0) {
+                                3.dp.toPx()
+                            } else {
+                                (xp / chartMax * availableHeight).coerceIn(3.dp.toPx(), availableHeight)
+                            }
+                            val x = index * slotWidth + (slotWidth - barWidth) / 2f
+                            val y = availableHeight - barHeight
+                            val fillColor = when {
+                                xp == 0 -> emptyDayColor
+                                reachedGoal -> metGoalColor
+                                else -> belowGoalColor
+                            }
+
+                            drawRoundRect(
+                                color = fillColor,
+                                topLeft = Offset(x, y),
+                                size = Size(barWidth, barHeight),
+                                cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(7.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    history.forEach { item ->
+                        val xp = item.xp.coerceAtLeast(0)
+                        val reachedGoal = item.goalMet || (goal > 0 && xp >= goal)
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = compactXp(xp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = if (reachedGoal) colorScheme.primary else colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = item.dayLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+
+                if (goal > 0) {
+                    Spacer(Modifier.height(10.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 16.dp, height = 2.dp)
+                                .background(targetLineColor)
                         )
                         Text(
-                            text = item.dayLabel,
+                            text = "Daily goal",
+                            modifier = Modifier.padding(start = 6.dp),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -174,21 +237,8 @@ fun XpBarChart(
     }
 }
 
-@Preview
-@Composable
-private fun XpBarChartPreview() {
-    MaterialTheme {
-        XpBarChart(
-            history = listOf(
-                DailyXp("Mon", 35),
-                DailyXp("Tue", 60, goalMet = true),
-                DailyXp("Wed", 50, goalMet = true),
-                DailyXp("Thu", 20),
-                DailyXp("Fri", 75, goalMet = true),
-                DailyXp("Sat", 40),
-                DailyXp("Sun", 80, goalMet = true)
-            ),
-            dailyGoal = 50
-        )
-    }
+private fun compactXp(xp: Int): String = when {
+    xp < 1_000 -> xp.toString()
+    xp % 1_000 == 0 -> "${xp / 1_000}k"
+    else -> "${xp / 1_000}.${(xp % 1_000) / 100}k"
 }

@@ -37,7 +37,9 @@ data class ExerciseAttempt(
     val exerciseId: String,
     val correct: Boolean,
     val review: Boolean = false,
-    val aiHintsUsed: List<Int> = emptyList()
+    val aiHintsUsed: List<Int> = emptyList(),
+    /** A retry within a lesson's mistake round; record it without counting another completion. */
+    val isLessonRetry: Boolean = false
 )
 
 /** One checked part of a multi-part problem. Each part pays its XP once, on its first pass. */
@@ -181,7 +183,7 @@ class ProgressRecorder(
         return commit(
             attemptId = attempt.attemptId,
             result = placed.result(exercise.id, attempt.correct, xp, now),
-            completesExercise = true,
+            completesExercise = !attempt.isLessonRetry,
             reviewCard = seed,
             day = day
         )

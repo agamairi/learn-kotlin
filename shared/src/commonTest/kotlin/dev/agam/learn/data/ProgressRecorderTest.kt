@@ -157,6 +157,36 @@ class ProgressRecorderTest {
     }
 
     @Test
+    fun lessonMistakeRetriesKeepOneDailyCompletionAndAwardXpOnTheFirstCorrectRetry() = runTest {
+        recorder.record(ExerciseAttempt("initial-wrong", "card-mc", correct = false))
+        recorder.record(
+            ExerciseAttempt(
+                attemptId = "retry-wrong",
+                exerciseId = "card-mc",
+                correct = false,
+                isLessonRetry = true
+            )
+        )
+        recorder.record(
+            ExerciseAttempt(
+                attemptId = "retry-correct",
+                exerciseId = "card-mc",
+                correct = true,
+                isLessonRetry = true
+            )
+        )
+
+        val results = repository.getExerciseResultsForExercise("card-mc")
+        assertEquals(3, results.size)
+        assertEquals(1, results.count { it.correct })
+        assertEquals(listOf(0, 0, 10), results.map { it.xpAwarded }.sorted())
+        assertEquals(
+            DailyActivity(epochDay(2026, 1, 6), xpEarned = 10, exercisesCompleted = 1, goalMet = false),
+            repository.getDailyActivity(epochDay(2026, 1, 6))
+        )
+    }
+
+    @Test
     fun aMissedCardKeepsAnExistingReviewCard() = runTest {
         repository.upsertReviewCard(ReviewCard("card-cloze", box = 4, dueEpochDay = epochDay(2026, 1, 20)))
 

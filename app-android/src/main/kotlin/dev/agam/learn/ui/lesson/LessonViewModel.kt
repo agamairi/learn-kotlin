@@ -66,7 +66,13 @@ class LessonViewModel(
     val uiState: StateFlow<LessonUiState> = _uiState.asStateFlow()
 
     private var activeLesson: Lesson? = null
+    private var activeCourseRequestId: String? = null
     private var exercises: List<Exercise> = emptyList()
+    private val mistakeReviewQueue = mutableListOf<Exercise>()
+    private val queuedMistakeIds = mutableSetOf<String>()
+    private val masteredExerciseIds = mutableSetOf<String>()
+    private var mistakeReviewTotal = 0
+    private var mistakeReviewCorrectCount = 0
 
     /** Identifies this visit to the lesson. Attempt ids are built from it, so each attempt is recorded once. */
     private val runId: String = newAttemptId()
@@ -76,6 +82,9 @@ class LessonViewModel(
 
     private var nextEventId: Long = 1L
     private fun generateEventId(): Long = nextEventId++
+    private var nextPresentationAttemptOrdinal: Long = 1L
+    private fun generatePresentationAttemptId(exerciseId: String): String =
+        "$runId:$exerciseId:${nextPresentationAttemptOrdinal++}"
 
     /**
      * Route of the studio screen that completes [exercise], or null for exercises the lesson grades itself.
@@ -89,7 +98,13 @@ class LessonViewModel(
     /**
      * Loads the target lesson from the curriculum by identifier.
      */
-    fun loadLesson(lessonId: String, courseId: String = "kotlin-stripe") {
+    fun loadLesson(
+        lessonId: String,
+        courseId: String = "kotlin-stripe",
+        forceReload: Boolean = false
+    ) {
+        if (!forceReload && activeLesson?.id == lessonId && activeCourseRequestId == courseId) return
+
         runStartedAtMillis = progressRecorder.now().toEpochMilliseconds()
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -129,7 +144,13 @@ class LessonViewModel(
             }
 
             activeLesson = foundLesson
+            activeCourseRequestId = courseId
             exercises = foundLesson.exercises
+            mistakeReviewQueue.clear()
+            queuedMistakeIds.clear()
+            masteredExerciseIds.clear()
+            mistakeReviewTotal = 0
+            mistakeReviewCorrectCount = 0
 
             _uiState.update {
                 it.copy(
@@ -140,6 +161,17 @@ class LessonViewModel(
                     chapterTitle = chapterTitle,
                     step = LessonStep.Explanation(foundLesson.explanation),
                     totalExercisesCount = exercises.size,
+                    correctExercisesCount = 0,
+                    xpEarnedInLesson = 0,
+                    pendingMistakeCount = 0,
+                    isMistakeReview = false,
+                    selectedOptionIndex = null,
+                    clozeAnswers = emptyMap(),
+                    predictOutputText = "",
+                    isAnswerChecked = false,
+                    isAnswerCorrect = null,
+                    currentExplanation = "",
+                    aiPracticeState = AiPracticeState(),
                     consecutiveCorrectStreak = 0,
                     activeMilestone = null,
                     feedbackEvent = null
@@ -152,6 +184,7 @@ class LessonViewModel(
      * User clicks "Start Exercises" after reading the lesson explanation.
      */
     fun onStartPractice() {
+        if (_uiState.value.step !is LessonStep.Explanation) return
         if (exercises.isEmpty()) {
             _uiState.update {
                 it.copy(
@@ -172,6 +205,32 @@ class LessonViewModel(
                     totalExercises = exercises.size,
                     exercise = exercises[0]
                 ),
+                selectedOptionIndex = null,
+                clozeAnswers = emptyMap(),
+                predictOutputText = "",
+                isAnswerChecked = false,
+                isAnswerCorrect = null,
+                currentExplanation = ""
+            )
+        }
+    }
+
+    /** Starts the explicit end-of-lesson round for unique missed lesson cards. */
+    fun startMistakeReview() {
+        val state = _uiState.value
+        if (state.step !is LessonStep.MistakeReviewIntro || mistakeReviewQueue.isEmpty()) return
+
+        mistakeReviewTotal = mistakeReviewQueue.size
+        mistakeReviewCorrectCount = 0
+        _uiState.update {
+            it.copy(
+                step = LessonStep.ExercisePlaying(
+                    exerciseIndex = 0,
+                    totalExercises = mistakeReviewTotal,
+                    exercise = mistakeReviewQueue.first()
+                ),
+                isMistakeReview = true,
+                pendingMistakeCount = mistakeReviewQueue.size,
                 selectedOptionIndex = null,
                 clozeAnswers = emptyMap(),
                 predictOutputText = "",
@@ -205,8 +264,9 @@ class LessonViewModel(
      * Evaluates the learner's answer against the active exercise.
      */
     fun onCheckAnswer() {
-        val currentStep = _uiState.value.step as? LessonStep.ExercisePlaying ?: return
-        if (_uiState.value.isAnswerChecked) return
+        val state = _uiState.value
+        val currentStep = state.step as? LessonStep.ExercisePlaying ?: return
+        if (state.isAnswerChecked) return
 
         val exercise = currentStep.exercise
         // Code and problem exercises are graded in their studio screens; the lesson records their result.
@@ -214,22 +274,27 @@ class LessonViewModel(
 
         val (isCorrect, explanation) = when (exercise) {
             is Exercise.MultipleChoice -> {
-                val selected = _uiState.value.selectedOptionIndex ?: -1
+                val selected = state.selectedOptionIndex ?: -1
                 val correct = answerGrader.gradeMultipleChoice(exercise, selected)
                 correct to exercise.explanation
             }
             is Exercise.Cloze -> {
-                val correct = answerGrader.gradeCloze(exercise, _uiState.value.clozeAnswers)
+                val correct = answerGrader.gradeCloze(exercise, state.clozeAnswers)
                 correct to exercise.explanation
             }
             is Exercise.PredictOutput -> {
-                val correct = answerGrader.gradePredictOutput(exercise, _uiState.value.predictOutputText)
+                val correct = answerGrader.gradePredictOutput(exercise, state.predictOutputText)
                 correct to exercise.explanation
             }
             is Exercise.WriteFunction, is Exercise.MultiPartProblem -> return
         }
 
-        val newStreak = if (isCorrect) _uiState.value.consecutiveCorrectStreak + 1 else 0
+        if (!isCorrect && !state.isMistakeReview) enqueueMissedLessonCard(exercise)
+        val newlyMastered = isCorrect && masteredExerciseIds.add(exercise.id)
+        if (newlyMastered && state.isMistakeReview) mistakeReviewCorrectCount += 1
+        val attemptId = generatePresentationAttemptId(exercise.id)
+
+        val newStreak = if (isCorrect) state.consecutiveCorrectStreak + 1 else 0
         val isMilestone = isCorrect && newStreak > 0 && (newStreak % 5 == 0)
         val eventId = generateEventId()
         val milestone = if (isMilestone) MilestoneCelebration(id = eventId, streakCount = newStreak) else null
@@ -241,7 +306,8 @@ class LessonViewModel(
                 isAnswerChecked = true,
                 isAnswerCorrect = isCorrect,
                 currentExplanation = explanation,
-                correctExercisesCount = if (isCorrect) it.correctExercisesCount + 1 else it.correctExercisesCount,
+                correctExercisesCount = masteredExerciseIds.size.coerceAtMost(exercises.size),
+                pendingMistakeCount = mistakeReviewQueue.size,
                 consecutiveCorrectStreak = newStreak,
                 activeMilestone = milestone ?: it.activeMilestone,
                 feedbackEvent = feedbackEvent
@@ -251,12 +317,22 @@ class LessonViewModel(
         viewModelScope.launch {
             progressRecorder.record(
                 ExerciseAttempt(
-                    attemptId = "$runId:${exercise.id}",
+                    attemptId = attemptId,
                     exerciseId = exercise.id,
-                    correct = isCorrect
+                    correct = isCorrect,
+                    isLessonRetry = state.isMistakeReview
                 )
             )
             refreshLessonXp()
+        }
+    }
+
+    private fun enqueueMissedLessonCard(exercise: Exercise) {
+        val isLessonCard = exercise is Exercise.MultipleChoice ||
+            exercise is Exercise.Cloze ||
+            exercise is Exercise.PredictOutput
+        if (isLessonCard && queuedMistakeIds.add(exercise.id)) {
+            mistakeReviewQueue += exercise
         }
     }
 
@@ -273,6 +349,12 @@ class LessonViewModel(
             val passed = progressRepository.getExerciseResultsForExercise(exerciseId).any { it.correct }
             if (!passed) return@launch
             val xp = lessonXpThisRun()
+            val latest = _uiState.value
+            val latestPlaying = latest.step as? LessonStep.ExercisePlaying
+            if (latestPlaying == null || latestPlaying.exercise.id != exerciseId || latest.isAnswerChecked) {
+                return@launch
+            }
+            masteredExerciseIds.add(exerciseId)
             _uiState.update { state ->
                 val playing = state.step as? LessonStep.ExercisePlaying
                 if (playing == null || playing.exercise.id != exerciseId || state.isAnswerChecked) {
@@ -293,7 +375,8 @@ class LessonViewModel(
                         else -> "Exercise completed."
                     },
                     xpEarnedInLesson = xp,
-                    correctExercisesCount = state.correctExercisesCount + 1,
+                    correctExercisesCount = masteredExerciseIds.size.coerceAtMost(exercises.size),
+                    pendingMistakeCount = mistakeReviewQueue.size,
                     consecutiveCorrectStreak = newStreak,
                     activeMilestone = milestone ?: state.activeMilestone,
                     feedbackEvent = feedbackEvent
@@ -325,7 +408,48 @@ class LessonViewModel(
      * Advances to the next exercise or transitions to the summary completion view.
      */
     fun onContinueNext() {
-        val currentStep = _uiState.value.step as? LessonStep.ExercisePlaying ?: return
+        val state = _uiState.value
+        val currentStep = state.step as? LessonStep.ExercisePlaying ?: return
+        if (!state.isAnswerChecked) return
+
+        if (state.isMistakeReview) {
+            val currentMistake = mistakeReviewQueue.firstOrNull() ?: run {
+                completeLesson()
+                return
+            }
+            if (currentMistake.id != currentStep.exercise.id) return
+
+            mistakeReviewQueue.removeAt(0)
+            if (state.isAnswerCorrect != true) {
+                // Keep one pending copy and offer it after every other unresolved mistake.
+                mistakeReviewQueue += currentMistake
+            }
+
+            if (mistakeReviewQueue.isEmpty()) {
+                completeLesson()
+            } else {
+                _uiState.update {
+                    it.copy(
+                        step = LessonStep.ExercisePlaying(
+                            exerciseIndex = mistakeReviewCorrectCount,
+                            totalExercises = mistakeReviewTotal,
+                            exercise = mistakeReviewQueue.first()
+                        ),
+                        pendingMistakeCount = mistakeReviewQueue.size,
+                        selectedOptionIndex = null,
+                        clozeAnswers = emptyMap(),
+                        predictOutputText = "",
+                        isAnswerChecked = false,
+                        isAnswerCorrect = null,
+                        currentExplanation = "",
+                        activeMilestone = null,
+                        feedbackEvent = null
+                    )
+                }
+            }
+            return
+        }
+
         val nextIndex = currentStep.exerciseIndex + 1
 
         if (nextIndex < exercises.size) {
@@ -346,30 +470,49 @@ class LessonViewModel(
                     feedbackEvent = null
                 )
             }
-        } else {
-            // The last exercise is done: save the lesson as complete, then show the summary.
-            val lessonId = activeLesson?.id
-            val correctCount = _uiState.value.correctExercisesCount
-            val totalCount = exercises.size
-
+        } else if (mistakeReviewQueue.isNotEmpty()) {
             _uiState.update {
                 it.copy(
-                    step = LessonStep.Completed(
-                        totalXp = it.xpEarnedInLesson,
-                        correctCount = correctCount,
-                        totalCount = totalCount
-                    ),
+                    step = LessonStep.MistakeReviewIntro(pendingCount = mistakeReviewQueue.size),
+                    pendingMistakeCount = mistakeReviewQueue.size,
+                    isMistakeReview = false,
+                    selectedOptionIndex = null,
+                    clozeAnswers = emptyMap(),
+                    predictOutputText = "",
                     isAnswerChecked = false,
+                    isAnswerCorrect = null,
+                    currentExplanation = "",
                     activeMilestone = null,
                     feedbackEvent = null
                 )
             }
+        } else {
+            completeLesson()
+        }
+    }
 
-            if (lessonId != null) {
-                viewModelScope.launch {
-                    progressRecorder.completeLesson(lessonId)
-                    refreshLessonXp()
-                }
+    private fun completeLesson() {
+        if (_uiState.value.step is LessonStep.Completed) return
+        val lessonId = activeLesson?.id
+        _uiState.update {
+            it.copy(
+                step = LessonStep.Completed(
+                    totalXp = it.xpEarnedInLesson,
+                    correctCount = masteredExerciseIds.size.coerceAtMost(exercises.size),
+                    totalCount = exercises.size
+                ),
+                correctExercisesCount = masteredExerciseIds.size.coerceAtMost(exercises.size),
+                pendingMistakeCount = 0,
+                isMistakeReview = false,
+                isAnswerChecked = false,
+                activeMilestone = null,
+                feedbackEvent = null
+            )
+        }
+        if (lessonId != null) {
+            viewModelScope.launch {
+                progressRecorder.completeLesson(lessonId)
+                refreshLessonXp()
             }
         }
     }

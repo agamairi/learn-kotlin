@@ -1,6 +1,6 @@
 # Handoff: learn-kotlin
 
-State as of 2026-10-25, updated for v0.2.0. Written for whoever picks the project up next, for example Codex working in this checkout.
+State as of 2026-10-25, updated for v0.3.0. Written for whoever picks the project up next, for example Codex working in this checkout.
 
 ## What it is
 
@@ -18,6 +18,9 @@ An Android app for learning Kotlin, Duolingo-style, aimed at the Stripe Android 
 - Code blocks, fenced Markdown, review snippets, output, and the editable source soft-wrap. The editor gutter follows logical source lines across wrapped visual rows. The raw source and selection remain intact; do not insert invisible characters to force wrapping. Wrapping tests require Robolectric native graphics for real font measurement.
 - Android Keystore now generates the encryption IV itself, fixing **Caller-provided IV not permitted**. AES-GCM, randomized encryption, the existing key alias and the `base64(IV).base64(ciphertext)` record format are preserved. Two instrumented tests exercise the real Android Keystore with isolated aliases/databases and synthetic values. A Settings save on API 35 was also checked with a synthetic key, then removed; no real provider credentials were used in tests.
 - Design reference: a private Google Stitch concept informed the path; production artwork is original SVG/native vector code. The supplied Stitch credential belongs only in local tool configuration, never in source, docs, app configuration, APKs, or release assets. Source/APK credential scans passed. Antigravity Gemini 3.8 Flash and Luna xhigh implemented this upgrade; their output was reviewed and verified locally.
+- v0.3.0 adds an end-of-lesson queue for missed multiple-choice, cloze, and predict-output questions. Originals finish first, then `LessonStep.MistakeReviewIntro` introduces the round with a clay Koda banner and an explicit Review mistakes action. Wrong retries rotate behind the other unresolved items; completion waits until they are corrected. Code studio exercises retain their existing pass-before-advance flow. Attempts remain recorded through `ProgressRecorder`, with unique attempt IDs; `ExerciseAttempt.isLessonRetry` prevents retry attempts from inflating the daily completed-exercise count. A later correct retry pays the normal card XP. This is separate from the Leitner scheduler (`review=false`). No database migration is needed.
+- The lesson ViewModel preserves the active lesson and queue on redundant same-lesson loads, including configuration recreation. An explicit `forceReload` starts a fresh run; process death still restarts the lesson, with already-recorded results retained. Summary correctness counts mastered unique original exercises, not presentations.
+- Google Stitch created actual Home, Review, Stats, and Settings designs for v0.3.0, using Gemini 3.8 Flash. Screens, exported HTML, provenance, and adaptation notes are committed in `docs/design/stitch`. Antigravity implemented Home; Luna implemented the other screens and mistake flow. All native screens use real app data and the approved original Koda artwork, with no fictional profile, duration estimates, or invented metrics. The quiz layout remains. Top-level navigation now uses one helper for tabs and Home shortcuts, avoiding a saved Review stack reopening when Home is selected.
 - Plan and rules: `docs/PLAN.md`. Content contract: `docs/CONTENT_SCHEMA.md`. Compiler server findings: `docs/spike-report.md`. AI API facts: `docs/AI_PROVIDERS.md`. Setup for users: `README.md`.
 
 ## Modules
@@ -44,7 +47,7 @@ Run from the repo root. JDK 21 is needed, and `local.properties` must have `sdk.
 ./gradlew :shared:verifySqlDelightMigration
 ```
 
-The v0.2.0 full build and lint passed: 137 app (including feedback-exit, milestone, accessibility, raw-code wrapping and preferences regressions), 74 shared JVM, 71 shared Android host, 14 runtime JVM, 14 runtime Android host and 35 content tests (345 test executions, no failures). Both Android Keystore instrumented tests passed on API 35 arm64 AOSP. SQLDelight migration verification also passed. All 82 live content checks were rerun and passed on stable Kotlin 2.4.21 (21 cloze warnings that only need surrounding context). Visual checks covered Home, Path, lesson questions, the five-answer celebration, completion and Settings in dark mode, plus light mode at 320 dp with 1.5× text. Physical audio/vibration feel still needs a phone check.
+The v0.3.0 full build and lint passed: 144 app (including mistake ordering/retries/recreation, top-level navigation, feedback-exit, milestone, accessibility, wrapping and preferences regressions), 75 shared JVM, 72 shared Android host, 14 runtime JVM, 14 runtime Android host and 35 content tests (354 test executions, no failures). Both Android Keystore instrumented tests passed on API 35 arm64 AOSP. SQLDelight migration verification also passed. All 82 live content checks were rerun and passed on stable Kotlin 2.4.21 (21 cloze warnings that only need surrounding context). A real emulator lesson with two initial misses and one repeated miss finished with 9 recorded attempts, 6 correct original exercises, 60 XP, 6 daily exercise completions and one lesson completion. The queue survived configuration recreation. Visual checks covered the four Stitch-based screens in light and dark modes, the five-answer celebration, the clay mistake banner, and 320 dp with 1.5× text. Physical audio/vibration feel still needs a phone check.
 
 ## Compiler server (needed for code exercises)
 
@@ -92,7 +95,7 @@ The v0.2.0 full build and lint passed: 137 app (including feedback-exit, milesto
 
 ## Not done / next steps
 
-1. **Installation issue resolved; reported physical-device test complete.** Agam confirmed the app works locally on his phone and v0.1.2 installed after the duplicate scan/install dialog issue. API 35 ATD fresh-install, launch, and Home hierarchy checks passed for v0.1.3; updating from v0.1.2 retained a correct-answer result, 10 XP, and all existing database rows. The v0.2.0 visual emulator review is complete. Check the new sound/vibration strength on a physical phone and record a seven-day soak test when practical.
+1. **Installation issue resolved; reported physical-device test complete.** Agam confirmed the app works locally on his phone and v0.1.2 installed after the duplicate scan/install dialog issue. API 35 ATD fresh-install, launch, and Home hierarchy checks passed for v0.1.3; updating from v0.1.2 retained a correct-answer result, 10 XP, and all existing database rows. The v0.3.0 visual emulator review and end-of-lesson mistake-flow checks are complete. Check the new sound/vibration strength on a physical phone and record a seven-day soak test when practical.
 2. **Stable compiler migration complete.** The server runs Kotlin 2.4.21. Re-run `:content:verifyContent` whenever content or the compiler version changes.
 3. **Optional:** a hosted runner (the plan mentions Cloud Run with a token). It needs real isolation first; see the security bullet above.
 4. **Optional:** swap Leitner for FSRS behind `ReviewScheduler`, or add a second language pack (`docs/PLAN.md`, "Adding a language later").

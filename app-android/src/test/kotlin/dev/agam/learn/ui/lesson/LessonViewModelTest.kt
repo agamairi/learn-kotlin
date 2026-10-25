@@ -16,6 +16,7 @@ import dev.agam.learn.fake.courseOf
 import dev.agam.learn.fake.progressRecorderFor
 import dev.agam.learn.model.Course
 import dev.agam.learn.model.Exercise
+import dev.agam.learn.model.Blank
 import dev.agam.learn.model.ProblemPart
 import dev.agam.learn.runtime.kotlin.KotlinLanguageSupport
 import dev.agam.learn.ui.review.ReviewViewModel
@@ -97,6 +98,204 @@ class LessonViewModelTest {
         lessonId = "lesson-studio",
         chapterId = "ch-studio"
     )
+
+    private fun multipleChoice(id: String) = Exercise.MultipleChoice(
+        id = id,
+        prompt = "Choose the correct answer",
+        options = listOf("correct", "incorrect"),
+        correctIndex = 0,
+        explanation = ""
+    )
+
+    private fun cloze(id: String) = Exercise.Cloze(
+        id = id,
+        prompt = "Fill the blank",
+        template = "val answer = ____1",
+        blanks = listOf(Blank("____1", listOf("yes"))),
+        explanation = ""
+    )
+
+    private fun predictOutput(id: String) = Exercise.PredictOutput(
+        id = id,
+        prompt = "Predict the output",
+        code = "println(\"done\")",
+        expectedOutput = "done",
+        explanation = ""
+    )
+
+    @Test
+    fun missedCardsAreDeferredThenReviewedInOrderUntilMasteredOnce() = runTest(testDispatcher) {
+        val first = multipleChoice("first")
+        val second = cloze("second")
+        val third = predictOutput("third")
+        val vm = viewModelFor(courseWith(first, second, third))
+        vm.loadLesson("lesson-studio")
+        advanceUntilIdle()
+        vm.onStartPractice()
+
+        // A Check before an answer and a Continue before checking cannot skip the first card.
+        vm.onContinueNext()
+        assertEquals("first", (vm.uiState.value.step as LessonStep.ExercisePlaying).exercise.id)
+        assertFalse(vm.uiState.value.isAnswerChecked)
+
+        // Initial pass: miss first, master second, miss third. Duplicate taps record/advance once.
+        vm.onOptionSelected(1)
+        vm.onCheckAnswer()
+        vm.onCheckAnswer()
+        vm.onContinueNext()
+        vm.onContinueNext()
+        assertEquals("second", (vm.uiState.value.step as LessonStep.ExercisePlaying).exercise.id)
+
+        vm.onClozeAnswerChanged("____1", "yes")
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+        vm.onContinueNext()
+        vm.onPredictOutputChanged("wrong")
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+        assertEquals(1, vm.uiState.value.correctExercisesCount)
+        assertEquals(2, vm.uiState.value.pendingMistakeCount)
+        assertFalse(progressRepository.isLessonCompleted("lesson-studio"))
+        vm.onContinueNext()
+
+        val intro = vm.uiState.value.step as LessonStep.MistakeReviewIntro
+        assertEquals(2, intro.pendingCount)
+        assertEquals(2, vm.uiState.value.pendingMistakeCount)
+        assertEquals(3, vm.uiState.value.totalExercisesCount)
+        assertEquals(1, vm.uiState.value.correctExercisesCount)
+        assertFalse(progressRepository.isLessonCompleted("lesson-studio"))
+
+        // Review order starts with first; a repeated wrong answer rotates it behind third.
+        vm.startMistakeReview()
+        vm.startMistakeReview() // idempotent after the intro is consumed
+        assertTrue(vm.uiState.value.isMistakeReview)
+        assertEquals("first", (vm.uiState.value.step as LessonStep.ExercisePlaying).exercise.id)
+        vm.onOptionSelected(1)
+        vm.onCheckAnswer()
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+        vm.onContinueNext()
+        vm.onContinueNext()
+        assertEquals("third", (vm.uiState.value.step as LessonStep.ExercisePlaying).exercise.id)
+        assertEquals(2, vm.uiState.value.pendingMistakeCount)
+
+        // Third is wrong again and rotates behind first; then both recover exactly once.
+        vm.onPredictOutputChanged("still wrong")
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+        vm.onContinueNext()
+        assertEquals("first", (vm.uiState.value.step as LessonStep.ExercisePlaying).exercise.id)
+        vm.onOptionSelected(0)
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+        assertEquals(2, vm.uiState.value.correctExercisesCount)
+        vm.onContinueNext()
+        assertEquals("third", (vm.uiState.value.step as LessonStep.ExercisePlaying).exercise.id)
+        assertEquals(1, vm.uiState.value.pendingMistakeCount)
+        vm.onPredictOutputChanged("done")
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+        vm.onContinueNext()
+        advanceUntilIdle()
+
+        val completed = vm.uiState.value.step as LessonStep.Completed
+        assertEquals(3, completed.correctCount)
+        assertEquals(3, completed.totalCount)
+        assertEquals(30, completed.totalXp)
+        assertEquals(30, vm.uiState.value.xpEarnedInLesson)
+        assertEquals(0, vm.uiState.value.pendingMistakeCount)
+        assertFalse(vm.uiState.value.isMistakeReview)
+        assertTrue(progressRepository.isLessonCompleted("lesson-studio"))
+
+        val attempts = progressRepository.getExerciseResults()
+        assertEquals("Every presentation records once, including wrong retries", 7, attempts.size)
+        assertEquals(30, attempts.sumOf { it.xpAwarded })
+        assertEquals(3, attempts.count { it.correct })
+        assertEquals(3, attempts.map { it.exerciseId }.distinct().size)
+        assertTrue(attempts.any { it.exerciseId == "first" && it.correct && it.xpAwarded == 10 })
+        val dailyActivity = progressRepository.getDailyActivities().single()
+        assertEquals(3, dailyActivity.exercisesCompleted)
+        assertEquals(30, dailyActivity.xpEarned)
+    }
+
+    @Test
+    fun allCorrectOriginalPassCompletesWithoutMistakeReview() = runTest(testDispatcher) {
+        val onlyQuestion = multipleChoice("only")
+        val vm = viewModelFor(courseWith(onlyQuestion))
+        vm.loadLesson("lesson-studio")
+        advanceUntilIdle()
+        vm.onStartPractice()
+        vm.onOptionSelected(0)
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+
+        vm.onContinueNext()
+        vm.onContinueNext()
+        advanceUntilIdle()
+
+        val completed = vm.uiState.value.step as LessonStep.Completed
+        assertEquals(1, completed.correctCount)
+        assertEquals(1, completed.totalCount)
+        assertEquals(10, completed.totalXp)
+        assertEquals(1, progressRepository.getExerciseResults().size)
+        assertTrue(progressRepository.isLessonCompleted("lesson-studio"))
+    }
+
+    @Test
+    fun reloadingSameLessonDuringMistakeReviewKeepsSessionState() = runTest(testDispatcher) {
+        val vm = viewModelFor(courseWith(multipleChoice("mastered"), cloze("missed")))
+        vm.loadLesson("lesson-studio")
+        advanceUntilIdle()
+        vm.onStartPractice()
+
+        vm.onOptionSelected(0)
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+        vm.onContinueNext()
+        vm.onClozeAnswerChanged("____1", "wrong")
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+        vm.onContinueNext()
+        vm.startMistakeReview()
+
+        val beforeReload = vm.uiState.value
+        assertTrue(beforeReload.isMistakeReview)
+        assertEquals("missed", (beforeReload.step as LessonStep.ExercisePlaying).exercise.id)
+        assertEquals(1, beforeReload.pendingMistakeCount)
+        assertEquals(1, beforeReload.correctExercisesCount)
+        assertEquals(10, beforeReload.xpEarnedInLesson)
+
+        // LessonScreen calls loadLesson again after recreation; an already-loaded lesson must retain its run.
+        vm.loadLesson("lesson-studio")
+        advanceUntilIdle()
+
+        val afterReload = vm.uiState.value
+        assertEquals(beforeReload.step, afterReload.step)
+        assertTrue(afterReload.isMistakeReview)
+        assertEquals(1, afterReload.pendingMistakeCount)
+        assertEquals(1, afterReload.correctExercisesCount)
+        assertEquals(10, afterReload.xpEarnedInLesson)
+    }
+
+    @Test
+    fun loadingLessonResetsMistakeQueueAndUniqueMasteryCount() = runTest(testDispatcher) {
+        val vm = viewModelFor(courseWith(multipleChoice("only")))
+        vm.loadLesson("lesson-studio")
+        advanceUntilIdle()
+        vm.onStartPractice()
+        vm.onOptionSelected(1)
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+        vm.onContinueNext()
+        assertTrue(vm.uiState.value.step is LessonStep.MistakeReviewIntro)
+
+        vm.loadLesson("lesson-studio", forceReload = true)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.step is LessonStep.Explanation)
+        assertEquals(0, vm.uiState.value.pendingMistakeCount)
+        assertEquals(0, vm.uiState.value.correctExercisesCount)
+        assertFalse(vm.uiState.value.isMistakeReview)
+    }
 
     private fun drill() = Exercise.WriteFunction(
         id = "drill-sum",
@@ -638,7 +837,7 @@ class LessonViewModelTest {
     }
 
     @Test
-    fun loadingNewLessonResetsStreakAndMilestone() = runTest(testDispatcher) {
+    fun forceReloadingLessonResetsStreakAndMilestone() = runTest(testDispatcher) {
         viewModel.loadLesson("lesson-01-syntax")
         advanceUntilIdle()
         viewModel.onStartPractice()
@@ -649,8 +848,8 @@ class LessonViewModelTest {
         advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.consecutiveCorrectStreak)
 
-        // Load new lesson -> resets session streak
-        viewModel.loadLesson("lesson-01-syntax")
+        // An explicit reload starts a fresh run and resets the session streak.
+        viewModel.loadLesson("lesson-01-syntax", forceReload = true)
         advanceUntilIdle()
 
         assertEquals(0, viewModel.uiState.value.consecutiveCorrectStreak)

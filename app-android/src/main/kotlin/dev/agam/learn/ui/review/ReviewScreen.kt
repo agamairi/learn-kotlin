@@ -1,10 +1,12 @@
 package dev.agam.learn.ui.review
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -190,170 +192,198 @@ private fun ReviewQueueOverview(
     onStartSession: () -> Unit
 ) {
     Text(
-        text = "Spaced Repetition Review",
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold
-    )
-    Text(
-        text = "5-Box Leitner Spaced Repetition Queue",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
+        text = "Review",
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.SemiBold
     )
 
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(12.dp))
 
-    // Due cards count hero card
+    val dueCount = state.dueCards.size
+    val dueByBox = state.dueCards
+        .groupingBy { it.box.coerceIn(1, 5) }
+        .eachCount()
+    val rotationCount = (1..5).sumOf { state.boxCounts[it] ?: 0 }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
         colors = CardDefaults.cardColors(
-            containerColor = if (state.dueCards.isNotEmpty())
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(16.dp)
         ) {
-            if (state.dueCards.isEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "SPACED REPETITION",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (dueCount == 0) "All caught up" else "$dueCount ${if (dueCount == 1) "card" else "cards"} ready for review",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
                 BrandArtwork(
-                    asset = BrandAsset.ReviewDone,
-                    modifier = Modifier.size(112.dp),
+                    asset = if (dueCount == 0) BrandAsset.ReviewDone else BrandAsset.MascotThink,
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceContainerLow,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .padding(6.dp),
                     contentDescription = null
                 )
-                Spacer(modifier = Modifier.height(12.dp))
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "${state.dueCards.size}",
-                style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (state.dueCards.isNotEmpty())
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                text = if (dueCount == 0) {
+                    "No cards are due today. Cards return when their next review date arrives."
+                } else {
+                    "Review due cards to strengthen recall. Correct answers move forward; missed cards return to Box 1."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(
-                text = if (state.dueCards.isNotEmpty()) "Cards Due for Review Today" else "Queue is Clear!",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onStartSession,
+                enabled = dueCount > 0,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = if (dueCount > 0) "Start review · $dueCount ${if (dueCount == 1) "card" else "cards"}" else "No cards due today",
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
         }
     }
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    // Leitner Box Breakdown
-    Text(
-        text = "Leitner Box Distribution",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold
-    )
-    Spacer(modifier = Modifier.height(8.dp))
-
-    val intervals = listOf("1d", "2d", "4d", "8d", "16d")
-    Row(
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        (1..5).forEach { box ->
-            val count = state.boxCounts[box] ?: 0
-            Card(
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Box $box",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "$count",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = intervals[box - 1],
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Memory strength",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = if (rotationCount == 0) "No cards in the review rotation yet." else "$rotationCount ${if (rotationCount == 1) "card" else "cards"} in the review rotation",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val columns = if (maxWidth >= 304.dp) 5 else 3
+                val spacing = 8.dp
+                val itemWidth = (maxWidth - spacing * (columns - 1)) / columns
+                val intervals = listOf("1 day", "2 days", "4 days", "8 days", "16 days")
+
+                (1..5).toList().chunked(columns).forEachIndexed { rowIndex, boxes ->
+                    if (rowIndex > 0) Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                        boxes.forEach { box ->
+                            val count = state.boxCounts[box] ?: 0
+                            val dueInBox = dueByBox[box] ?: 0
+                            Card(
+                                modifier = Modifier.width(itemWidth),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (dueInBox > 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+                                    else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+                                ),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (dueInBox > 0)
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)
+                                    else MaterialTheme.colorScheme.surfaceContainerLow
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "Box $box",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "$count",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = intervals[box - 1],
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    if (dueInBox > 0) {
+                                        Text(
+                                            text = "$dueInBox due",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
-    Spacer(modifier = Modifier.height(20.dp))
-
-    // Action button
-    Button(
-        onClick = onStartSession,
-        enabled = state.dueCards.isNotEmpty(),
+    Spacer(modifier = Modifier.height(12.dp))
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
-        Text(
-            text = if (state.dueCards.isNotEmpty()) "Start Review (${state.dueCards.size} cards)" else "No Cards Due",
-            fontSize = 16.sp
-        )
-    }
-
-    if (state.dueCards.isNotEmpty()) {
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(
-            text = "Due Items",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        state.dueCards.forEach { card ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = card.itemId,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Due epoch day: ${card.dueEpochDay}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Text(
-                        text = "Box ${card.box}",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(
+                text = "How review works",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Cards return after 1, 2, 4, 8, then 16 days as they move through the boxes. A missed card returns to Box 1.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -567,79 +597,97 @@ private fun ReviewSessionCompleteView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 24.dp),
+            .padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        BrandArtwork(
-            asset = BrandAsset.LessonTrophy,
-            modifier = Modifier.size(96.dp),
-            contentDescription = null
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "Review Complete!",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "You've reviewed all due cards for this session.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Stats Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                BrandArtwork(
+                    asset = BrandAsset.LessonTrophy,
+                    modifier = Modifier.size(72.dp),
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Review complete",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "You've reviewed all due cards for this session.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Cards Reviewed:")
-                    Text("${state.totalAnswered}", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Cards reviewed",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text("${state.totalAnswered}", fontWeight = FontWeight.SemiBold)
                 }
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Correct Answers:")
-                    Text("${state.totalCorrect}", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Correct answers",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text("${state.totalCorrect}", fontWeight = FontWeight.SemiBold)
                 }
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Accuracy:")
-                    val accuracy = if (state.totalAnswered > 0) {
-                        (state.totalCorrect * 100) / state.totalAnswered
-                    } else 0
-                    Text("$accuracy%", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "XP earned",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "+${state.xpEarned} XP",
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Button(
+                    onClick = onBackToQueue,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("XP Earned:")
-                    Text("+${state.xpEarned} XP", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text("Back to review")
                 }
             }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onBackToQueue,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text("Back to Queue")
         }
     }
 }

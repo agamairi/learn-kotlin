@@ -13,6 +13,7 @@ sealed interface LessonStep {
         val totalExercises: Int,
         val exercise: Exercise
     ) : LessonStep
+    data class MistakeReviewIntro(val pendingCount: Int) : LessonStep
     data class Completed(
         val totalXp: Int,
         val correctCount: Int,
@@ -93,6 +94,10 @@ data class LessonUiState(
     val xpEarnedInLesson: Int = 0,
     val correctExercisesCount: Int = 0,
     val totalExercisesCount: Int = 0,
+    /** Number of unique missed lesson cards still waiting in the end-of-lesson review. */
+    val pendingMistakeCount: Int = 0,
+    /** True while the learner is working through the separate mistake-review round. */
+    val isMistakeReview: Boolean = false,
     val isAiAvailable: Boolean = false,
     val isInterviewMode: Boolean = false,
     val hasApiKey: Boolean = false,
@@ -130,7 +135,12 @@ data class LessonUiState(
 
     val progressFraction: Float
         get() {
-            val playingStep = step as? LessonStep.ExercisePlaying ?: return if (step is LessonStep.Completed) 1f else 0f
+            if (step is LessonStep.Completed) return 1f
+            if (step is LessonStep.MistakeReviewIntro || isMistakeReview) {
+                if (totalExercisesCount == 0) return 0f
+                return (correctExercisesCount.toFloat() / totalExercisesCount).coerceIn(0f, 1f)
+            }
+            val playingStep = step as? LessonStep.ExercisePlaying ?: return 0f
             if (playingStep.totalExercises == 0) return 0f
             return (playingStep.exerciseIndex.toFloat() / playingStep.totalExercises)
         }

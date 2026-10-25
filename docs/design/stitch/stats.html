@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Your progress - Learn Kotlin</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-error-container": "#93000a",
+            "surface": "#f8faf4",
+            "on-tertiary": "#ffffff",
+            "inverse-primary": "#acceba",
+            "surface-container-highest": "#e1e3dd",
+            "on-tertiary-fixed-variant": "#6f3800",
+            "error-container": "#ffdad6",
+            "surface-container-high": "#e7e9e3",
+            "tertiary": "#783d00",
+            "secondary-fixed": "#afeee7",
+            "primary-container": "#4c6b5a",
+            "on-secondary-fixed": "#00201d",
+            "inverse-on-surface": "#f0f1eb",
+            "tertiary-fixed-dim": "#ffb77f",
+            "surface-variant": "#e1e3dd",
+            "on-primary-container": "#c8ead5",
+            "surface-container-low": "#f3f4ee",
+            "tertiary-container": "#965415",
+            "primary-fixed": "#c8ebd5",
+            "surface-dim": "#d9dbd5",
+            "primary": "#345343",
+            "on-surface-variant": "#424844",
+            "on-secondary": "#ffffff",
+            "secondary": "#296862",
+            "surface-container-lowest": "#ffffff",
+            "background": "#f8faf4",
+            "surface-container": "#edefe8",
+            "on-primary": "#ffffff",
+            "inverse-surface": "#2e312d",
+            "surface-tint": "#466554",
+            "tertiary-fixed": "#ffdcc4",
+            "on-tertiary-container": "#ffdcc4",
+            "on-error": "#ffffff",
+            "on-secondary-container": "#306e68",
+            "surface-bright": "#f8faf4",
+            "on-surface": "#191c19",
+            "on-primary-fixed-variant": "#2f4d3d",
+            "on-primary-fixed": "#022114",
+            "on-secondary-fixed-variant": "#05504b",
+            "secondary-fixed-dim": "#94d2cb",
+            "on-background": "#191c19",
+            "error": "#ba1a1a",
+            "outline-variant": "#c2c8c2",
+            "on-tertiary-fixed": "#2f1500",
+            "outline": "#727973",
+            "primary-fixed-dim": "#acceba",
+            "secondary-container": "#afeee7"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "margin-tablet": "2rem",
+            "margin": "1.25rem",
+            "space-sm": "0.5rem",
+            "space-md": "1rem",
+            "space-xs": "0.25rem",
+            "gutter": "1rem",
+            "space-lg": "1.5rem",
+            "space-xl": "2rem",
+            "gutter-tablet": "1.5rem"
+          },
+          "fontFamily": {
+            "body-md": ["Inter"],
+            "display": ["Inter"],
+            "body-lg": ["Inter"],
+            "label-sm": ["Inter"],
+            "label-lg": ["Inter"],
+            "code-snippet": ["JetBrains Mono"],
+            "label-md": ["Inter"],
+            "headline-lg-mobile": ["Inter"],
+            "headline-md": ["Inter"],
+            "headline-lg": ["Inter"],
+            "body-sm": ["Inter"],
+            "headline-sm": ["Inter"]
+          },
+          "fontSize": {
+            "body-md": ["15px", { "lineHeight": "22px", "fontWeight": "400" }],
+            "display": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "body-lg": ["17px", { "lineHeight": "26px", "fontWeight": "400" }],
+            "label-sm": ["11px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "600" }],
+            "label-lg": ["15px", { "lineHeight": "20px", "fontWeight": "500" }],
+            "code-snippet": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+            "label-md": ["13px", { "lineHeight": "18px", "fontWeight": "500" }],
+            "headline-lg-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "headline-sm": ["17px", { "lineHeight": "24px", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed min-h-screen flex justify-center">
+<!-- Mobile Android Container (390px constrained canvas) -->
+<div class="w-full max-w-[390px] min-h-screen flex flex-col bg-surface relative pb-28">
+<!-- TopAppBar (Shared Component Implementation) -->
+<header class="sticky top-0 z-40 flex justify-between items-center w-full px-5 py-3 bg-surface border-b border-outline-variant/40">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="terminal">terminal</span>
+<span class="text-headline-sm font-headline-sm font-semibold text-on-surface">Learn Kotlin</span>
+</div>
+<div class="flex items-center gap-2">
+<!-- Streak / Freeze indicators -->
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-low border border-outline-variant/30 text-on-surface text-label-md font-label-md">
+<span class="text-sm">3 🔥</span>
+</div>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-low border border-outline-variant/30 text-on-surface text-label-md font-label-md">
+<span class="material-symbols-outlined text-[15px] text-secondary" data-icon="ac_unit">ac_unit</span>
+<span>1</span>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 px-5 pt-5 space-y-5">
+<!-- Screen Header & Title -->
+<div>
+<p class="text-label-sm font-label-sm text-outline tracking-wider uppercase mb-1">Analytics &amp; Mastery</p>
+<h1 class="text-headline-lg-mobile font-headline-lg-mobile text-on-surface tracking-tight">Your progress</h1>
+</div>
+<!-- Koda Companion Encouragement Card -->
+<section class="bg-surface-container-lowest border border-outline-variant/40 rounded-xl p-4 flex items-center justify-between gap-3 shadow-none">
+<div class="flex-1 pr-1">
+<div class="flex items-center gap-1.5 mb-1.5">
+<span class="inline-block w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-label-sm font-label-sm text-primary font-semibold uppercase tracking-wider">Study Partner</span>
+</div>
+<p class="text-body-md font-body-md text-on-surface leading-snug">
+            Steady consistency, Alex. 3 days in a row builds real muscle memory.
+          </p>
+<p class="text-body-sm font-body-sm text-outline mt-1.5">
+            Immutability &amp; data models retained.
+          </p>
+</div>
+<div class="w-16 h-16 flex-shrink-0 flex items-center justify-center">
+<img alt="Koda the companion teal fox mascot" class="w-16 h-16 object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1U3iZCfrt7jOXjdWlbQyxxVVkNU0slUZo0iIApetRG2C_fiwYwe4D-U16NZJWyeEyHa6kmab8wVZgSrJR2ODVRNdObJRO0wV-8a5z1qvykkhjaxPXwyp3G3F2UTz215UNDrJKUpra05BbV1ElOzHoxDT0NRwnJCqvZuxpiqB8qElRV32KCghAJT4q43DVv67NO4yWtxd-Wdi_KJMfwc9h3dkoJVNZTq-pEcI-IQo73acAMROCWsPPb_YfM"/>
+</div>
+</section>
+<!-- Core Stat Overview (3 Column Metric Grid) -->
+<section class="grid grid-cols-3 gap-2.5">
+<!-- Metric 1: XP -->
+<div class="bg-surface-container-lowest border border-outline-variant/40 rounded-xl p-3 flex flex-col justify-between">
+<span class="text-label-sm font-label-sm text-outline uppercase tracking-wider">Total XP</span>
+<div class="mt-2">
+<span class="text-headline-md font-headline-md text-on-surface">450</span>
+</div>
+<span class="text-label-sm font-label-sm text-primary mt-1">+45 today</span>
+</div>
+<!-- Metric 2: Streak -->
+<div class="bg-surface-container-lowest border border-outline-variant/40 rounded-xl p-3 flex flex-col justify-between">
+<span class="text-label-sm font-label-sm text-outline uppercase tracking-wider">Streak</span>
+<div class="mt-2">
+<span class="text-headline-md font-headline-md text-on-surface">3 <span class="text-body-sm font-body-sm text-on-surface-variant font-normal">days</span></span>
+</div>
+<span class="text-label-sm font-label-sm text-primary mt-1">Active</span>
+</div>
+<!-- Metric 3: Exercises -->
+<div class="bg-surface-container-lowest border border-outline-variant/40 rounded-xl p-3 flex flex-col justify-between">
+<span class="text-label-sm font-label-sm text-outline uppercase tracking-wider">Solved</span>
+<div class="mt-2">
+<span class="text-headline-md font-headline-md text-on-surface">18</span>
+</div>
+<span class="text-label-sm font-label-sm text-outline mt-1">Exercises</span>
+</div>
+</section>
+<!-- 7-Day Activity Bar Chart -->
+<section class="bg-surface-container-lowest border border-outline-variant/40 rounded-xl p-4">
+<div class="flex justify-between items-baseline mb-4">
+<div>
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Daily practice</h2>
+<p class="text-body-sm font-body-sm text-outline mt-0.5">Goal: 50 XP / day</p>
+</div>
+<span class="text-label-sm font-label-sm text-primary font-medium px-2 py-0.5 rounded bg-surface-container-low border border-outline-variant/30">
+            This week
+          </span>
+</div>
+<!-- Chart Container -->
+<div class="relative pt-6 pb-1">
+<!-- 50 XP Goal Reference Line -->
+<div class="absolute inset-x-0 top-12 border-b border-dashed border-outline-variant/60 flex justify-between items-center pointer-events-none">
+<span class="text-[10px] text-outline font-code-snippet -mt-4 bg-surface-container-lowest pr-1">50 XP target</span>
+</div>
+<!-- Bar Chart Columns (M, T, W, T, F, S, S) -->
+<div class="grid grid-cols-7 gap-2 items-end h-28 pt-4">
+<!-- Mon: 0 XP (rest) -->
+<div class="flex flex-col items-center h-full justify-end group">
+<div class="w-full max-w-[24px] h-1.5 rounded-sm bg-surface-container-highest/60 border border-outline-variant/30"></div>
+<span class="text-label-sm font-label-sm text-outline mt-2">M</span>
+</div>
+<!-- Tue: 0 XP (rest) -->
+<div class="flex flex-col items-center h-full justify-end group">
+<div class="w-full max-w-[24px] h-1.5 rounded-sm bg-surface-container-highest/60 border border-outline-variant/30"></div>
+<span class="text-label-sm font-label-sm text-outline mt-2">T</span>
+</div>
+<!-- Wed: 0 XP (rest) -->
+<div class="flex flex-col items-center h-full justify-end group">
+<div class="w-full max-w-[24px] h-1.5 rounded-sm bg-surface-container-highest/60 border border-outline-variant/30"></div>
+<span class="text-label-sm font-label-sm text-outline mt-2">W</span>
+</div>
+<!-- Thu: 60 XP (Complete) -->
+<div class="flex flex-col items-center h-full justify-end group">
+<span class="text-[10px] text-on-surface-variant font-code-snippet mb-1 opacity-80">60</span>
+<div class="w-full max-w-[24px] h-[80%] rounded-t-sm bg-primary-container"></div>
+<span class="text-label-sm font-label-sm text-on-surface mt-2 font-medium">T</span>
+</div>
+<!-- Fri: 45 XP -->
+<div class="flex flex-col items-center h-full justify-end group">
+<span class="text-[10px] text-on-surface-variant font-code-snippet mb-1 opacity-80">45</span>
+<div class="w-full max-w-[24px] h-[60%] rounded-t-sm bg-primary-container"></div>
+<span class="text-label-sm font-label-sm text-on-surface mt-2 font-medium">F</span>
+</div>
+<!-- Sat: 50 XP (Target Met) -->
+<div class="flex flex-col items-center h-full justify-end group">
+<span class="text-[10px] text-on-surface-variant font-code-snippet mb-1 opacity-80">50</span>
+<div class="w-full max-w-[24px] h-[68%] rounded-t-sm bg-primary-container"></div>
+<span class="text-label-sm font-label-sm text-on-surface mt-2 font-medium">S</span>
+</div>
+<!-- Sun (Today): 55 XP (Active highlight) -->
+<div class="flex flex-col items-center h-full justify-end group">
+<span class="text-[10px] text-primary font-code-snippet mb-1 font-semibold">55</span>
+<div class="w-full max-w-[24px] h-[74%] rounded-t-sm bg-primary ring-1 ring-primary/20"></div>
+<span class="text-label-sm font-label-sm text-primary mt-2 font-semibold underline decoration-primary underline-offset-4">S</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Streak & Consistency Card -->
+<section class="bg-surface-container-lowest border border-outline-variant/40 rounded-xl p-4">
+<div class="flex justify-between items-center mb-3">
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Streak consistency</h2>
+<span class="text-label-sm font-label-sm text-outline">7-day record</span>
+</div>
+<!-- Weekly mini-pill indicators -->
+<div class="flex items-center justify-between py-2 border-y border-outline-variant/20 mb-3">
+<div class="text-center">
+<span class="text-[10px] text-outline uppercase block mb-1">M</span>
+<div class="w-6 h-6 rounded-full border border-outline-variant/40 flex items-center justify-center text-outline text-xs">·</div>
+</div>
+<div class="text-center">
+<span class="text-[10px] text-outline uppercase block mb-1">T</span>
+<div class="w-6 h-6 rounded-full border border-outline-variant/40 flex items-center justify-center text-outline text-xs">·</div>
+</div>
+<div class="text-center">
+<span class="text-[10px] text-outline uppercase block mb-1">W</span>
+<div class="w-6 h-6 rounded-full border border-outline-variant/40 flex items-center justify-center text-outline text-xs">·</div>
+</div>
+<div class="text-center">
+<span class="text-[10px] text-on-surface uppercase block mb-1 font-medium">T</span>
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]" data-icon="check">check</span>
+</div>
+</div>
+<div class="text-center">
+<span class="text-[10px] text-on-surface uppercase block mb-1 font-medium">F</span>
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]" data-icon="check">check</span>
+</div>
+</div>
+<div class="text-center">
+<span class="text-[10px] text-on-surface uppercase block mb-1 font-medium">S</span>
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]" data-icon="check">check</span>
+</div>
+</div>
+<div class="text-center">
+<span class="text-[10px] text-primary uppercase block mb-1 font-semibold">S</span>
+<div class="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center ring-2 ring-primary-fixed">
+<span class="material-symbols-outlined text-[14px]" data-icon="check">check</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2 text-body-sm font-body-sm text-on-surface-variant pt-1">
+<div class="flex items-center gap-1.5">
+<span class="text-outline">Longest streak:</span>
+<span class="font-medium text-on-surface">7 days</span>
+</div>
+<div class="flex items-center gap-1.5 justify-end">
+<span class="material-symbols-outlined text-secondary text-[16px]" data-icon="ac_unit">ac_unit</span>
+<span class="text-outline">Freezes left:</span>
+<span class="font-medium text-on-surface">1</span>
+</div>
+</div>
+</section>
+<!-- Chapter Accuracy & Mastery Section -->
+<section class="bg-surface-container-lowest border border-outline-variant/40 rounded-xl p-4 space-y-4">
+<div class="flex justify-between items-baseline">
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Chapter breakdown</h2>
+<span class="text-label-sm font-label-sm text-outline">11 / 21 mastered</span>
+</div>
+<div class="space-y-4">
+<!-- Chapter 1 -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center text-body-sm font-body-sm">
+<div class="flex items-center gap-1.5">
+<span class="font-medium text-on-surface">1. Basics &amp; Immutability</span>
+</div>
+<span class="text-label-sm font-label-sm text-primary font-semibold">8 / 10 (80%)</span>
+</div>
+<!-- Progress track -->
+<div class="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full" style="width: 80%;"></div>
+</div>
+<p class="text-[11px] text-outline font-code-snippet">val, var, type inference, standard outputs</p>
+</div>
+<!-- Chapter 2 -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center text-body-sm font-body-sm">
+<div class="flex items-center gap-1.5">
+<span class="font-medium text-on-surface">2. Control &amp; Data Models</span>
+</div>
+<span class="text-label-sm font-label-sm text-primary font-semibold">3 / 5 (60%)</span>
+</div>
+<!-- Progress track -->
+<div class="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full" style="width: 60%;"></div>
+</div>
+<p class="text-[11px] text-outline font-code-snippet">when statements, data class, null safety</p>
+</div>
+<!-- Chapter 3 -->
+<div class="space-y-1.5 opacity-70">
+<div class="flex justify-between items-center text-body-sm font-body-sm">
+<div class="flex items-center gap-1.5">
+<span class="font-medium text-on-surface">3. Functions &amp; Lambdas</span>
+</div>
+<span class="text-label-sm font-label-sm text-outline">0 / 6 (Ready)</span>
+</div>
+<!-- Progress track -->
+<div class="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-outline-variant/40 rounded-full" style="width: 0%;"></div>
+</div>
+<p class="text-[11px] text-outline font-code-snippet">higher-order functions, inline, trailing lambda</p>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Shared Component Specification Implementation) -->
+<!-- Active Destination: Stats (Exact match priority) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-3 py-2 bg-surface-container-lowest border-t border-outline-variant/40 max-w-[390px] mx-auto right-0 shadow-none">
+<!-- Destination 1: Home -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant gap-1 hover:text-primary transition-colors duration-150 active:scale-95" href="#">
+<span class="material-symbols-outlined text-[22px]" data-icon="home">home</span>
+<span class="text-label-sm font-label-sm">Home</span>
+</a>
+<!-- Destination 2: Path -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant gap-1 hover:text-primary transition-colors duration-150 active:scale-95" href="#">
+<span class="material-symbols-outlined text-[22px]" data-icon="map">map</span>
+<span class="text-label-sm font-label-sm">Path</span>
+</a>
+<!-- Destination 3: Review -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant gap-1 hover:text-primary transition-colors duration-150 active:scale-95" href="#">
+<span class="material-symbols-outlined text-[22px]" data-icon="replay">replay</span>
+<span class="text-label-sm font-label-sm">Review</span>
+</a>
+<!-- Destination 4: Stats (ACTIVE) -->
+<a aria-current="page" class="flex flex-col items-center justify-center text-primary font-medium gap-1 hover:text-primary transition-colors duration-150 active:scale-95" href="#">
+<span class="material-symbols-outlined text-[22px]" data-icon="analytics" data-weight="fill" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span class="text-label-sm font-label-sm font-semibold">Stats</span>
+</a>
+<!-- Destination 5: Settings -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant gap-1 hover:text-primary transition-colors duration-150 active:scale-95" href="#">
+<span class="material-symbols-outlined text-[22px]" data-icon="settings">settings</span>
+<span class="text-label-sm font-label-sm">Settings</span>
+</a>
+</nav>
+</div>
+</body></html>

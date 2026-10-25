@@ -1,9 +1,7 @@
 package dev.agam.learn.ui.settings
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.defaultMinSize
@@ -21,13 +19,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedFilterChip
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -46,20 +43,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.semantics.contentDescription
-import dev.agam.learn.ui.theme.extendedColors
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.agam.learn.ai.AiProvider
 import dev.agam.learn.ai.AiProviderConfig
 import dev.agam.learn.di.LocalAppContainer
+import dev.agam.learn.ui.components.BrandArtwork
+import dev.agam.learn.ui.components.BrandAsset
+import dev.agam.learn.ui.theme.extendedColors
 
 /**
  * UI state for the Settings screen.
@@ -173,153 +174,140 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
                 text = "Settings",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Preferences, AI Tutor configuration, and compiler runtime",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.semantics { heading() }
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            CompanionIntro()
 
-            SettingsSectionCard(title = "Learning experience") {
+            SettingsGroup(title = "Learning experience") {
                 PreferenceSwitchRow(
                     title = "Sound effects",
-                    description = "Hear a soft cue for correct answers and milestones, with a gentle tone for mistakes.",
+                    description = "Soft cues for answers and milestones.",
                     checked = state.soundEffectsEnabled,
                     onCheckedChange = onSoundEffectsChanged
                 )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
                 PreferenceSwitchRow(
                     title = "Haptics",
-                    description = "Feel a light confirmation for correct answers and a stronger pattern for mistakes.",
+                    description = "A light confirmation and a stronger mistake cue.",
                     checked = state.hapticsEnabled,
                     onCheckedChange = onHapticsChanged
                 )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
                 PreferenceSwitchRow(
                     title = "Reduce motion",
-                    description = "Use calmer transitions and respect your device’s reduced-motion setting.",
+                    description = "Calmer animation; your device setting is respected too.",
                     checked = state.reducedMotionEnabled,
                     onCheckedChange = onReducedMotionChanged
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 1. Daily Goal Picker Section
-            SettingsSectionCard(title = "Daily Goal") {
-                Text(
-                    text = "Choose your target daily practice commitment.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                DAILY_GOAL_PRESETS.forEach { (xp, label) ->
-                    val isSelected = state.dailyGoalXp == xp
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .defaultMinSize(minHeight = 48.dp)
-                            .padding(vertical = 3.dp)
-                            .border(
-                                width = 1.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .background(
-                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .clickable { onDailyGoalSelected(xp) }
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = { onDailyGoalSelected(xp) }
+            SettingsGroup(
+                title = "Daily practice goal",
+                trailing = {
+                    Text(
+                        text = "${state.dailyGoalXp} XP daily",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            ) {
+                Column(
+                    modifier = Modifier.selectableGroup(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DailyGoalChoice(
+                            xp = 30,
+                            label = "Casual",
+                            selected = state.dailyGoalXp == 30,
+                            onClick = { onDailyGoalSelected(30) },
+                            modifier = Modifier.weight(1f)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        DailyGoalChoice(
+                            xp = 50,
+                            label = "Recommended",
+                            selected = state.dailyGoalXp == 50,
+                            onClick = { onDailyGoalSelected(50) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DailyGoalChoice(
+                            xp = 75,
+                            label = "Focused",
+                            selected = state.dailyGoalXp == 75,
+                            onClick = { onDailyGoalSelected(75) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        DailyGoalChoice(
+                            xp = 100,
+                            label = "Intense",
+                            selected = state.dailyGoalXp == 100,
+                            onClick = { onDailyGoalSelected(100) },
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+                Text(
+                    text = "A steady daily target helps you build a regular practice habit.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 2. AI Tutor Section
-            SettingsSectionCard(title = "AI Tutor (Bring Your Own Key)") {
+            SettingsGroup(
+                title = "AI tutor",
+                trailing = {
+                    Text(
+                        text = "Optional",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            ) {
                 Text(
-                    text = "Configure your preferred AI provider to unlock interactive mistake explanations, progressive hints, and code reviews.",
+                    text = "Get explanations, hints, and code reviews with a provider you choose.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Provider Choice
-                Text(
-                    text = "Provider",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-
+                SettingsFieldLabel("Provider")
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     AiProvider.entries.forEach { provider ->
-                        val isSelected = state.aiProvider == provider
                         FilterChip(
-                            selected = isSelected,
+                            selected = state.aiProvider == provider,
                             onClick = { onAiProviderSelected(provider) },
-                            label = {
-                                Text(
-                                    text = when (provider) {
-                                        AiProvider.ANTHROPIC -> "Anthropic"
-                                        AiProvider.OPENAI -> "OpenAI"
-                                        AiProvider.GEMINI -> "Google Gemini"
-                                        AiProvider.OPENROUTER -> "OpenRouter"
-                                    }
-                                )
-                            },
+                            label = { Text(providerLabel(provider)) },
                             modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Model Choice
-                Text(
-                    text = "Model",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-
-                val availableModels = PROVIDER_MODELS[state.aiProvider] ?: emptyList()
+                SettingsFieldLabel("Model")
+                val availableModels = PROVIDER_MODELS[state.aiProvider].orEmpty()
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     availableModels.forEach { modelName ->
-                        val isSelected = state.aiModel == modelName
-                        ElevatedFilterChip(
-                            selected = isSelected,
+                        FilterChip(
+                            selected = state.aiModel == modelName,
                             onClick = { onAiModelSelected(modelName) },
                             label = {
                                 Text(
@@ -327,13 +315,13 @@ fun SettingsScreen(
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 12.sp
                                 )
-                            }
+                            },
+                            modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                         )
                     }
                 }
 
                 if (state.aiProvider == AiProvider.OPENROUTER) {
-                    Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
                         value = state.aiModel,
                         onValueChange = onAiModelSelected,
@@ -341,20 +329,17 @@ fun SettingsScreen(
                         placeholder = { Text("openrouter/auto") },
                         singleLine = true,
                         supportingText = {
-                            Text("Use a model slug from OpenRouter, or leave blank for automatic routing.")
+                            Text("Enter a model slug, or leave blank for automatic routing.")
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // API Key Field with Show/Hide
                 OutlinedTextField(
                     value = state.apiKey,
                     onValueChange = onApiKeyChange,
-                    label = { Text("API Key") },
-                    placeholder = { Text("Paste your API key here") },
+                    label = { Text("API key") },
+                    placeholder = { Text("Paste your API key") },
                     singleLine = true,
                     visualTransformation = if (isApiKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -363,242 +348,263 @@ fun SettingsScreen(
                             onClick = { isApiKeyVisible = !isApiKeyVisible },
                             modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                         ) {
-                            Text(
-                                if (isApiKeyVisible) "Hide" else "Show",
-                                style = MaterialTheme.typography.labelSmall
-                            )
+                            Text(if (isApiKeyVisible) "Hide" else "Show")
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Action buttons: Test Connection, Remove Key, Save Key
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(
                         onClick = onTestAiConnection,
                         enabled = state.apiKey.isNotBlank() && !state.isTestingAiConnection && !state.isInterviewModeDefault,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         if (state.isTestingAiConnection) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
-                            )
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Testing...")
+                            Text("Testing…")
                         } else {
                             Text("Test connection")
                         }
                     }
-
                     OutlinedButton(
                         onClick = onRemoveApiKey,
                         enabled = state.apiKey.isNotBlank(),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
-                        modifier = Modifier.weight(1f)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) {
                         Text("Remove key")
                     }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Button(
-                    onClick = onSaveAiSettings,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Save AI Settings")
-                }
-
-                // Keystore error feedback
-                if (state.keystoreErrorMessage != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(6.dp))
-                            .padding(10.dp)
+                    Button(
+                        onClick = onSaveAiSettings,
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(
-                            text = "✗ ${state.keystoreErrorMessage}",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
+                        Text("Save AI settings")
                     }
                 }
 
-                // Connection test feedback result
-                if (state.aiConnectionTestResult != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    val isSuccess = state.aiConnectionTestResult.isSuccess
-                    val resultBg = if (isSuccess) MaterialTheme.extendedColors.successContainer else MaterialTheme.colorScheme.errorContainer
-                    val resultColor = if (isSuccess) MaterialTheme.extendedColors.onSuccessContainer else MaterialTheme.colorScheme.onErrorContainer
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(resultBg, RoundedCornerShape(6.dp))
-                            .padding(10.dp)
-                    ) {
-                        Text(
-                            text = if (isSuccess) "✓ ${state.aiConnectionTestResult.message}" else "✗ ${state.aiConnectionTestResult.message}",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = resultColor
-                        )
-                    }
+                if (state.isSavedMessageVisible) {
+                    StatusMessage(text = "AI settings saved.", success = true)
+                }
+                state.keystoreErrorMessage?.let { message ->
+                    StatusMessage(text = message, success = false)
+                }
+                state.aiConnectionTestResult?.let { result ->
+                    StatusMessage(text = result.message, success = result.isSuccess)
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Privacy Note text from PLAN.md 7b
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = "🔒", fontSize = 16.sp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (state.aiProvider == AiProvider.OPENROUTER) {
-                                "Your answers and code are sent to OpenRouter and its selected model providers, using your key and your account."
-                            } else {
-                                "Your answers and code are sent to the provider you chose, using your key and your account."
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 3. Compiler Server URL & Token Fields
-            SettingsSectionCard(title = "Compiler Server") {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
                 Text(
-                    text = "Endpoint for self-hosted kotlin-compiler-server runtime execution.",
+                    text = if (state.aiProvider == AiProvider.OPENROUTER) {
+                        "Your API key is encrypted on this device. AI features send relevant prompts and code to OpenRouter and the selected model provider using your account."
+                    } else {
+                        "Your API key is encrypted on this device. AI features send relevant prompts and code to ${providerLabel(state.aiProvider)} using your account."
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
 
-                Spacer(modifier = Modifier.height(10.dp))
-
+            SettingsGroup(title = "Kotlin compiler server") {
+                Text(
+                    text = "Choose the server used to run compiler and code exercises.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 OutlinedTextField(
                     value = state.compilerServerUrl,
                     onValueChange = onCompilerUrlChange,
                     label = { Text("Server URL") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
                 OutlinedTextField(
                     value = state.compilerToken,
                     onValueChange = onCompilerTokenChange,
-                    label = { Text("Bearer Token (optional)") },
+                    label = { Text("Bearer token (optional)") },
+                    placeholder = { Text("Optional bearer token") },
                     singleLine = true,
                     visualTransformation = if (isTokenVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     trailingIcon = {
                         TextButton(
                             onClick = { isTokenVisible = !isTokenVisible },
                             modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                         ) {
-                            Text(
-                                if (isTokenVisible) "Hide" else "Show",
-                                style = MaterialTheme.typography.labelSmall
-                            )
+                            Text(if (isTokenVisible) "Hide" else "Show")
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
                 Button(
                     onClick = onSaveCompilerSettings,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
                 ) {
-                    Text("Save Compiler Settings")
+                    Text("Save compiler settings")
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 4. Interview Mode Default Section
-            SettingsSectionCard(title = "Interview Mode Default") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Start problems in Interview Mode",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Disables and hides all AI tutor controls during problem sessions to simulate realistic screen conditions.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Switch(
-                        checked = state.isInterviewModeDefault,
-                        onCheckedChange = onToggleInterviewModeDefault
-                    )
-                }
+            SettingsGroup(title = "Practice preferences") {
+                PreferenceSwitchRow(
+                    title = "Interview mode default",
+                    description = "New problem sessions start with AI tutor controls hidden.",
+                    checked = state.isInterviewModeDefault,
+                    onCheckedChange = onToggleInterviewModeDefault
+                )
             }
         }
     }
 }
 
 @Composable
-private fun SettingsSectionCard(
+private fun CompanionIntro() {
+    SettingsPanel {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    BrandArtwork(
+                        asset = BrandAsset.MascotThink,
+                        modifier = Modifier.size(48.dp),
+                        contentDescription = "Koda"
+                    )
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    text = "Make practice work for you",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Set your daily rhythm, feedback, and optional tools.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsGroup(
     title: String,
+    trailing: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.semantics { heading() }
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            trailing?.invoke()
+        }
+        SettingsPanel(content = content)
+    }
+}
+
+@Composable
+private fun SettingsPanel(content: @Composable () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             content()
         }
+    }
+}
+
+@Composable
+private fun DailyGoalChoice(
+    xp: Int,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+    Surface(
+        modifier = modifier
+            .defaultMinSize(minHeight = 76.dp)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.32f) else MaterialTheme.colorScheme.surface,
+        border = BorderStroke(if (selected) 1.5.dp else 1.dp, borderColor)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "$xp XP",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            RadioButton(selected = selected, onClick = null)
+        }
+    }
+}
+
+@Composable
+private fun SettingsFieldLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+@Composable
+private fun StatusMessage(text: String, success: Boolean) {
+    val background = if (success) MaterialTheme.extendedColors.successContainer else MaterialTheme.colorScheme.errorContainer
+    val foreground = if (success) MaterialTheme.extendedColors.onSuccessContainer else MaterialTheme.colorScheme.onErrorContainer
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(background, RoundedCornerShape(10.dp))
+            .padding(12.dp)
+            .semantics { contentDescription = text }
+    ) {
+        Text(text = text, style = MaterialTheme.typography.bodySmall, color = foreground)
     }
 }
 
@@ -610,7 +616,7 @@ private fun PreferenceSwitchRow(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 68.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -635,6 +641,13 @@ private fun PreferenceSwitchRow(
             }
         )
     }
+}
+
+private fun providerLabel(provider: AiProvider): String = when (provider) {
+    AiProvider.ANTHROPIC -> "Anthropic"
+    AiProvider.OPENAI -> "OpenAI"
+    AiProvider.GEMINI -> "Google Gemini"
+    AiProvider.OPENROUTER -> "OpenRouter"
 }
 
 @Preview(showBackground = true)

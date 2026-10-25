@@ -16,6 +16,8 @@ v0.1.3 fixes lesson feedback briefly turning red when advancing after a correct 
 
 v0.2.0 brings a restrained warm ivory, sage, and clay palette with matching light and dark modes, a curved learning path, more Koda poses, compact question guides, and a flying-mascot celebration every five consecutive correct lesson answers. Code blocks and the code editor wrap within the screen while preserving the original code. Settings now includes independent **Sound effects**, **Haptics**, and **Reduce motion** switches; the app also respects the device's animation setting. Correct answers use a light vibration and mistakes use a stronger pattern. This release fixes Android Keystore rejecting an AI key save with “Caller-provided IV not permitted.”
 
+v0.3.0 adds an end-of-lesson mistake round. Missed quiz questions wait until the remaining questions are finished. A clay-coloured Koda banner says **Let’s review your mistakes**, then you can review them in order. A question missed again returns to the back of that review queue. The lesson completes when those questions are corrected; retries do not inflate XP or the completed-exercise count. Home, Review, Stats, and Settings now follow actual Google Stitch screen designs; the quiz layout keeps the existing style. Design exports and implementation notes are in [`docs/design/stitch`](docs/design/stitch/README.md).
+
 The app needs Android 8.0 (API 26) or newer. Install the APK by sideloading it. When Android asks, allow installs from the app you opened the file with, such as your browser or file manager.
 
 Lessons and review work offline. Code exercises need the compiler server, and the AI tutor needs internet access and your own API key. Sections 3 and 4 explain both.

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Learn Kotlin</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-variant": "#e1e3dd",
+            "surface-tint": "#466554",
+            "tertiary": "#783d00",
+            "error": "#ba1a1a",
+            "on-primary-fixed-variant": "#2f4d3d",
+            "tertiary-fixed": "#ffdcc4",
+            "secondary-container": "#afeee7",
+            "outline-variant": "#c2c8c2",
+            "surface-dim": "#d9dbd5",
+            "on-primary": "#ffffff",
+            "error-container": "#ffdad6",
+            "on-error": "#ffffff",
+            "on-secondary-fixed-variant": "#05504b",
+            "tertiary-fixed-dim": "#ffb77f",
+            "surface-container-highest": "#e1e3dd",
+            "outline": "#727973",
+            "primary": "#345343",
+            "on-surface-variant": "#424844",
+            "surface-container-lowest": "#ffffff",
+            "surface-container": "#edefe8",
+            "secondary-fixed": "#afeee7",
+            "surface-container-low": "#f3f4ee",
+            "on-secondary": "#ffffff",
+            "secondary": "#296862",
+            "on-error-container": "#93000a",
+            "surface-container-high": "#e7e9e3",
+            "primary-container": "#4c6b5a",
+            "on-background": "#191c19",
+            "on-secondary-container": "#306e68",
+            "on-tertiary-fixed-variant": "#6f3800",
+            "tertiary-container": "#965415",
+            "on-tertiary-fixed": "#2f1500",
+            "surface": "#f8faf4",
+            "on-primary-fixed": "#022114",
+            "secondary-fixed-dim": "#94d2cb",
+            "background": "#f8faf4",
+            "primary-fixed": "#c8ebd5",
+            "inverse-primary": "#acceba",
+            "primary-fixed-dim": "#acceba",
+            "inverse-surface": "#2e312d",
+            "on-tertiary-container": "#ffdcc4",
+            "on-surface": "#191c19",
+            "surface-bright": "#f8faf4",
+            "on-secondary-fixed": "#00201d",
+            "inverse-on-surface": "#f0f1eb",
+            "on-tertiary": "#ffffff",
+            "on-primary-container": "#c8ead5"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-md": "1rem",
+            "margin-tablet": "2rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "gutter-tablet": "1.5rem",
+            "gutter": "1rem",
+            "margin": "1.25rem",
+            "space-xl": "2rem",
+            "space-lg": "1.5rem"
+          },
+          "fontFamily": {
+            "headline-lg": ["Inter"],
+            "headline-sm": ["Inter"],
+            "label-sm": ["Inter"],
+            "body-sm": ["Inter"],
+            "label-md": ["Inter"],
+            "body-lg": ["Inter"],
+            "headline-lg-mobile": ["Inter"],
+            "label-lg": ["Inter"],
+            "headline-md": ["Inter"],
+            "body-md": ["Inter"],
+            "display": ["Inter"],
+            "code-snippet": ["JetBrains Mono"]
+          },
+          "fontSize": {
+            "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "headline-sm": ["17px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "label-sm": ["11px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "600" }],
+            "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "label-md": ["13px", { "lineHeight": "18px", "fontWeight": "500" }],
+            "body-lg": ["17px", { "lineHeight": "26px", "fontWeight": "400" }],
+            "headline-lg-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "label-lg": ["15px", { "lineHeight": "20px", "fontWeight": "500" }],
+            "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "body-md": ["15px", { "lineHeight": "22px", "fontWeight": "400" }],
+            "display": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "code-snippet": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    body {
+      background-color: #F7F4EE;
+      color: #2D302C;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+</head>
+<body class="h-full flex justify-center bg-[#F7F4EE]">
+<!-- Mobile Container (390px x 844px target) -->
+<div class="relative w-full max-w-[420px] min-h-screen flex flex-col bg-[#F7F4EE] pb-24 select-none">
+<!-- TopAppBar (Shared Component Implementation) -->
+<header class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center w-full max-w-[420px] mx-auto px-5 py-3 bg-[#F7F4EE] border-b border-[#E8E4DC]">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#4C6B5A] text-xl" data-icon="terminal">terminal</span>
+<span class="font-headline-sm text-headline-sm font-semibold text-[#2D302C] tracking-tight">Learn Kotlin</span>
+</div>
+<!-- Right Streak Indicator -->
+<div class="flex items-center gap-2">
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FFFDFA] border border-[#E8E4DC]">
+<span class="material-symbols-outlined text-[#D98A48] text-base" data-icon="local_fire_department" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<span class="font-label-md text-label-md font-semibold text-[#2D302C]">3</span>
+<span class="font-label-sm text-label-sm text-[#787D75]">days</span>
+</div>
+<div class="flex items-center gap-1 px-2 py-1 rounded-full bg-[#FFFDFA] border border-[#E8E4DC]" title="1 Streak Freeze Active">
+<span class="material-symbols-outlined text-[#36746E] text-sm" data-icon="ac_unit">ac_unit</span>
+<span class="font-label-sm text-label-sm font-medium text-[#6C7069]">1</span>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-5 pt-16 flex flex-col gap-4 mt-1">
+<!-- Companion Greeting & Mascot Card -->
+<section class="mt-2 bg-[#FFFDFA] rounded-[16px] border border-[#E8E4DC] p-4 flex items-center justify-between gap-3 relative overflow-hidden">
+<div class="flex-1 pr-1">
+<div class="flex items-center gap-1.5 mb-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#4C6B5A]"></span>
+<span class="font-label-sm text-label-sm text-[#787D75] tracking-wider uppercase font-semibold">Morning check-in</span>
+</div>
+<h1 class="font-headline-md text-headline-md text-[#2D302C] leading-snug">Ready, Alex?</h1>
+<p class="font-body-sm text-body-sm text-[#6C7069] mt-1 leading-relaxed">
+            Let's practice immutability, data classes, and clean expression syntax today.
+          </p>
+</div>
+<!-- Mascot Illustration -->
+<div class="relative w-[78px] h-[78px] flex-shrink-0 flex items-center justify-center">
+<img alt="Koda the Kotlin Companion" class="w-full h-full object-contain pointer-events-none drop-shadow-none" src="https://lh3.googleusercontent.com/aida/AEtjO1U3iZCfrt7jOXjdWlbQyxxVVkNU0slUZo0iIApetRG2C_fiwYwe4D-U16NZJWyeEyHa6kmab8wVZgSrJR2ODVRNdObJRO0wV-8a5z1qvykkhjaxPXwyp3G3F2UTz215UNDrJKUpra05BbV1ElOzHoxDT0NRwnJCqvZuxpiqB8qElRV32KCghAJT4q43DVv67NO4yWtxd-Wdi_KJMfwc9h3dkoJVNZTq-pEcI-IQo73acAMROCWsPPb_YfM"/>
+</div>
+</section>
+<!-- Primary Next Lesson Card -->
+<section class="bg-[#FFFDFA] rounded-[16px] border border-[#E8E4DC] p-5 flex flex-col gap-3 relative">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-[#946654] font-semibold tracking-wider uppercase">
+            Chapter 2 · Control & Data
+          </span>
+<span class="flex items-center gap-1 text-[#6C7069] font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+            8 min
+          </span>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-[#2D302C] font-semibold tracking-tight">
+            Kotlin values and small data models
+          </h2>
+<p class="font-body-sm text-body-sm text-[#6C7069] mt-1">
+            Build lightweight, immutable structures using <span class="font-code-snippet text-code-snippet px-1 py-0.5 rounded bg-[#F4F0E8] text-[#2D302C]">val</span> and <span class="font-code-snippet text-code-snippet px-1 py-0.5 rounded bg-[#F4F0E8] text-[#2D302C]">data class</span>.
+          </p>
+</div>
+<!-- Exercise Details Pill -->
+<div class="flex items-center gap-3 pt-1 text-[#787D75] font-label-md text-label-md">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-base text-[#4C6B5A]" data-icon="check_circle">check_circle</span>
+<span>6 interactive exercises</span>
+</div>
+<span class="text-[#E8E4DC]">•</span>
+<div class="flex items-center gap-1 text-[#6C7069]">
+<span class="material-symbols-outlined text-base" data-icon="code">code</span>
+<span>REPL syntax</span>
+</div>
+</div>
+<!-- Action CTA -->
+<a class="mt-1 w-full h-[52px] rounded-[16px] bg-[#4C6B5A] active:bg-[#345343] text-white flex items-center justify-center gap-2 font-label-lg text-label-lg font-medium transition-colors" href="#lesson">
+<span>Continue lesson</span>
+<span class="material-symbols-outlined text-lg" data-icon="arrow_forward">arrow_forward</span>
+</a>
+</section>
+<!-- Daily Goal Card -->
+<section class="bg-[#FFFDFA] rounded-[16px] border border-[#E8E4DC] p-4 flex flex-col gap-2.5">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-base text-[#4C6B5A]" data-icon="flag">flag</span>
+<span class="font-label-md text-label-md font-semibold text-[#2D302C]">Daily Practice Goal</span>
+</div>
+<span class="font-label-sm text-label-sm font-semibold text-[#2D302C]">10 / 50 XP</span>
+</div>
+<!-- Progress Track -->
+<div class="w-full h-[6px] rounded-full bg-[#EBE7DF] overflow-hidden">
+<div class="h-full bg-[#4C6B5A] rounded-full transition-all duration-300" style="width: 20%;"></div>
+</div>
+<div class="flex items-center justify-between text-[#787D75] font-label-sm text-label-sm">
+<span>40 XP remaining to achieve streak goal</span>
+<span class="font-medium text-[#4C6B5A]">20%</span>
+</div>
+</section>
+<!-- Spaced Repetition / Review Queue Card -->
+<section class="bg-[#FFFDFA] rounded-[16px] border border-[#E8E4DC] p-4 flex items-center justify-between gap-3">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded-xl bg-[#F0EDE6] border border-[#E8E4DC] flex items-center justify-center text-[#4C6B5A] flex-shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-lg" data-icon="replay">replay</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-headline-sm text-headline-sm font-semibold text-[#2D302C]">Spaced Review</h3>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#F4F0E8] text-[#946654] border border-[#E8E4DC]">4 DUE</span>
+</div>
+<p class="font-body-sm text-body-sm text-[#6C7069] mt-0.5">
+              `val` vs `var`, string templates, null safety
+            </p>
+</div>
+</div>
+<button class="flex-shrink-0 h-9 px-3 rounded-[12px] border border-[#DFDAD0] hover:bg-[#F0EDE6] active:bg-[#EFECE5] text-[#2D302C] font-label-md text-label-md font-medium transition-colors flex items-center gap-1">
+<span>Review</span>
+<span class="material-symbols-outlined text-base" data-icon="chevron_right">chevron_right</span>
+</button>
+</section>
+<!-- Learning Path Snapshot Card -->
+<section class="bg-[#FFFDFA] rounded-[16px] border border-[#E8E4DC] p-4 flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-base text-[#36746E]" data-icon="account_tree">account_tree</span>
+<span class="font-label-md text-label-md font-semibold text-[#2D302C]">Track: Kotlin Core</span>
+</div>
+<a class="font-label-sm text-label-sm font-medium text-[#4C6B5A] flex items-center gap-0.5" href="#path">
+<span>View path</span>
+<span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</a>
+</div>
+<!-- Path Stepper Minimal -->
+<div class="flex items-center justify-between px-1 pt-1">
+<div class="flex flex-col items-center gap-1 flex-1">
+<div class="w-6 h-6 rounded-full bg-[#4C6B5A] text-white flex items-center justify-center">
+<span class="material-symbols-outlined text-xs" data-icon="check">check</span>
+</div>
+<span class="font-label-sm text-[10px] text-[#4C6B5A] font-medium text-center">Basics</span>
+</div>
+<div class="h-[2px] bg-[#4C6B5A] flex-1 -mt-3"></div>
+<div class="flex flex-col items-center gap-1 flex-1">
+<div class="w-6 h-6 rounded-full border-2 border-[#4C6B5A] bg-[#FFFDFA] text-[#4C6B5A] flex items-center justify-center font-bold text-[10px]">
+              2
+            </div>
+<span class="font-label-sm text-[10px] text-[#2D302C] font-semibold text-center">Control</span>
+</div>
+<div class="h-[2px] bg-[#E8E4DC] flex-1 -mt-3"></div>
+<div class="flex flex-col items-center gap-1 flex-1">
+<div class="w-6 h-6 rounded-full border border-[#E8E4DC] bg-[#F7F4EE] text-[#787D75] flex items-center justify-center text-[10px]">
+              3
+            </div>
+<span class="font-label-sm text-[10px] text-[#787D75] text-center">Nulls</span>
+</div>
+<div class="h-[2px] bg-[#E8E4DC] flex-1 -mt-3"></div>
+<div class="flex flex-col items-center gap-1 flex-1">
+<div class="w-6 h-6 rounded-full border border-[#E8E4DC] bg-[#F7F4EE] text-[#787D75] flex items-center justify-center text-[10px]">
+              4
+            </div>
+<span class="font-label-sm text-[10px] text-[#787D75] text-center">Classes</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Shared Component Implementation) -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center px-3 py-2 bg-[#FFFDFA] border-t border-[#E8E4DC] max-w-[420px] mx-auto">
+<!-- Home (Active) -->
+<a class="flex flex-col items-center justify-center text-primary font-medium gap-1 flex-1 py-1" href="#home">
+<span class="material-symbols-outlined text-2xl text-[#4C6B5A]" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-sm text-label-sm font-semibold text-[#4C6B5A]">Home</span>
+</a>
+<!-- Path -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant gap-1 flex-1 py-1 hover:text-primary transition-colors" href="#path">
+<span class="material-symbols-outlined text-2xl text-[#787D75]" data-icon="map">map</span>
+<span class="font-label-sm text-label-sm text-[#787D75]">Path</span>
+</a>
+<!-- Review -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant gap-1 flex-1 py-1 hover:text-primary transition-colors" href="#review">
+<span class="material-symbols-outlined text-2xl text-[#787D75]" data-icon="replay">replay</span>
+<span class="font-label-sm text-label-sm text-[#787D75]">Review</span>
+</a>
+<!-- Stats -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant gap-1 flex-1 py-1 hover:text-primary transition-colors" href="#stats">
+<span class="material-symbols-outlined text-2xl text-[#787D75]" data-icon="analytics">analytics</span>
+<span class="font-label-sm text-label-sm text-[#787D75]">Stats</span>
+</a>
+<!-- Settings -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant gap-1 flex-1 py-1 hover:text-primary transition-colors" href="#settings">
+<span class="material-symbols-outlined text-2xl text-[#787D75]" data-icon="settings">settings</span>
+<span class="font-label-sm text-label-sm text-[#787D75]">Settings</span>
+</a>
+</nav>
+</div>
+</body></html>

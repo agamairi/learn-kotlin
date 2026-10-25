@@ -69,6 +69,7 @@ import dev.agam.learn.ui.lesson.components.ClozeCard
 import dev.agam.learn.ui.lesson.components.AnimatedLessonFeedbackBanner
 import dev.agam.learn.ui.lesson.components.LessonExplanation
 import dev.agam.learn.ui.lesson.components.LessonMilestoneOverlay
+import dev.agam.learn.ui.lesson.components.LessonMistakeReviewIntro
 import dev.agam.learn.ui.lesson.components.LessonQuestionHeader
 import dev.agam.learn.ui.lesson.components.LessonSummary
 import dev.agam.learn.ui.lesson.components.MultipleChoiceCard
@@ -127,22 +128,37 @@ fun LessonScreen(
             if (uiState.step !is LessonStep.Completed) {
                 TopAppBar(
                     title = {
-                        if (uiState.step is LessonStep.ExercisePlaying) {
+                        val playingStep = uiState.step as? LessonStep.ExercisePlaying
+                        if (playingStep != null) {
+                            val progress = if (uiState.isMistakeReview && playingStep.totalExercises > 0) {
+                                playingStep.exerciseIndex.toFloat() / playingStep.totalExercises
+                            } else {
+                                uiState.progressFraction
+                            }
                             val animatedProgress by animateFloatAsState(
-                                targetValue = uiState.progressFraction,
+                                targetValue = progress,
                                 animationSpec = if (reducedMotion) snap() else tween(durationMillis = 400, easing = FastOutSlowInEasing),
                                 label = "lessonProgressFraction"
                             )
-                            LinearProgressIndicator(
-                                progress = { animatedProgress },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(8.dp)
-                                    .clip(RoundedCornerShape(4.dp)),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                strokeCap = StrokeCap.Round
-                            )
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                if (uiState.isMistakeReview) {
+                                    Text(
+                                        text = "Mistake review",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                LinearProgressIndicator(
+                                    progress = { animatedProgress },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(8.dp)
+                                        .clip(RoundedCornerShape(4.dp)),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    strokeCap = StrokeCap.Round
+                                )
+                            }
                         } else {
                             Text(
                                 text = uiState.lessonTitle,
@@ -244,6 +260,14 @@ fun LessonScreen(
                         chapterTitle = uiState.chapterTitle,
                         explanation = step.text,
                         onStartPractice = viewModel::onStartPractice
+                    )
+                }
+
+                is LessonStep.MistakeReviewIntro -> {
+                    LessonMistakeReviewIntro(
+                        pendingCount = step.pendingCount,
+                        onStartReview = viewModel::startMistakeReview,
+                        reducedMotion = reducedMotion
                     )
                 }
 

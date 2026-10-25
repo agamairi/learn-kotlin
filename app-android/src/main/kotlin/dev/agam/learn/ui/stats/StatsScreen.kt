@@ -1,6 +1,10 @@
 package dev.agam.learn.ui.stats
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,11 +12,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -21,16 +25,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.agam.learn.di.LocalAppContainer
+import dev.agam.learn.ui.components.BrandArtwork
+import dev.agam.learn.ui.components.BrandAsset
 
-/**
- * State for the Stats screen.
- */
+/** State for the Stats screen. */
 data class StatsUiState(
     val totalXp: Int = 0,
     val totalExercisesCompleted: Int = 0,
@@ -52,21 +56,23 @@ fun StatsScreen(
     )
 ) {
     val state by viewModel.uiState.collectAsState()
-    StatsScreen(
-        state = state,
-        modifier = modifier
-    )
+    StatsScreen(state = state, modifier = modifier)
 }
 
-/**
- * Stateless screen displaying learner stats: XP history chart, streak calendar, and per-chapter accuracy.
- */
+/** Progress overview backed by the learner's recorded XP, streak, and exercise results. */
 @Composable
 fun StatsScreen(
     state: StatsUiState,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
+    val hasLoadedStats = state.totalXp != 0 ||
+        state.totalExercisesCompleted != 0 ||
+        state.currentStreak != 0 ||
+        state.longestStreak != 0 ||
+        state.recentXpHistory.isNotEmpty() ||
+        state.calendarDays.isNotEmpty() ||
+        state.chapterAccuracies.isNotEmpty()
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -76,145 +82,266 @@ fun StatsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 20.dp)
         ) {
             Text(
-                text = "Learning Stats",
+                text = "Your progress",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
+            Spacer(Modifier.height(4.dp))
             Text(
-                text = "Your progress, XP streaks, and mastery metrics",
+                text = "Practice, consistency, and chapter accuracy",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            if (state.isLoading && !hasLoadedStats) {
+                Spacer(Modifier.height(28.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics(mergeDescendants = true) {
+                            contentDescription = "Loading your progress"
+                        },
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Text(
+                        text = "Loading your progress…",
+                        modifier = Modifier.padding(start = 12.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Spacer(Modifier.height(18.dp))
+                if (state.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .align(Alignment.End),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
 
-            // Overview Metric Cards Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                MetricCard(
-                    title = "Total XP",
-                    value = "${state.totalXp}",
-                    subtitle = "Points earned",
-                    modifier = Modifier.weight(1f)
+                KodaEncouragement(
+                    currentStreak = state.currentStreak,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                MetricCard(
-                    title = "Streak",
-                    value = "🔥 ${state.currentStreak}d",
-                    subtitle = "Current",
-                    modifier = Modifier.weight(1f)
+
+                Spacer(Modifier.height(12.dp))
+                MetricStrip(state = state, modifier = Modifier.fillMaxWidth())
+
+                Spacer(Modifier.height(20.dp))
+                XpBarChart(
+                    history = state.recentXpHistory,
+                    dailyGoal = state.dailyGoalXp,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                MetricCard(
-                    title = "Completed",
-                    value = "${state.totalExercisesCompleted}",
-                    subtitle = "Exercises",
-                    modifier = Modifier.weight(1f)
+
+                Spacer(Modifier.height(12.dp))
+                StreakCalendar(
+                    currentStreak = state.currentStreak,
+                    longestStreak = state.longestStreak,
+                    heldFreezes = state.heldStreakFreezes,
+                    days = state.calendarDays,
+                    modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(Modifier.height(12.dp))
+                ChapterAccuracyList(
+                    accuracies = state.chapterAccuracies,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 1. XP History Chart (Canvas)
-            XpBarChart(
-                history = state.recentXpHistory,
-                dailyGoal = state.dailyGoalXp,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 2. Streak Calendar
-            StreakCalendar(
-                currentStreak = state.currentStreak,
-                longestStreak = state.longestStreak,
-                heldFreezes = state.heldStreakFreezes,
-                days = state.calendarDays,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 3. Per-Chapter Accuracy
-            ChapterAccuracyList(
-                accuracies = state.chapterAccuracies,
-                modifier = Modifier.fillMaxWidth()
-            )
         }
     }
 }
 
 @Composable
-private fun MetricCard(
-    title: String,
-    value: String,
-    subtitle: String,
+private fun KodaEncouragement(
+    currentStreak: Int,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+    val message = if (currentStreak > 0) {
+        "You're on a $currentStreak-day streak. Keep your rhythm going."
+    } else {
+        "A little practice at a time builds a steady habit."
+    }
+
+    Surface(
+        modifier = modifier.border(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+            shape = RoundedCornerShape(14.dp)
+        ),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface
     ) {
-        Column(
-            modifier = Modifier.padding(10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = subtitle,
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "A note from Koda",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            BrandArtwork(
+                asset = BrandAsset.MascotThink,
+                modifier = Modifier.size(52.dp),
+                contentDescription = null
             )
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-private fun StatsScreenPreview() {
-    MaterialTheme {
-        StatsScreen(
-            state = StatsUiState(
-                totalXp = 485,
-                totalExercisesCompleted = 42,
-                currentStreak = 4,
-                longestStreak = 7,
-                dailyGoalXp = 50,
-                recentXpHistory = listOf(
-                    DailyXp("Mon", 35),
-                    DailyXp("Tue", 65, goalMet = true),
-                    DailyXp("Wed", 50, goalMet = true),
-                    DailyXp("Thu", 15),
-                    DailyXp("Fri", 70, goalMet = true),
-                    DailyXp("Sat", 40),
-                    DailyXp("Sun", 80, goalMet = true)
-                ),
-                calendarDays = (1..28).map {
-                    CalendarDay(it, isActive = it in listOf(3, 4, 7, 8, 9, 10, 14, 15, 16, 21, 22), isToday = it == 22)
-                },
-                chapterAccuracies = listOf(
-                    ChapterAccuracy("ch01", "Syntax Basics", 10, 9, 90),
-                    ChapterAccuracy("ch02", "Strings & Text", 12, 10, 83),
-                    ChapterAccuracy("ch03", "Collections", 15, 12, 80)
-                )
-            )
+private fun MetricStrip(
+    state: StatsUiState,
+    modifier: Modifier = Modifier
+) {
+    val metrics = listOf(
+        Metric("Total XP", state.totalXp.toString(), "earned"),
+        Metric("Streak", state.currentStreak.toString(), if (state.currentStreak == 1) "day" else "days"),
+        Metric("Exercises", state.totalExercisesCompleted.toString(), "completed")
+    )
+    val shape = RoundedCornerShape(14.dp)
+
+    Surface(
+        modifier = modifier.border(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+            shape = shape
+        ),
+        shape = shape,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val useVerticalLayout = maxWidth < 360.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.3f
+            if (useVerticalLayout) {
+                Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)) {
+                    metrics.forEachIndexed { index, metric ->
+                        if (index > 0) {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            )
+                        }
+                        MetricRow(metric = metric)
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    metrics.forEachIndexed { index, metric ->
+                        if (index > 0) {
+                            Box(
+                                Modifier
+                                    .padding(horizontal = 10.dp)
+                                    .size(width = 1.dp, height = 38.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                            )
+                        }
+                        MetricColumn(metric = metric, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class Metric(
+    val title: String,
+    val value: String,
+    val unit: String
+)
+
+@Composable
+private fun MetricRow(metric: Metric) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                contentDescription = "${metric.title}: ${metric.value} ${metric.unit}"
+            }
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = metric.title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "${metric.value} ${metric.unit}",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End
+        )
+    }
+}
+
+@Composable
+private fun MetricColumn(
+    metric: Metric,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = "${metric.title}: ${metric.value} ${metric.unit}"
+        },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = metric.title,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = metric.value,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = metric.unit,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
