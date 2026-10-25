@@ -60,6 +60,7 @@ import kotlinx.coroutines.flow.collect
 
 /** Saved-state key the studio screens use to tell the lesson which exercise was completed. */
 private const val COMPLETED_EXERCISE_KEY = "completed_exercise_id"
+private const val COMPLETED_LESSON_RUN_KEY = "completed_lesson_run_id"
 
 private data class BottomNavItem(
     val route: String,
@@ -205,17 +206,21 @@ fun LearnAppNavHost(
                 val completedExerciseId by backStackEntry.savedStateHandle
                     .getStateFlow<String?>(COMPLETED_EXERCISE_KEY, null)
                     .collectAsState()
-                LaunchedEffect(completedExerciseId) {
+                val completedRunId by backStackEntry.savedStateHandle
+                    .getStateFlow<String?>(COMPLETED_LESSON_RUN_KEY, null)
+                    .collectAsState()
+                LaunchedEffect(completedExerciseId, completedRunId) {
                     val exerciseId = completedExerciseId ?: return@LaunchedEffect
                     backStackEntry.savedStateHandle.remove<String>(COMPLETED_EXERCISE_KEY)
-                    lessonViewModel.onStudioExerciseCompleted(exerciseId)
+                    backStackEntry.savedStateHandle.remove<String>(COMPLETED_LESSON_RUN_KEY)
+                    lessonViewModel.onStudioExerciseCompleted(exerciseId, completedRunId)
                 }
 
                 LessonScreen(
                     lessonId = lessonId,
                     viewModel = lessonViewModel,
                     onNavigateBack = {
-                        navController.popBackStack()
+                        lessonViewModel.abandonLessonRun { navController.popBackStack() }
                     },
                     onOpenExercise = { route ->
                         navController.navigate(route)
@@ -227,10 +232,12 @@ fun LearnAppNavHost(
             composable(
                 route = Screen.CodeExercise.route,
                 arguments = listOf(
-                    navArgument("exerciseId") { type = NavType.StringType }
+                    navArgument("exerciseId") { type = NavType.StringType },
+                    navArgument("lessonRunId") { type = NavType.StringType; nullable = true; defaultValue = null }
                 )
             ) { backStackEntry ->
                 val exerciseId = backStackEntry.arguments?.getString("exerciseId") ?: ""
+                val lessonRunId = backStackEntry.arguments?.getString("lessonRunId")
                 val appContainer = LocalAppContainer.current
                 var exercise by remember { mutableStateOf<Exercise.WriteFunction?>(null) }
                 var aiAccess by remember { mutableStateOf<AiAccess?>(null) }
@@ -256,7 +263,8 @@ fun LearnAppNavHost(
                                     progressRecorder = appContainer.progressRecorder,
                                     aiTutor = appContainer.aiTutor,
                                     isInterviewMode = access.interviewMode,
-                                    hasApiKey = access.hasApiKey
+                                    hasApiKey = access.hasApiKey,
+                                    lessonRunId = lessonRunId
                                 )
                             }
                         }
@@ -288,6 +296,10 @@ fun LearnAppNavHost(
                                 COMPLETED_EXERCISE_KEY,
                                 currentExercise.id
                             )
+                            navController.previousBackStackEntry?.savedStateHandle?.set(
+                                COMPLETED_LESSON_RUN_KEY,
+                                lessonRunId
+                            )
                             navController.popBackStack()
                         }
                     )
@@ -302,10 +314,12 @@ fun LearnAppNavHost(
             composable(
                 route = Screen.Problem.route,
                 arguments = listOf(
-                    navArgument("problemId") { type = NavType.StringType }
+                    navArgument("problemId") { type = NavType.StringType },
+                    navArgument("lessonRunId") { type = NavType.StringType; nullable = true; defaultValue = null }
                 )
             ) { backStackEntry ->
                 val problemId = backStackEntry.arguments?.getString("problemId") ?: ""
+                val lessonRunId = backStackEntry.arguments?.getString("lessonRunId")
                 val appContainer = LocalAppContainer.current
                 var problem by remember { mutableStateOf<Exercise.MultiPartProblem?>(null) }
                 var aiAccess by remember { mutableStateOf<AiAccess?>(null) }
@@ -330,7 +344,8 @@ fun LearnAppNavHost(
                                     progressRecorder = appContainer.progressRecorder,
                                     aiTutor = appContainer.aiTutor,
                                     isInterviewModeDefault = access.interviewMode,
-                                    hasApiKey = access.hasApiKey
+                                    hasApiKey = access.hasApiKey,
+                                    lessonRunId = lessonRunId
                                 )
                             }
                         }
@@ -363,6 +378,10 @@ fun LearnAppNavHost(
                             navController.previousBackStackEntry?.savedStateHandle?.set(
                                 COMPLETED_EXERCISE_KEY,
                                 currentProblem.id
+                            )
+                            navController.previousBackStackEntry?.savedStateHandle?.set(
+                                COMPLETED_LESSON_RUN_KEY,
+                                lessonRunId
                             )
                             navController.popBackStack()
                         }

@@ -214,6 +214,33 @@ class CodeExerciseViewModelTest {
     }
 
     @Test
+    fun codePassOpenedFromALessonStaysProvisionalUntilTheLessonSettles() = runBlocking {
+        val runId = "code-lesson-run"
+        recorder.beginLessonRun("lesson-test", runId)
+        fakeRunner.testResult = RunOutcome.Passed(testsRun = 3, stdout = "")
+
+        val viewModel = CodeExerciseViewModel(
+            exercise = sampleExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            lessonRunId = runId,
+            coroutineScope = testScope
+        )
+        viewModel.checkCode()
+
+        assertTrue(progress.getExerciseResults().isEmpty())
+        assertTrue(progress.getDailyActivities().isEmpty())
+        assertEquals(25, recorder.lessonRunXp(runId))
+
+        assertEquals(
+            dev.agam.learn.data.LessonRunSettlementOutcome.Settled(25),
+            recorder.settleLessonRun("lesson-test", runId)
+        )
+        assertEquals(25, progress.getDailyActivities().single().xpEarned)
+        assertEquals(1, progress.getExerciseResults().size)
+    }
+
+    @Test
     fun testAskAiExplainMistakeSuccess() {
         fakeAiTutor.explainResponse = AiResult.Success("Check operator precedence.")
 

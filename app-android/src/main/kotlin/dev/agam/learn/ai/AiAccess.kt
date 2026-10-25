@@ -2,6 +2,7 @@ package dev.agam.learn.ai
 
 import dev.agam.learn.data.SecretStore
 import dev.agam.learn.data.SettingsRepository
+import kotlinx.coroutines.CancellationException
 
 /** Shown in place of the AI controls when no API key has been saved. */
 const val AI_API_KEY_MISSING_MESSAGE = "Add your API key in Settings"
@@ -23,7 +24,13 @@ data class AiAccess(
  * is treated as "no key saved" so the controls degrade to the add-key message.
  */
 suspend fun loadAiAccess(settings: SettingsRepository, secrets: SecretStore): AiAccess {
-    val hasKey = runCatching { secrets.get() }.getOrNull()?.isNotBlank() == true
+    val hasKey = try {
+        secrets.get()?.trim()?.isNotEmpty() == true
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (_: Exception) {
+        false
+    }
     return AiAccess(
         hasApiKey = hasKey,
         interviewMode = settings.getSettings().interviewMode

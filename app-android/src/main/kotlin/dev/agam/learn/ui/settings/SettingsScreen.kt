@@ -69,6 +69,11 @@ data class SettingsUiState(
     val dailyGoalXp: Int = 50,
     val aiProvider: AiProvider = AiProvider.ANTHROPIC,
     val aiModel: String = "claude-haiku-5-5",
+    val aiModelSearchQuery: String = "",
+    val availableAiModels: List<String> = emptyList(),
+    val isLoadingAiModels: Boolean = false,
+    val aiModelCatalogMessage: String? = null,
+    val isAiModelCatalogMessageError: Boolean = false,
     val apiKey: String = "",
     val isTestingAiConnection: Boolean = false,
     val aiConnectionTestResult: ConnectionTestResult? = null,
@@ -127,6 +132,8 @@ fun SettingsScreen(
         onDailyGoalSelected = viewModel::onDailyGoalSelected,
         onAiProviderSelected = viewModel::onAiProviderSelected,
         onAiModelSelected = viewModel::onAiModelSelected,
+        onAiModelSearchChanged = viewModel::onAiModelSearchChanged,
+        onRefreshAiModels = viewModel::refreshAiModels,
         onApiKeyChange = viewModel::onApiKeyChange,
         onTestAiConnection = viewModel::testAiConnection,
         onRemoveApiKey = viewModel::removeApiKey,
@@ -149,6 +156,8 @@ fun SettingsScreen(
     onDailyGoalSelected: (Int) -> Unit,
     onAiProviderSelected: (AiProvider) -> Unit,
     onAiModelSelected: (String) -> Unit,
+    onAiModelSearchChanged: (String) -> Unit,
+    onRefreshAiModels: () -> Unit,
     onApiKeyChange: (String) -> Unit,
     onTestAiConnection: () -> Unit,
     onRemoveApiKey: () -> Unit,
@@ -299,13 +308,47 @@ fun SettingsScreen(
                 }
 
                 SettingsFieldLabel("Model")
-                val availableModels = PROVIDER_MODELS[state.aiProvider].orEmpty()
+                OutlinedTextField(
+                    value = state.aiModel,
+                    onValueChange = onAiModelSelected,
+                    label = { Text("${providerLabel(state.aiProvider)} model ID") },
+                    placeholder = { Text(AiProviderConfig.defaultModel(state.aiProvider)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        autoCorrectEnabled = false,
+                        keyboardType = KeyboardType.Ascii
+                    ),
+                    supportingText = {
+                        Text("Type any model ID, or choose a discovered or recommended model below.")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = state.aiModelSearchQuery,
+                    onValueChange = onAiModelSearchChanged,
+                    label = { Text("Search available models") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                val recommendedModels = PROVIDER_MODELS[state.aiProvider].orEmpty()
+                val modelOptions = if (state.aiModelSearchQuery.isBlank()) {
+                    (
+                        recommendedModels +
+                            listOfNotNull(state.aiModel.takeIf { it.isNotBlank() && it !in recommendedModels }) +
+                            state.availableAiModels.filterNot { it in recommendedModels }.take(8)
+                        ).distinct()
+                } else {
+                    (state.availableAiModels + recommendedModels)
+                        .distinct()
+                        .filter { it.contains(state.aiModelSearchQuery.trim(), ignoreCase = true) }
+                        .take(40)
+                }
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    availableModels.forEach { modelName ->
+                    modelOptions.forEach { modelName ->
                         FilterChip(
                             selected = state.aiModel == modelName,
                             onClick = { onAiModelSelected(modelName) },
@@ -320,19 +363,28 @@ fun SettingsScreen(
                         )
                     }
                 }
-
-                if (state.aiProvider == AiProvider.OPENROUTER) {
-                    OutlinedTextField(
-                        value = state.aiModel,
-                        onValueChange = onAiModelSelected,
-                        label = { Text("OpenRouter model") },
-                        placeholder = { Text("openrouter/auto") },
-                        singleLine = true,
-                        supportingText = {
-                            Text("Enter a model slug, or leave blank for automatic routing.")
-                        },
-                        modifier = Modifier.fillMaxWidth()
+                OutlinedButton(
+                    onClick = onRefreshAiModels,
+                    enabled = !state.isLoadingAiModels && !state.isInterviewModeDefault,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    if (state.isLoadingAiModels) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Loading models…")
+                    } else {
+                        Text("Refresh models")
+                    }
+                }
+                if (state.availableAiModels.isNotEmpty()) {
+                    Text(
+                        text = "${state.availableAiModels.size} text models found. Search to show more.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+                state.aiModelCatalogMessage?.let { message ->
+                    ModelCatalogMessage(text = message, isError = state.isAiModelCatalogMessageError)
                 }
 
                 OutlinedTextField(
@@ -609,6 +661,21 @@ private fun StatusMessage(text: String, success: Boolean) {
 }
 
 @Composable
+private fun ModelCatalogMessage(text: String, isError: Boolean) {
+    val background = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant
+    val foreground = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(background, RoundedCornerShape(10.dp))
+            .padding(12.dp)
+            .semantics { contentDescription = text }
+    ) {
+        Text(text = text, style = MaterialTheme.typography.bodySmall, color = foreground)
+    }
+}
+
+@Composable
 private fun PreferenceSwitchRow(
     title: String,
     description: String,
@@ -669,6 +736,8 @@ private fun SettingsScreenPreview() {
             onDailyGoalSelected = {},
             onAiProviderSelected = {},
             onAiModelSelected = {},
+            onAiModelSearchChanged = {},
+            onRefreshAiModels = {},
             onApiKeyChange = {},
             onTestAiConnection = {},
             onRemoveApiKey = {},

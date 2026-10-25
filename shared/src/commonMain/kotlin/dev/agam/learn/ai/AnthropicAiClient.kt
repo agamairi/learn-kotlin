@@ -1,19 +1,22 @@
 package dev.agam.learn.ai
 
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.request.header
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpMethod
+import io.ktor.http.URLBuilder
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 /** Ktor client for Anthropic's Messages API. */
 internal class AnthropicAiClient(
     private val httpClient: HttpClient,
     private val model: String = AiProviderConfig.ANTHROPIC_DEFAULT_MODEL
 ) : AiChatClient {
+    private val responseJson = Json { ignoreUnknownKeys = true }
 
     override suspend fun chat(
         apiKey: String,
@@ -35,11 +38,28 @@ internal class AnthropicAiClient(
                     messages = listOf(AnthropicMessage(role = "user", content = userPrompt))
                 )
             )
-        }.getOrElse { return AiClientResult.Failure(networkFailure = true) }
+        }.getOrElse { return requestFailure(it) }
 
-        if (response.isFailure()) return failureFrom(response)
+        if (response.status.value !in 200..299) return failureFrom(response)
 
-        return parseResponseBody(response)
+        return try {
+            val parsed = responseJson.decodeFromString<AnthropicResponse>(response.bodyAsText())
+            if (parsed.stopReason == "max_tokens") {
+                return AiClientResult.Failure(reason = AiFailureReason.INCOMPLETE_RESPONSE)
+            }
+
+            val text = parsed.content
+                .asSequence()
+                .filter { it.type == "text" }
+                .mapNotNull { it.text?.takeIf(String::isNotBlank) }
+                .joinToString("")
+                .trim()
+            text.takeIf(String::isNotEmpty)?.let(AiClientResult::Text) ?: emptyResponse()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            invalidResponse()
+        }
     }
 
     override suspend fun testConnection(apiKey: String): AiClientResult {
@@ -49,20 +69,49 @@ internal class AnthropicAiClient(
         ) {
             header(AiProviderConfig.ANTHROPIC_AUTHORIZATION_HEADER, "Bearer $apiKey")
             header(AiProviderConfig.ANTHROPIC_VERSION_HEADER, AiProviderConfig.ANTHROPIC_VERSION)
-        }.getOrElse { return AiClientResult.Failure(networkFailure = true) }
+        }.getOrElse { return requestFailure(it) }
 
-        return if (response.isSuccess()) AiClientResult.Text("") else failureFrom(response)
+        return if (response.status.value in 200..299) AiClientResult.Text("") else failureFrom(response)
     }
 
-    private suspend fun parseResponseBody(response: io.ktor.client.statement.HttpResponse): AiClientResult =
-        try {
-            val parsed = response.body<AnthropicResponse>()
-            AiClientResult.Text(parsed.content.firstOrNull()?.text.orEmpty())
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (_: Exception) {
-            AiClientResult.Failure(networkFailure = true)
+    override suspend fun listModels(apiKey: String): AiClientResult {
+        val models = mutableListOf<String>()
+        val seenCursors = mutableSetOf<String>()
+        var afterId: String? = null
+        var pageCount = 0
+
+        while (pageCount < MAX_MODEL_PAGES) {
+            val url = URLBuilder(AiProviderConfig.ANTHROPIC_MODELS_URL).apply {
+                parameters.append("limit", MODEL_PAGE_SIZE.toString())
+                afterId?.let { parameters.append("after_id", it) }
+            }.buildString()
+            val response = httpClient.executeStatus(HttpMethod.Get, url) {
+                header(AiProviderConfig.ANTHROPIC_AUTHORIZATION_HEADER, "Bearer $apiKey")
+                header(AiProviderConfig.ANTHROPIC_VERSION_HEADER, AiProviderConfig.ANTHROPIC_VERSION)
+            }.getOrElse { return requestFailure(it) }
+            if (response.status.value !in 200..299) return failureFrom(response)
+
+            val page = try {
+                responseJson.decodeFromString<AnthropicModelsResponse>(response.bodyAsText())
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                return invalidResponse()
+            }
+            models += page.data.map { it.id }
+
+            val cursor = page.lastId?.takeIf { page.hasMore && seenCursors.add(it) } ?: break
+            afterId = cursor
+            pageCount++
         }
+
+        return AiClientResult.Models(models.distinct())
+    }
+
+    private companion object {
+        const val MODEL_PAGE_SIZE = 100
+        const val MAX_MODEL_PAGES = 20
+    }
 }
 
 @Serializable
@@ -81,19 +130,22 @@ private data class AnthropicMessage(val role: String, val content: String)
 
 @Serializable
 private data class AnthropicResponse(
-    val id: String? = null,
-    val type: String? = null,
-    val role: String? = null,
-    val content: List<AnthropicResponseContent>,
-    val model: String? = null,
+    val content: List<AnthropicResponseContent> = emptyList(),
     @SerialName("stop_reason") val stopReason: String? = null
 )
 
 @Serializable
-private data class AnthropicResponseContent(val type: String, val text: String)
+private data class AnthropicResponseContent(
+    val type: String? = null,
+    val text: String? = null
+)
 
-private fun io.ktor.client.statement.HttpResponse.isFailure(): Boolean =
-    status.value !in 200..299
+@Serializable
+private data class AnthropicModelsResponse(
+    val data: List<AnthropicModel> = emptyList(),
+    @SerialName("has_more") val hasMore: Boolean = false,
+    @SerialName("last_id") val lastId: String? = null
+)
 
-private fun io.ktor.client.statement.HttpResponse.isSuccess(): Boolean =
-    status.value in 200..299
+@Serializable
+private data class AnthropicModel(val id: String)

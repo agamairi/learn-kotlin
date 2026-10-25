@@ -23,6 +23,26 @@ data class ProgressCommit(
     val heldStreakFreezes: Int? = null
 )
 
+/** One attempt held until the learner completes the whole lesson run. */
+data class StagedLessonAttempt(
+    val attemptId: String,
+    val result: ExerciseResult,
+    val completesExercise: Boolean,
+    val reviewCard: ReviewCard? = null
+)
+
+/** All durable changes produced by one completed lesson run. */
+data class LessonProgressSettlement(
+    val runId: String,
+    val lessonId: String,
+    val completedAtEpochMillis: Long,
+    val attempts: List<StagedLessonAttempt>,
+    val dailyActivity: DailyActivity?,
+    val reviewCards: List<ReviewCard>,
+    val frozenEpochDays: Set<Long>,
+    val heldStreakFreezes: Int
+)
+
 /**
  * Local persistent storage interface for learner progress, spaced repetition cards, and settings.
  */
@@ -37,6 +57,13 @@ interface ProgressRepository {
      * [ProgressCommit.attemptId] was already committed.
      */
     suspend fun commitProgress(commit: ProgressCommit): Boolean
+
+    /**
+     * Atomically commits one lesson run and marks the lesson complete. Returns false only when
+     * [LessonProgressSettlement.runId] was already settled; attempt id conflicts throw so callers
+     * can retain staged progress and offer a retry instead of reporting a false completion.
+     */
+    suspend fun settleLessonProgress(settlement: LessonProgressSettlement): Boolean
 
     /**
      * Retrieves all recorded exercise attempts.

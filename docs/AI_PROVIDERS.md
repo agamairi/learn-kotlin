@@ -12,7 +12,7 @@ Required headers:
 - `anthropic-version: 2026-10-21`
 - `Content-Type: application/json`
 
-The legacy `x-api-key` header remains supported, but Anthropic documents `Authorization` as the current form. The latest API version removes `temperature`, `top_p`, and `top_k`; sending them returns HTTP 400. Therefore, no current request can satisfy the temperature requirement. This is **unverified** for legacy API versions and individual older models. ([authentication](https://platform.claude.com/docs/en/api/overview), [versioning](https://platform.claude.com/docs/en/api/versioning), [Messages reference](https://platform.claude.com/docs/en/api/messages/create))
+The legacy `x-api-key` header remains supported, but Anthropic documents `Authorization` as the current form. The latest API version removes `temperature`, `top_p`, and `top_k`; sending them returns HTTP 400. The app omits these overrides and uses provider defaults. Legacy API versions and individual older models were not checked. ([authentication](https://platform.claude.com/docs/en/api/overview), [versioning](https://platform.claude.com/docs/en/api/versioning), [Messages reference](https://platform.claude.com/docs/en/api/messages/create))
 
 Current JSON:
 
@@ -53,7 +53,7 @@ Successful response shape:
 }
 ```
 
-Generated text path: `content[0].text`. ([Messages guide](https://platform.claude.com/docs/en/build-with-claude/working-with-messages))
+Generated text comes from the visible `content` blocks whose type is `text`; the client combines their `text` values. ([Messages guide](https://platform.claude.com/docs/en/build-with-claude/working-with-messages))
 
 Errors:
 
@@ -94,8 +94,7 @@ Minimal JSON:
   "model": "gpt-6-luna",
   "instructions": "You are a patient Kotlin tutor.",
   "input": "Explain Kotlin null safety simply.",
-  "max_output_tokens": 256,
-  "temperature": 0.2
+  "max_output_tokens": 2048
 }
 ```
 
@@ -175,8 +174,7 @@ Minimal JSON:
     }
   ],
   "generationConfig": {
-    "maxOutputTokens": 256,
-    "temperature": 0.2
+    "maxOutputTokens": 256
   }
 }
 ```
@@ -220,7 +218,7 @@ Invalid key: usually HTTP 400 with `API_KEY_INVALID`; a valid key lacking permis
 
 Cheap key test: `GET https://generativelanguage.googleapis.com/v1beta/models` with `x-goog-api-key`. It validates that the key exists, but does not confirm project billing or inference eligibility. ([troubleshooting](https://ai.google.dev/gemini-api/docs/troubleshooting))
 
-Suitable models: fast/cheap `gemini-3.5-flash-lite`; strong `gemini-4-argon`. Note that Gemini 4 ignores custom temperature, so omit `temperature` when using Argon. ([models](https://ai.google.dev/gemini-api/docs/models), [Gemini 4 guide](https://ai.google.dev/gemini-api/docs/latest-model))
+Suitable models: fast/cheap `gemini-3.5-flash-lite`; strong `gemini-4-argon`. Gemini requests use provider-default sampling; do not force `temperature` for custom models. ([models](https://ai.google.dev/gemini-api/docs/models), [Gemini 4 guide](https://ai.google.dev/gemini-api/docs/latest-model))
 
 ## OpenRouter Chat Completions API
 
@@ -228,7 +226,7 @@ Added for v0.1.0; checked against official documentation and the live public mod
 
 - Endpoint: `POST https://openrouter.ai/api/v1/chat/completions`.
 - Authentication: `Authorization: Bearer YOUR_OPENROUTER_KEY`; JSON content type.
-- Request: `model`, a `messages` list with `system` and `user` roles, `max_completion_tokens`, and `temperature: 0.2`.
+- Request: `model`, a `messages` list with `system` and `user` roles, and `max_completion_tokens`. Sampling uses provider defaults for custom-model compatibility.
 - Response text: `choices[0].message.content`; additional metadata is ignored. Empty or invalid output is a failure.
 - Default: `openrouter/auto`, confirmed in the public catalog. Settings also accepts a custom model slug.
 - Free credential check: `GET https://openrouter.ai/api/v1/key` with the bearer key. The public models endpoint cannot validate a key. This check does not test completion eligibility or available credits.
@@ -236,6 +234,16 @@ Added for v0.1.0; checked against official documentation and the live public mod
 - Privacy: OpenRouter forwards prompts to model providers; both OpenRouter and those providers receive the exercise data. Hidden tests remain excluded.
 
 Sources: [OpenRouter quickstart](https://openrouter.ai/docs/quickstart), [authenticated key endpoint](https://openrouter.ai/docs/api/api-reference/api-keys/get-current-api-key), [model catalog](https://openrouter.ai/api/v1/models).
+
+## v0.4.0 response handling and model discovery
+
+The production Ktor client uses `ignoreUnknownKeys` for response compatibility. A documented Gemini GenerateContent response includes `usageMetadata`, `modelVersion`, `responseId`, and optional candidate metadata; these used to fail the strict DTO decoder and were incorrectly reported as **No connection**. Response parsing now separates invalid, blocked, and empty provider replies from transport failures and joins visible text blocks. No provider error body, credential, or raw exception text is shown to the learner. See the [Google response schema](https://ai.google.dev/api/generate-content) and [documented response example](https://ai.google.dev/gemini-api/docs/generate-content/text-generation).
+
+Gemini requests omit sampling overrides. Google documents them as deprecated for Gemini 3.5 Flash Lite and rejected by future generations; the provider defaults avoid imposing unsupported parameters on a manually selected model. See [Google's generation changes](https://ai.google.dev/gemini-api/docs/generate-content/whats-new-gemini-3.6).
+
+Tutor requests use a minimum 2,048-token output cap, retaining a larger count-based cap for generated cards. This allows room for thinking tokens while the prompts still request brief visible answers; the cap is not a forced token spend. OpenAI and Anthropic truncated-status replies are reported as incomplete rather than successful tutor answers. Non-text reasoning and tool blocks are excluded. OpenAI and OpenRouter omit optional sampling overrides so custom reasoning models do not reject unsupported temperature parameters.
+
+Every provider supports a manually entered model ID. Authenticated catalog discovery runs after a key is saved and on explicit refresh, with stale requests ignored when the key/provider/model changes. Discovery failure never removes the custom model field. Listing a model or accepting a key does not guarantee inference access, billing, or available credits. Tests use synthetic credentials and production-factory MockEngine responses, including realistic Gemini metadata; no real learner key is used for validation.
 
 ## Android secret storage
 

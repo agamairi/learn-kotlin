@@ -1,6 +1,7 @@
 package dev.agam.learn.fake
 
 import dev.agam.learn.data.ProgressCommit
+import dev.agam.learn.data.LessonProgressSettlement
 import dev.agam.learn.data.ProgressRepository
 import dev.agam.learn.model.DailyActivity
 import dev.agam.learn.model.ExerciseResult
@@ -16,6 +17,8 @@ import kotlinx.coroutines.sync.withLock
  * Thread-safe in-memory implementation of [ProgressRepository] for unit tests.
  */
 class FakeProgressRepository : ProgressRepository {
+
+    var settlementFailure: Exception? = null
 
     private val mutex = Mutex()
     private val exerciseResultsState = MutableStateFlow<List<ExerciseResult>>(emptyList())
@@ -136,6 +139,7 @@ class FakeProgressRepository : ProgressRepository {
     private val frozenEpochDays = mutableSetOf<Long>()
     private var heldStreakFreezes = 0
     private val committedAttemptIds = mutableSetOf<String>()
+    private val settledLessonRuns = mutableSetOf<String>()
 
     override suspend fun commitProgress(commit: ProgressCommit): Boolean = mutex.withLock {
         if (!committedAttemptIds.add(commit.attemptId)) return@withLock false
@@ -150,6 +154,40 @@ class FakeProgressRepository : ProgressRepository {
         }
         frozenEpochDays.addAll(commit.frozenEpochDays)
         commit.heldStreakFreezes?.let { heldStreakFreezes = it.coerceIn(0, 2) }
+        true
+    }
+
+    override suspend fun settleLessonProgress(settlement: LessonProgressSettlement): Boolean = mutex.withLock {
+        settlementFailure?.let { throw it }
+        if (settlement.runId in settledLessonRuns) {
+            return@withLock false
+        }
+        if (settlement.attempts.any { it.attemptId in committedAttemptIds }) {
+            throw IllegalStateException("A lesson attempt id is already committed outside this run")
+        }
+        if (settlement.attempts.map { it.attemptId }.distinct().size != settlement.attempts.size) {
+            throw IllegalArgumentException("A lesson settlement contains duplicate attempt ids")
+        }
+        committedAttemptIds.addAll(settlement.attempts.map { it.attemptId })
+        exerciseResultsState.value = exerciseResultsState.value + settlement.attempts.map { it.result }
+        settlement.dailyActivity?.let { activity ->
+            val updatedActivities = dailyActivitiesState.value.toMutableMap()
+            updatedActivities[activity.epochDay] = activity
+            dailyActivitiesState.value = updatedActivities
+        }
+        if (settlement.reviewCards.isNotEmpty()) {
+            val updatedCards = reviewCardsState.value.toMutableMap()
+            settlement.reviewCards.forEach { card ->
+                if (card.itemId !in updatedCards) updatedCards[card.itemId] = card
+            }
+            reviewCardsState.value = updatedCards
+        }
+        frozenEpochDays.addAll(settlement.frozenEpochDays)
+        heldStreakFreezes = settlement.heldStreakFreezes.coerceIn(0, 2)
+        val completions = lessonCompletionsState.value.toMutableMap()
+        completions[settlement.lessonId] = settlement.completedAtEpochMillis
+        lessonCompletionsState.value = completions
+        settledLessonRuns.add(settlement.runId)
         true
     }
 

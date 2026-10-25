@@ -11,12 +11,14 @@ sealed class Screen(val route: String) {
         fun createRoute(lessonId: String): String = "lesson/$lessonId"
     }
 
-    data object CodeExercise : Screen("code_exercise/{exerciseId}") {
-        fun createRoute(exerciseId: String): String = "code_exercise/$exerciseId"
+    data object CodeExercise : Screen("code_exercise/{exerciseId}?lessonRunId={lessonRunId}") {
+        fun createRoute(exerciseId: String, lessonRunId: String? = null): String =
+            "code_exercise/$exerciseId" + (lessonRunId?.let { "?lessonRunId=$it" } ?: "")
     }
 
-    data object Problem : Screen("problem/{problemId}") {
-        fun createRoute(problemId: String): String = "problem/$problemId"
+    data object Problem : Screen("problem/{problemId}?lessonRunId={lessonRunId}") {
+        fun createRoute(problemId: String, lessonRunId: String? = null): String =
+            "problem/$problemId" + (lessonRunId?.let { "?lessonRunId=$it" } ?: "")
     }
 
     data object Review : Screen("review")

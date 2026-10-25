@@ -10,6 +10,10 @@ interface AiTutor {
     suspend fun testConnection(): AiResult<Unit> =
         AiResult.Error("Testing the AI connection is not supported")
 
+    /** Lists text-generation models visible to the saved provider key, when supported. */
+    suspend fun listModels(): AiResult<List<String>> =
+        AiResult.Error("Model discovery is not supported by this AI tutor")
+
     /**
      * Explains why an answer was incorrect in plain language.
      */

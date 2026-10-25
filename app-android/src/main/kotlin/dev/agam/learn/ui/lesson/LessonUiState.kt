@@ -7,6 +7,8 @@ import dev.agam.learn.model.Exercise
  */
 sealed interface LessonStep {
     data object Loading : LessonStep
+    data object Completing : LessonStep
+    data class SettlementFailed(val message: String) : LessonStep
     data class Explanation(val text: String) : LessonStep
     data class ExercisePlaying(
         val exerciseIndex: Int,

@@ -41,6 +41,8 @@ class MultiPartProblemViewModel(
     isInterviewModeDefault: Boolean = false,
     /** False when no API key is saved; the AI controls then show the add-key hint and do nothing. */
     hasApiKey: Boolean = false,
+    /** Present when this studio was opened from a lesson; its attempts then wait for lesson settlement. */
+    private val lessonRunId: String? = null,
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
@@ -212,7 +214,8 @@ class MultiPartProblemViewModel(
                         attemptId = newAttemptId(),
                         problemId = problem.id,
                         partId = currentPart.id,
-                        correct = passed
+                        correct = passed,
+                        lessonRunId = lessonRunId
                     )
                 )
             }
@@ -221,7 +224,12 @@ class MultiPartProblemViewModel(
             }
             if (allPartsPassed()) {
                 progressRecorder.record(
-                    ExerciseAttempt(attemptId = "$runId:complete", exerciseId = problem.id, correct = true)
+                    ExerciseAttempt(
+                        attemptId = "$runId:complete",
+                        exerciseId = problem.id,
+                        correct = true,
+                        lessonRunId = lessonRunId
+                    )
                 )
             }
 

@@ -127,6 +127,34 @@ class MultiPartProblemViewModelTest {
     }
 
     @Test
+    fun multipartPartsAndCompletionWaitForTheLessonSettlement() = runBlocking {
+        val runId = "multipart-lesson-run"
+        recorder.beginLessonRun("lesson-test", runId)
+        fakeRunner.testOutcome = RunOutcome.Passed(testsRun = 2, stdout = "")
+        val viewModel = MultiPartProblemViewModel(
+            problem = problem,
+            codeRunner = fakeRunner,
+            progressRecorder = recorder,
+            lessonRunId = runId,
+            coroutineScope = testScope
+        )
+
+        viewModel.checkPart()
+        viewModel.revealNextPart()
+        viewModel.checkPart()
+
+        assertTrue(progress.getExerciseResults().isEmpty())
+        assertTrue(progress.getDailyActivities().isEmpty())
+        assertEquals(100, recorder.lessonRunXp(runId))
+        assertEquals(
+            dev.agam.learn.data.LessonRunSettlementOutcome.Settled(100),
+            recorder.settleLessonRun("lesson-test", runId)
+        )
+        assertEquals(setOf("part1", "part2", "ledger-system"), progress.getExerciseResults().map { it.exerciseId }.toSet())
+        assertEquals(1, progress.getDailyActivities().single().exercisesCompleted)
+    }
+
+    @Test
     fun testInterviewModeToggle() {
         val viewModel = MultiPartProblemViewModel(
             problem = problem,

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -36,6 +37,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -102,6 +106,40 @@ fun CodeEditor(
     val layoutHeight = with(density) { (currentTextLayout?.heightPx ?: 0).toDp() }
     val editorContentHeight = maxOf(layoutHeight, 144.dp)
 
+    // Reset when source or cursor changes, but preserve an explicit request while committing IME text.
+    var isCompletionDismissed by remember(value.text, value.selection) {
+        mutableStateOf(false)
+    }
+    var explicitTrigger by remember(value.text, value.selection) {
+        mutableStateOf(false)
+    }
+
+    val completionContext = remember(value.text, value.selection, readOnly) {
+        if (readOnly) null
+        else KotlinCompletionEngine.analyzeContext(value.text, value.selection)
+    }
+
+    val suggestions = remember(
+        value.text,
+        value.selection,
+        value.composition,
+        readOnly,
+        explicitTrigger,
+        isCompletionDismissed
+    ) {
+        if (readOnly || (value.hasActiveComposition && !explicitTrigger) || isCompletionDismissed ||
+            completionContext == null || !completionContext.canComplete
+        ) {
+            emptyList()
+        } else {
+            KotlinCompletionEngine.getCompletions(
+                text = value.text,
+                selection = value.selection,
+                explicit = explicitTrigger
+            )
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -144,8 +182,40 @@ fun CodeEditor(
             onTabClick = {
                 onValueChange(insertTextAtCursor(value, "    "))
             },
+            onAutoCompleteClick = {
+                if (value.hasActiveComposition) {
+                    // Explicit activation commits the current IME pre-edit without changing source or cursor.
+                    onValueChange(value.copy(composition = null))
+                }
+                explicitTrigger = true
+                isCompletionDismissed = false
+            },
             enabled = !readOnly
         )
+
+        // Contextual code completion suggestions
+        if (!readOnly && suggestions.isNotEmpty()) {
+            CodeCompletionBar(
+                suggestions = suggestions,
+                onSelectSuggestion = { item ->
+                    // Some IMEs reassert the same composing range after an explicit commit. An
+                    // explicit request is anchored by the remembered text and selection above,
+                    // so clear only that stale pre-edit marker before applying the chosen item.
+                    val valueForCompletion = if (explicitTrigger) value.copy(composition = null) else value
+                    val nextValue = KotlinCompletionEngine.applyCompletion(
+                        valueForCompletion,
+                        item,
+                        completionContext
+                    )
+                    onValueChange(nextValue)
+                    explicitTrigger = false
+                },
+                onDismiss = {
+                    isCompletionDismissed = true
+                    explicitTrigger = false
+                }
+            )
+        }
 
         // Text editor area with line numbers
         val editorScrollState = rememberScrollState()
@@ -198,6 +268,12 @@ fun CodeEditor(
                 readOnly = readOnly,
                 singleLine = false,
                 maxLines = Int.MAX_VALUE,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.None,
+                    autoCorrectEnabled = false,
+                    keyboardType = KeyboardType.Ascii,
+                    imeAction = ImeAction.Default
+                ),
                 textStyle = MaterialTheme.typography.bodySmall.copy(
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurface
@@ -239,7 +315,8 @@ fun SymbolBar(
     onTabClick: () -> Unit,
     modifier: Modifier = Modifier,
     symbols: List<String> = CODE_SYMBOL_LIST,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    onAutoCompleteClick: (() -> Unit)? = null
 ) {
     val scrollState = rememberScrollState()
 
@@ -270,6 +347,29 @@ fun SymbolBar(
                 .padding(end = 4.dp)
                 .defaultMinSize(minHeight = 48.dp)
         )
+
+        // Explicit completion trigger chip
+        if (onAutoCompleteClick != null) {
+            AssistChip(
+                onClick = onAutoCompleteClick,
+                enabled = enabled,
+                label = {
+                    Text(
+                        text = "Complete",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                modifier = Modifier
+                    .padding(end = 4.dp)
+                    .defaultMinSize(minHeight = 48.dp)
+                    .semantics { contentDescription = "Trigger code completion" }
+            )
+        }
 
         symbols.forEach { symbol ->
             AssistChip(

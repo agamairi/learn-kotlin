@@ -320,6 +320,202 @@ class ProgressRecorderTest {
     }
 
     @Test
+    fun aLessonRunKeepsCardsCodeAndMultipartXpInvisibleUntilOneSettlement() = runTest {
+        settings.setDailyGoalXp(100)
+        assertTrue(recorder.beginLessonRun("lesson-a", "lesson-run-1"))
+
+        recorder.record(ExerciseAttempt("card-wrong", "card-mc", correct = false, lessonRunId = "lesson-run-1"))
+        recorder.record(
+            ExerciseAttempt("card-retry-wrong", "card-mc", correct = false, isLessonRetry = true, lessonRunId = "lesson-run-1")
+        )
+        assertEquals(
+            RecordOutcome.Recorded(10, null),
+            recorder.record(ExerciseAttempt("card-retry-right", "card-mc", correct = true, isLessonRetry = true, lessonRunId = "lesson-run-1"))
+        )
+        recorder.record(ExerciseAttempt("cloze-pass", "card-cloze", correct = true, lessonRunId = "lesson-run-1"))
+        recorder.record(ExerciseAttempt("code-fail", "drill", correct = false, lessonRunId = "lesson-run-1"))
+        assertEquals(
+            RecordOutcome.Recorded(13, null),
+            recorder.record(ExerciseAttempt("code-pass", "drill", correct = true, aiHintsUsed = listOf(1), lessonRunId = "lesson-run-1"))
+        )
+        assertEquals(
+            RecordOutcome.Recorded(50, null),
+            recorder.record(ProblemPartAttempt("part-1-pass", "problem", "part-1", correct = true, lessonRunId = "lesson-run-1"))
+        )
+        assertEquals(
+            RecordOutcome.Recorded(0, null),
+            recorder.record(ProblemPartAttempt("part-1-again", "problem", "part-1", correct = true, lessonRunId = "lesson-run-1"))
+        )
+        recorder.record(ProblemPartAttempt("part-2-pass", "problem", "part-2", correct = true, lessonRunId = "lesson-run-1"))
+        recorder.record(ExerciseAttempt("problem-complete", "problem", correct = true, lessonRunId = "lesson-run-1"))
+
+        assertEquals(133, recorder.lessonRunXp("lesson-run-1"))
+        assertTrue(repository.getExerciseResults().isEmpty())
+        assertTrue(repository.getDailyActivities().isEmpty())
+        assertNull(repository.getReviewCard("card-mc"))
+        assertFalse(repository.isLessonCompleted("lesson-a"))
+        assertEquals(0, recorder.refreshStreak().currentStreak)
+
+        assertEquals(LessonRunSettlementOutcome.Settled(133), recorder.settleLessonRun("lesson-a", "lesson-run-1"))
+        assertEquals(LessonRunSettlementOutcome.Duplicate, recorder.settleLessonRun("lesson-a", "lesson-run-1"))
+
+        assertEquals(10, repository.getExerciseResults().size)
+        assertEquals(133, repository.getExerciseResults().sumOf { it.xpAwarded })
+        assertEquals(
+            DailyActivity(epochDay(2026, 1, 6), xpEarned = 133, exercisesCompleted = 4, goalMet = true),
+            repository.getDailyActivity(epochDay(2026, 1, 6))
+        )
+        assertEquals(ReviewCard("card-mc", box = 1, dueEpochDay = epochDay(2026, 1, 7)), repository.getReviewCard("card-mc"))
+        assertTrue(repository.isLessonCompleted("lesson-a"))
+    }
+
+    @Test
+    fun abandonedCodePassDoesNotBlockXpInANewLessonRun() = runTest {
+        val drillOnlyCourse = course.copy(
+            chapters = course.chapters.map { chapter ->
+                chapter.copy(lessons = chapter.lessons.map { lesson -> lesson.copy(exercises = listOf(drill)) })
+            }
+        )
+        val sessionRecorder = ProgressRecorder(
+            progressRepository = repository,
+            courseRepository = StaticCourses(listOf(drillOnlyCourse)),
+            settingsRepository = settings,
+            reviewScheduler = LeitnerScheduler(),
+            xpPolicy = DefaultXpPolicy(),
+            clock = clock,
+            timeZone = toronto
+        )
+        assertTrue(sessionRecorder.beginLessonRun("lesson-a", "abandoned-run"))
+        assertEquals(
+            RecordOutcome.Recorded(25, null),
+            sessionRecorder.record(ExerciseAttempt("abandoned-pass", "drill", correct = true, lessonRunId = "abandoned-run"))
+        )
+        assertEquals(25, sessionRecorder.lessonRunXp("abandoned-run"))
+        assertTrue(repository.getExerciseResults().isEmpty())
+        assertTrue(repository.getDailyActivities().isEmpty())
+        sessionRecorder.abandonLessonRun("abandoned-run")
+
+        assertTrue(sessionRecorder.beginLessonRun("lesson-a", "retry-run"))
+        assertEquals(
+            RecordOutcome.Recorded(25, null),
+            sessionRecorder.record(ExerciseAttempt("retry-pass", "drill", correct = true, lessonRunId = "retry-run"))
+        )
+        assertEquals(LessonRunSettlementOutcome.Settled(25), sessionRecorder.settleLessonRun("lesson-a", "retry-run"))
+        assertEquals(25, repository.getDailyActivity(epochDay(2026, 1, 6))?.xpEarned)
+        assertEquals(1, repository.getExerciseResults().size)
+    }
+
+    @Test
+    fun lessonXpIsCreditedToTheEffectiveDayOnWhichTheRunSettles() = runTest {
+        settings.setDailyGoalXp(10)
+        val cardOnlyCourse = course.copy(
+            chapters = course.chapters.map { chapter ->
+                chapter.copy(lessons = chapter.lessons.map { lesson -> lesson.copy(exercises = listOf(multipleChoice)) })
+            }
+        )
+        val boundaryRecorder = ProgressRecorder(
+            progressRepository = repository,
+            courseRepository = StaticCourses(listOf(cardOnlyCourse)),
+            settingsRepository = settings,
+            reviewScheduler = LeitnerScheduler(),
+            xpPolicy = DefaultXpPolicy(),
+            clock = clock,
+            timeZone = toronto
+        )
+        clock.now = instant("2026-01-06T08:59:59Z") // 03:59; effective Jan 5 in Toronto
+        boundaryRecorder.beginLessonRun("lesson-a", "boundary-run")
+        boundaryRecorder.record(ExerciseAttempt("before-cutoff", "card-mc", correct = true, lessonRunId = "boundary-run"))
+        assertNull(repository.getDailyActivity(epochDay(2026, 1, 5)))
+
+        clock.now = instant("2026-01-06T09:00:00Z") // 04:00; effective Jan 6
+        assertEquals(LessonRunSettlementOutcome.Settled(10), boundaryRecorder.settleLessonRun("lesson-a", "boundary-run"))
+        assertNull(repository.getDailyActivity(epochDay(2026, 1, 5)))
+        assertEquals(
+            DailyActivity(epochDay(2026, 1, 6), xpEarned = 10, exercisesCompleted = 1, goalMet = true),
+            repository.getDailyActivity(epochDay(2026, 1, 6))
+        )
+        assertEquals(1, boundaryRecorder.refreshStreak().currentStreak)
+    }
+
+    @Test
+    fun mistakeCardSeedUsesTheSettlementDayAfterTheEffectiveDayBoundary() = runTest {
+        val cardOnlyCourse = course.copy(
+            chapters = course.chapters.map { chapter ->
+                chapter.copy(lessons = chapter.lessons.map { lesson -> lesson.copy(exercises = listOf(multipleChoice)) })
+            }
+        )
+        val boundaryRecorder = ProgressRecorder(
+            progressRepository = repository,
+            courseRepository = StaticCourses(listOf(cardOnlyCourse)),
+            settingsRepository = settings,
+            reviewScheduler = LeitnerScheduler(),
+            xpPolicy = DefaultXpPolicy(),
+            clock = clock,
+            timeZone = toronto
+        )
+        clock.now = instant("2026-01-06T08:59:59Z") // 03:59; effective Jan 5 in Toronto
+        assertTrue(boundaryRecorder.beginLessonRun("lesson-a", "mistake-boundary-run"))
+        boundaryRecorder.record(
+            ExerciseAttempt("boundary-wrong", "card-mc", correct = false, lessonRunId = "mistake-boundary-run")
+        )
+        boundaryRecorder.record(
+            ExerciseAttempt("boundary-pass", "card-mc", correct = true, lessonRunId = "mistake-boundary-run")
+        )
+        assertNull(repository.getReviewCard("card-mc"))
+
+        clock.now = instant("2026-01-06T09:00:00Z") // 04:00; effective Jan 6
+        assertEquals(
+            LessonRunSettlementOutcome.Settled(10),
+            boundaryRecorder.settleLessonRun("lesson-a", "mistake-boundary-run")
+        )
+        assertEquals(ReviewCard("card-mc", box = 1, dueEpochDay = epochDay(2026, 1, 7)), repository.getReviewCard("card-mc"))
+    }
+
+    @Test
+    fun settlementDoesNotReplaceARealReviewCardCreatedAfterTheMistakeWasStaged() = runTest {
+        val cardOnlyCourse = course.copy(
+            chapters = course.chapters.map { chapter ->
+                chapter.copy(lessons = chapter.lessons.map { lesson -> lesson.copy(exercises = listOf(multipleChoice)) })
+            }
+        )
+        val cardRecorder = ProgressRecorder(
+            progressRepository = repository,
+            courseRepository = StaticCourses(listOf(cardOnlyCourse)),
+            settingsRepository = settings,
+            reviewScheduler = LeitnerScheduler(),
+            xpPolicy = DefaultXpPolicy(),
+            clock = clock,
+            timeZone = toronto
+        )
+        assertTrue(cardRecorder.beginLessonRun("lesson-a", "review-card-race-run"))
+        cardRecorder.record(
+            ExerciseAttempt("race-wrong", "card-mc", correct = false, lessonRunId = "review-card-race-run")
+        )
+        val existingCard = ReviewCard("card-mc", box = 4, dueEpochDay = epochDay(2026, 1, 20))
+        repository.upsertReviewCard(existingCard)
+        cardRecorder.record(
+            ExerciseAttempt("race-pass", "card-mc", correct = true, lessonRunId = "review-card-race-run")
+        )
+
+        assertEquals(
+            LessonRunSettlementOutcome.Settled(10),
+            cardRecorder.settleLessonRun("lesson-a", "review-card-race-run")
+        )
+        assertEquals(existingCard, repository.getReviewCard("card-mc"))
+    }
+
+    @Test
+    fun unknownLessonCannotStartOrSettleARun() = runTest {
+        assertFalse(recorder.beginLessonRun("missing-lesson", "unknown-run"))
+        assertEquals(
+            LessonRunSettlementOutcome.Rejected,
+            recorder.settleLessonRun("missing-lesson", "unknown-run")
+        )
+        assertTrue(repository.getExerciseResults().isEmpty())
+        assertTrue(repository.getDailyActivities().isEmpty())
+    }
+
+    @Test
     fun wrongReviewAnswerReturnsTheCardToBoxOneAndPaysNothing() = runTest {
         repository.upsertReviewCard(ReviewCard("card-mc", box = 4, dueEpochDay = epochDay(2026, 1, 6)))
 

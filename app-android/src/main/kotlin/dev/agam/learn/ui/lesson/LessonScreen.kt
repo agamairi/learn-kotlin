@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -95,6 +96,10 @@ fun LessonScreen(
     val learningFeedback = LocalLearningFeedback.current
     val reducedMotion = LocalReducedMotion.current
 
+    BackHandler(enabled = uiState.step !is LessonStep.Completing) {
+        onNavigateBack()
+    }
+
     LaunchedEffect(lessonId) {
         presentedMilestone = null
         viewModel.loadLesson(lessonId)
@@ -125,7 +130,7 @@ fun LessonScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            if (uiState.step !is LessonStep.Completed) {
+            if (uiState.step !is LessonStep.Completed && uiState.step !is LessonStep.Completing) {
                 TopAppBar(
                     title = {
                         val playingStep = uiState.step as? LessonStep.ExercisePlaying
@@ -222,7 +227,7 @@ fun LessonScreen(
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Text(
-                                            text = "+${uiState.xpEarnedInLesson}",
+                                            text = "+${uiState.xpEarnedInLesson} pending",
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onTertiaryContainer
@@ -251,6 +256,24 @@ fun LessonScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+
+                is LessonStep.Completing -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+
+                is LessonStep.SettlementFailed -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(step.message, style = MaterialTheme.typography.bodyLarge)
+                        Spacer(Modifier.height(16.dp))
+                        Button(onClick = viewModel::retrySettlement) { Text("Retry") }
                     }
                 }
 

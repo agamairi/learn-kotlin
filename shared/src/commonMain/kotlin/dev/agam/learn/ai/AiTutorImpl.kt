@@ -9,6 +9,7 @@ import kotlinx.serialization.json.Json
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
 
@@ -18,10 +19,30 @@ import kotlinx.coroutines.CancellationException
  */
 fun createAiHttpClient(engine: HttpClientEngine? = null): HttpClient =
     if (engine == null) {
-        HttpClient { install(ContentNegotiation) { json() } }
+        HttpClient {
+            expectSuccess = false
+            install(HttpTimeout) {
+                connectTimeoutMillis = AI_CONNECT_TIMEOUT_MILLIS
+                requestTimeoutMillis = AI_REQUEST_TIMEOUT_MILLIS
+                socketTimeoutMillis = AI_SOCKET_TIMEOUT_MILLIS
+            }
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
     } else {
-        HttpClient(engine) { install(ContentNegotiation) { json() } }
+        HttpClient(engine) {
+            expectSuccess = false
+            install(HttpTimeout) {
+                connectTimeoutMillis = AI_CONNECT_TIMEOUT_MILLIS
+                requestTimeoutMillis = AI_REQUEST_TIMEOUT_MILLIS
+                socketTimeoutMillis = AI_SOCKET_TIMEOUT_MILLIS
+            }
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
     }
+
+private const val AI_CONNECT_TIMEOUT_MILLIS = 15_000L
+private const val AI_REQUEST_TIMEOUT_MILLIS = 60_000L
+private const val AI_SOCKET_TIMEOUT_MILLIS = 60_000L
 
 /** Default provider-agnostic implementation of [AiTutor]. */
 class AiTutorImpl(
@@ -42,7 +63,21 @@ class AiTutorImpl(
             val result = client.testConnection(apiKey)
             when (result) {
                 is AiClientResult.Text -> AiResult.Success(Unit)
+                is AiClientResult.Models -> AiResult.Error("AI provider returned an unexpected result")
                 is AiClientResult.Failure -> failureResult(result)
+            }
+        }
+    }
+
+    /** Lists models available to this provider key without generating a response. */
+    override suspend fun listModels(): AiResult<List<String>> {
+        val blocked = blockedResult()
+        if (blocked != null) return blocked
+        return withClient { client, apiKey ->
+            when (val result = client.listModels(apiKey)) {
+                is AiClientResult.Models -> AiResult.Success(result.values)
+                is AiClientResult.Failure -> failureResult(result)
+                is AiClientResult.Text -> AiResult.Error("AI provider returned an unexpected result")
             }
         }
     }
@@ -83,8 +118,11 @@ class AiTutorImpl(
         val blocked = blockedResult()
         if (blocked != null) return blocked
         return withClient { client, apiKey ->
-            when (val result = client.chat(apiKey, Prompts.SYSTEM, userPrompt, maxTokens)) {
+            // Thinking tokens count against several providers' output caps. A small tutor
+            // answer can otherwise spend its entire 140-token budget on internal reasoning.
+            when (val result = client.chat(apiKey, Prompts.SYSTEM, userPrompt, maxOf(MIN_OUTPUT_TOKENS, maxTokens))) {
                 is AiClientResult.Text -> AiResult.Success(result.value)
+                is AiClientResult.Models -> AiResult.Error("AI provider returned an unexpected result")
                 is AiClientResult.Failure -> failureResult(result)
             }
         }
@@ -93,24 +131,26 @@ class AiTutorImpl(
     private suspend fun <T> withClient(
         block: suspend (AiChatClient, String) -> AiResult<T>
     ): AiResult<T> {
-        val apiKey = try {
+        val storedApiKey = try {
             secretStore.get()
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (_: Exception) {
-            null
-        }?.takeIf { it.isNotBlank() } ?: return AiResult.Error("Add your API key in Settings")
+            return AiResult.Error("Unable to read the API key from secure storage")
+        }
+        val apiKey = storedApiKey?.trim()?.takeIf { it.isNotEmpty() }
+            ?: return AiResult.Error("Add your API key in Settings")
         return try {
             block(createClient(), apiKey)
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (_: Exception) {
-            AiResult.Error("No connection")
+            AiResult.Error("AI provider request failed")
         }
     }
 
     private fun createClient(): AiChatClient {
-        val model = settings.model ?: AiProviderConfig.defaultModel(settings.provider)
+        val model = AiProviderConfig.normalizeModel(settings.provider, settings.model)
         return when (settings.provider) {
             AiProvider.ANTHROPIC -> AnthropicAiClient(httpClient, model)
             AiProvider.OPENAI -> OpenAiClient(httpClient, model)
@@ -126,15 +166,43 @@ class AiTutorImpl(
     }
 
     private fun failureResult(result: AiClientResult): AiResult.Error = when (result) {
-        is AiClientResult.Text -> AiResult.Error("AI provider returned an unexpected result")
-        is AiClientResult.Failure -> when {
-            result.networkFailure -> AiResult.Error("No connection")
-            result.statusCode == 401 || result.statusCode == 403 -> AiResult.Error("API key rejected")
-            result.statusCode == 429 -> AiResult.Error("Rate limit, try again shortly")
-            result.statusCode == 402 && settings.provider == AiProvider.OPENROUTER ->
-                AiResult.Error("OpenRouter credits or spending limit reached")
-            result.statusCode == 529 || result.statusCode in 500..599 -> AiResult.Error("Provider busy")
-            else -> AiResult.Error("AI provider request failed")
+        is AiClientResult.Text,
+        is AiClientResult.Models -> AiResult.Error("AI provider returned an unexpected result")
+        is AiClientResult.Failure -> failureResult(result)
+    }
+
+    private fun failureResult(failure: AiClientResult.Failure): AiResult.Error = when {
+        failure.networkFailure -> AiResult.Error("No connection. Check your internet and try again.")
+        else -> when (failure.reason) {
+            AiFailureReason.INVALID_CREDENTIALS -> AiResult.Error("API key rejected")
+            AiFailureReason.PERMISSION_DENIED ->
+                AiResult.Error("Provider denied access. Check API key permissions and account access.")
+            AiFailureReason.INVALID_MODEL ->
+                AiResult.Error("Model not found. Check the model ID or refresh the model list.")
+            AiFailureReason.INVALID_REQUEST ->
+                AiResult.Error("Provider rejected the request. Check the selected model and its supported settings.")
+            AiFailureReason.RATE_LIMIT_OR_QUOTA ->
+                AiResult.Error("Provider rate limit or usage quota reached. Check account limits or try again shortly.")
+            AiFailureReason.CREDITS_REQUIRED -> AiResult.Error(
+                if (settings.provider == AiProvider.OPENROUTER) {
+                    "OpenRouter credits or spending limit reached"
+                } else {
+                    "Provider account needs credits or billing"
+                }
+            )
+            AiFailureReason.PROVIDER_UNAVAILABLE -> AiResult.Error("Provider busy. Try again shortly.")
+            AiFailureReason.REQUEST_TIMEOUT -> AiResult.Error("Provider timed out. Try again shortly.")
+            AiFailureReason.SECURE_CONNECTION_FAILURE ->
+                AiResult.Error("Secure connection failed. Check your network or device date and time.")
+            AiFailureReason.EMPTY_RESPONSE ->
+                AiResult.Error("Provider returned no text. Choose a text generation model and try again.")
+            AiFailureReason.BLOCKED_RESPONSE ->
+                AiResult.Error("Gemini blocked the response. Try a different prompt.")
+            AiFailureReason.INCOMPLETE_RESPONSE ->
+                AiResult.Error("Provider stopped before finishing. Try a shorter request or increase the output limit.")
+            AiFailureReason.INVALID_RESPONSE ->
+                AiResult.Error("Provider returned an unreadable response. Try again or choose another model.")
+            AiFailureReason.UNKNOWN -> AiResult.Error("AI provider request failed")
         }
     }
 
@@ -177,6 +245,10 @@ class AiTutorImpl(
         accepted = accepted,
         caseSensitive = caseSensitive
     )
+
+    private companion object {
+        const val MIN_OUTPUT_TOKENS = 2_048
+    }
 }
 
 @Serializable

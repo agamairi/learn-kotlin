@@ -2,9 +2,12 @@ package dev.agam.learn.ui.lesson
 
 import dev.agam.learn.ai.AiResult
 import dev.agam.learn.ai.AiTutor
+import dev.agam.learn.content.CourseRepository
 import dev.agam.learn.data.AppSettings
 import dev.agam.learn.data.ExerciseAttempt
 import dev.agam.learn.data.ProgressRecorder
+import dev.agam.learn.domain.DefaultXpPolicy
+import dev.agam.learn.domain.LeitnerScheduler
 import dev.agam.learn.data.newAttemptId
 import dev.agam.learn.fake.FakeAnswerGrader
 import dev.agam.learn.fake.FakeCourseRepository
@@ -21,6 +24,7 @@ import dev.agam.learn.model.ProblemPart
 import dev.agam.learn.runtime.kotlin.KotlinLanguageSupport
 import dev.agam.learn.ui.review.ReviewViewModel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -297,6 +301,59 @@ class LessonViewModelTest {
         assertFalse(vm.uiState.value.isMistakeReview)
     }
 
+    @Test
+    fun staleLessonLoadCannotReplaceTheRunRequestedWhileItWasSuspended() = runTest(testDispatcher) {
+        val original = courseOf(multipleChoice("old-card"), lessonId = "lesson-old")
+        val chapter = original.chapters.single()
+        val newLesson = chapter.lessons.single().copy(id = "lesson-new", title = "New lesson")
+        val course = original.copy(chapters = listOf(chapter.copy(lessons = chapter.lessons + newLesson)))
+        val firstLoadEntered = CompletableDeferred<Unit>()
+        val releaseFirstLoad = CompletableDeferred<Unit>()
+        var shouldBlockFirstLoad = true
+        val courses = object : CourseRepository {
+            override suspend fun getCourse(courseId: String): Course? = course.takeIf { it.id == courseId }
+
+            override suspend fun listCourses(): List<Course> {
+                if (shouldBlockFirstLoad) {
+                    shouldBlockFirstLoad = false
+                    firstLoadEntered.complete(Unit)
+                    releaseFirstLoad.await()
+                }
+                return listOf(course)
+            }
+        }
+        val stagedRecorder = ProgressRecorder(
+            progressRepository = progressRepository,
+            courseRepository = courses,
+            settingsRepository = FakeSettingsRepository(),
+            reviewScheduler = LeitnerScheduler(),
+            xpPolicy = DefaultXpPolicy(),
+            clock = clock,
+            timeZone = toronto
+        )
+        val vm = LessonViewModel(
+            courseRepository = courses,
+            progressRepository = progressRepository,
+            progressRecorder = stagedRecorder,
+            answerGrader = answerGrader,
+            languageSupport = languageSupport
+        )
+
+        vm.loadLesson("lesson-old")
+        advanceUntilIdle()
+        firstLoadEntered.await()
+        vm.loadLesson("lesson-new", forceReload = true)
+        advanceUntilIdle()
+        assertEquals("lesson-new", vm.uiState.value.lessonId)
+
+        releaseFirstLoad.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals("lesson-new", vm.uiState.value.lessonId)
+        assertEquals("New lesson", vm.uiState.value.lessonTitle)
+        assertTrue(vm.uiState.value.step is LessonStep.Explanation)
+    }
+
     private fun drill() = Exercise.WriteFunction(
         id = "drill-sum",
         prompt = "Write sum(a, b)",
@@ -398,16 +455,16 @@ class LessonViewModelTest {
         viewModel.onCheckAnswer()
         advanceUntilIdle()
         assertFalse(viewModel.uiState.value.isAnswerChecked)
-        recorder.record(ExerciseAttempt(newAttemptId(), drillStep.exercise.id, correct = true))
-        viewModel.onStudioExerciseCompleted(drillStep.exercise.id)
+        recorder.record(ExerciseAttempt(newAttemptId(), drillStep.exercise.id, correct = true, lessonRunId = viewModel.lessonRunId))
+        viewModel.onStudioExerciseCompleted(drillStep.exercise.id, viewModel.lessonRunId)
         advanceUntilIdle()
         viewModel.onContinueNext()
         advanceUntilIdle()
 
         val problemStep = viewModel.uiState.value.step as LessonStep.ExercisePlaying
         assertTrue(problemStep.exercise is Exercise.MultiPartProblem)
-        recorder.record(ExerciseAttempt(newAttemptId(), problemStep.exercise.id, correct = true))
-        viewModel.onStudioExerciseCompleted(problemStep.exercise.id)
+        recorder.record(ExerciseAttempt(newAttemptId(), problemStep.exercise.id, correct = true, lessonRunId = viewModel.lessonRunId))
+        viewModel.onStudioExerciseCompleted(problemStep.exercise.id, viewModel.lessonRunId)
         advanceUntilIdle()
         viewModel.onContinueNext()
         advanceUntilIdle()
@@ -431,31 +488,46 @@ class LessonViewModelTest {
 
     @Test
     fun resultsCarryTheLessonAndChapterIds() = runTest(testDispatcher) {
-        viewModel.loadLesson("lesson-01-syntax")
+        val card = multipleChoice("metadata-card")
+        val vm = viewModelFor(courseWith(card))
+        vm.loadLesson("lesson-studio")
         advanceUntilIdle()
-        viewModel.onStartPractice()
+        vm.onStartPractice()
         advanceUntilIdle()
-        viewModel.onOptionSelected(0)
-        viewModel.onCheckAnswer()
+        vm.onOptionSelected(0)
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+        assertTrue("Checked attempts remain staged until lesson completion", progressRepository.getExerciseResults().isEmpty())
+        vm.onContinueNext()
         advanceUntilIdle()
 
         val stored = progressRepository.getExerciseResults().single()
-        assertEquals("lesson-01-syntax", stored.lessonId)
-        assertEquals(SampleCourseData.defaultCourse.chapters.first().id, stored.chapterId)
+        assertEquals("lesson-studio", stored.lessonId)
+        assertEquals("ch-studio", stored.chapterId)
     }
 
     @Test
     fun aMissedLessonCardEntersTheReviewQueueForTomorrow() = runTest(testDispatcher) {
-        viewModel.loadLesson("lesson-01-syntax")
+        val missed = multipleChoice("missed-card")
+        val vm = viewModelFor(courseWith(missed))
+        vm.loadLesson("lesson-studio")
         advanceUntilIdle()
-        viewModel.onStartPractice()
+        vm.onStartPractice()
         advanceUntilIdle()
-        viewModel.onOptionSelected(1) // wrong
-        viewModel.onCheckAnswer()
+        vm.onOptionSelected(1) // wrong
+        vm.onCheckAnswer()
         advanceUntilIdle()
 
-        val missed = viewModel.uiState.value.step as LessonStep.ExercisePlaying
-        val card = progressRepository.getReviewCard(missed.exercise.id)
+        assertNull("A review card is provisional until the lesson settles", progressRepository.getReviewCard(missed.id))
+        vm.onContinueNext()
+        vm.startMistakeReview()
+        vm.onOptionSelected(0)
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+        vm.onContinueNext()
+        advanceUntilIdle()
+
+        val card = progressRepository.getReviewCard(missed.id)
         assertEquals(1, card?.box)
         assertEquals(recorder.today() + 1, card?.dueEpochDay)
 
@@ -466,23 +538,28 @@ class LessonViewModelTest {
             progressRecorder = recorder,
             coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
-        assertTrue(review.uiState.value.dueCards.any { it.itemId == missed.exercise.id })
+        assertTrue(review.uiState.value.dueCards.any { it.itemId == missed.id })
     }
 
     @Test
     fun aCardCheckedTwiceIsRecordedOnce() = runTest(testDispatcher) {
-        viewModel.loadLesson("lesson-01-syntax")
+        val vm = viewModelFor(courseWith(multipleChoice("only-card")))
+        vm.loadLesson("lesson-studio")
         advanceUntilIdle()
-        viewModel.onStartPractice()
+        vm.onStartPractice()
         advanceUntilIdle()
-        viewModel.onOptionSelected(0)
+        vm.onOptionSelected(0)
 
-        viewModel.onCheckAnswer()
-        viewModel.onCheckAnswer()
+        vm.onCheckAnswer()
+        vm.onCheckAnswer()
         advanceUntilIdle()
 
+        assertTrue(progressRepository.getExerciseResults().isEmpty())
+        assertEquals(10, vm.uiState.value.xpEarnedInLesson)
+        vm.onContinueNext()
+        advanceUntilIdle()
         assertEquals(1, progressRepository.getExerciseResults().size)
-        assertEquals(10, viewModel.uiState.value.xpEarnedInLesson)
+        assertEquals(10, progressRepository.getDailyActivities().single().xpEarned)
     }
 
     @Test
@@ -492,8 +569,8 @@ class LessonViewModelTest {
         advanceUntilIdle()
         vm.onStartPractice()
         advanceUntilIdle()
-        recorder.record(ExerciseAttempt(newAttemptId(), "drill-sum", correct = true))
-        vm.onStudioExerciseCompleted("drill-sum")
+        recorder.record(ExerciseAttempt(newAttemptId(), "drill-sum", correct = true, lessonRunId = vm.lessonRunId))
+        vm.onStudioExerciseCompleted("drill-sum", vm.lessonRunId)
         advanceUntilIdle()
 
         vm.onContinueNext()
@@ -501,6 +578,35 @@ class LessonViewModelTest {
 
         assertTrue(progressRepository.isLessonCompleted("lesson-studio"))
         assertEquals(25, (vm.uiState.value.step as LessonStep.Completed).totalXp)
+    }
+
+    @Test
+    fun aFailedSettlementKeepsTheRunAndCanBeRetriedWithoutDoubleAward() = runTest(testDispatcher) {
+        val vm = viewModelFor(courseWith(multipleChoice("only-card")))
+        vm.loadLesson("lesson-studio")
+        advanceUntilIdle()
+        vm.onStartPractice()
+        vm.onOptionSelected(0)
+        vm.onCheckAnswer()
+        advanceUntilIdle()
+        progressRepository.settlementFailure = IllegalStateException("temporary storage failure")
+
+        vm.onContinueNext()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.step is LessonStep.SettlementFailed)
+        assertEquals(10, vm.uiState.value.xpEarnedInLesson)
+        assertTrue(progressRepository.getExerciseResults().isEmpty())
+        assertTrue(progressRepository.getDailyActivities().isEmpty())
+
+        progressRepository.settlementFailure = null
+        vm.retrySettlement()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.step is LessonStep.Completed)
+        assertEquals(10, (vm.uiState.value.step as LessonStep.Completed).totalXp)
+        assertEquals(1, progressRepository.getExerciseResults().size)
+        assertEquals(10, progressRepository.getDailyActivities().single().xpEarned)
     }
 
     @Test
@@ -513,7 +619,7 @@ class LessonViewModelTest {
 
         val step = vm.uiState.value.step as LessonStep.ExercisePlaying
         assertTrue(step.exercise is Exercise.WriteFunction)
-        assertEquals("code_exercise/drill-sum", vm.routeForExercise(step.exercise))
+        assertEquals("code_exercise/drill-sum?lessonRunId=${vm.lessonRunId}", vm.routeForExercise(step.exercise))
         assertTrue(vm.uiState.value.isStudioExercise)
         assertFalse("A code drill has no Check action in the lesson", vm.uiState.value.canCheckAnswer)
     }
@@ -528,7 +634,7 @@ class LessonViewModelTest {
 
         val step = vm.uiState.value.step as LessonStep.ExercisePlaying
         assertTrue(step.exercise is Exercise.MultiPartProblem)
-        assertEquals("problem/problem-ledger", vm.routeForExercise(step.exercise))
+        assertEquals("problem/problem-ledger?lessonRunId=${vm.lessonRunId}", vm.routeForExercise(step.exercise))
         assertTrue(vm.uiState.value.isStudioExercise)
     }
 
@@ -570,7 +676,11 @@ class LessonViewModelTest {
         advanceUntilIdle()
         vm.onStartPractice()
         advanceUntilIdle()
-        recorder.record(ExerciseAttempt(newAttemptId(), "drill-sum", correct = true))
+        recorder.record(ExerciseAttempt(newAttemptId(), "drill-sum", correct = true, lessonRunId = vm.lessonRunId))
+
+        vm.onStudioExerciseCompleted("drill-sum", "stale-lesson-run")
+        advanceUntilIdle()
+        assertFalse("A studio callback from another run cannot advance this lesson", vm.uiState.value.isAnswerChecked)
 
         vm.onStudioExerciseCompleted("drill-sum")
         advanceUntilIdle()
@@ -594,8 +704,8 @@ class LessonViewModelTest {
         advanceUntilIdle()
         vm.onStartPractice()
         advanceUntilIdle()
-        recorder.record(ExerciseAttempt(newAttemptId(), "drill-sum", correct = true))
-        vm.onStudioExerciseCompleted("drill-sum")
+        recorder.record(ExerciseAttempt(newAttemptId(), "drill-sum", correct = true, lessonRunId = vm.lessonRunId))
+        vm.onStudioExerciseCompleted("drill-sum", vm.lessonRunId)
         advanceUntilIdle()
         vm.onContinueNext()
         advanceUntilIdle()
@@ -767,8 +877,8 @@ class LessonViewModelTest {
         viewModel.onContinueNext()
         advanceUntilIdle()
         val drillStep = viewModel.uiState.value.step as LessonStep.ExercisePlaying
-        recorder.record(ExerciseAttempt(newAttemptId(), drillStep.exercise.id, correct = true))
-        viewModel.onStudioExerciseCompleted(drillStep.exercise.id)
+        recorder.record(ExerciseAttempt(newAttemptId(), drillStep.exercise.id, correct = true, lessonRunId = viewModel.lessonRunId))
+        viewModel.onStudioExerciseCompleted(drillStep.exercise.id, viewModel.lessonRunId)
         advanceUntilIdle()
         assertEquals(4, viewModel.uiState.value.consecutiveCorrectStreak)
         assertNull(viewModel.uiState.value.activeMilestone)
@@ -777,8 +887,8 @@ class LessonViewModelTest {
         viewModel.onContinueNext()
         advanceUntilIdle()
         val problemStep = viewModel.uiState.value.step as LessonStep.ExercisePlaying
-        recorder.record(ExerciseAttempt(newAttemptId(), problemStep.exercise.id, correct = true))
-        viewModel.onStudioExerciseCompleted(problemStep.exercise.id)
+        recorder.record(ExerciseAttempt(newAttemptId(), problemStep.exercise.id, correct = true, lessonRunId = viewModel.lessonRunId))
+        viewModel.onStudioExerciseCompleted(problemStep.exercise.id, viewModel.lessonRunId)
         advanceUntilIdle()
 
         assertEquals(5, viewModel.uiState.value.consecutiveCorrectStreak)
@@ -865,8 +975,8 @@ class LessonViewModelTest {
         vm.onStartPractice()
         advanceUntilIdle()
 
-        recorder.record(ExerciseAttempt(newAttemptId(), "drill-sum", correct = true))
-        vm.onStudioExerciseCompleted("drill-sum")
+        recorder.record(ExerciseAttempt(newAttemptId(), "drill-sum", correct = true, lessonRunId = vm.lessonRunId))
+        vm.onStudioExerciseCompleted("drill-sum", vm.lessonRunId)
         advanceUntilIdle()
 
         assertEquals(1, vm.uiState.value.consecutiveCorrectStreak)
@@ -942,15 +1052,15 @@ class LessonViewModelTest {
         viewModel.onContinueNext()
         advanceUntilIdle()
         val drill = (viewModel.uiState.value.step as LessonStep.ExercisePlaying).exercise
-        recorder.record(ExerciseAttempt(newAttemptId(), drill.id, correct = true))
-        viewModel.onStudioExerciseCompleted(drill.id)
+        recorder.record(ExerciseAttempt(newAttemptId(), drill.id, correct = true, lessonRunId = viewModel.lessonRunId))
+        viewModel.onStudioExerciseCompleted(drill.id, viewModel.lessonRunId)
         advanceUntilIdle()
 
         viewModel.onContinueNext()
         advanceUntilIdle()
         val problem = (viewModel.uiState.value.step as LessonStep.ExercisePlaying).exercise
-        recorder.record(ExerciseAttempt(newAttemptId(), problem.id, correct = true))
-        viewModel.onStudioExerciseCompleted(problem.id)
+        recorder.record(ExerciseAttempt(newAttemptId(), problem.id, correct = true, lessonRunId = viewModel.lessonRunId))
+        viewModel.onStudioExerciseCompleted(problem.id, viewModel.lessonRunId)
         advanceUntilIdle()
 
         // Milestone is present at 5

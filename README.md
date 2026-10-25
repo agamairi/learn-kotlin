@@ -18,6 +18,8 @@ v0.2.0 brings a restrained warm ivory, sage, and clay palette with matching ligh
 
 v0.3.0 adds an end-of-lesson mistake round. Missed quiz questions wait until the remaining questions are finished. A clay-coloured Koda banner says **Let’s review your mistakes**, then you can review them in order. A question missed again returns to the back of that review queue. The lesson completes when those questions are corrected; retries do not inflate XP or the completed-exercise count. Home, Review, Stats, and Settings now follow actual Google Stitch screen designs; the quiz layout keeps the existing style. Design exports and implementation notes are in [`docs/design/stitch`](docs/design/stitch/README.md).
 
+v0.4.0 fixes the AI tutor treating normal provider response metadata as a connection failure. AI Settings accepts a custom model ID for every provider, fetches available models after saving a key, and supports refresh and search. Lesson answers and code-studio results now stay pending until the entire lesson, including the mistake round, is finished; quitting discards that run without adding XP, daily-goal credit, or a lesson completion. Code Studio also offers local Kotlin autocomplete using the current source and common language/library suggestions.
+
 The app needs Android 8.0 (API 26) or newer. Install the APK by sideloading it. When Android asks, allow installs from the app you opened the file with, such as your browser or file manager.
 
 Lessons and review work offline. Code exercises need the compiler server, and the AI tutor needs internet access and your own API key. Sections 3 and 4 explain both.
@@ -64,7 +66,7 @@ The **Bearer Token (optional)** field in Settings is optional. The local server 
 
 The AI tutor is optional. It needs an API key from Anthropic, OpenAI, Google Gemini or OpenRouter. Without a key, the AI controls show a message that asks you to add one.
 
-Open **Settings**, then **AI Tutor (Bring Your Own Key)**. Choose a provider and a model, paste your key, and tap **Save AI Settings**. **Test connection** checks the saved key without generating a paid completion: it uses the provider's model list, or OpenRouter's authenticated key endpoint. **Remove key** deletes the saved key.
+Open **Settings**, then **AI Tutor (Bring Your Own Key)**. Choose a provider, type a model ID or choose a suggestion, paste your key, and tap **Save AI Settings**. Saving a key fetches the provider's model list; use **Refresh models** to retry and search to narrow the choices. You can enter a model manually even if discovery fails. **Test connection** checks the saved key without generating a paid completion: it uses the provider's model list, or OpenRouter's authenticated key endpoint. **Remove key** deletes the saved key.
 
 For **OpenRouter**, the default model is `openrouter/auto`. You can enter any model slug from the OpenRouter catalog, such as `openai/gpt-6-luna`. Save after changing the model, provider or key before testing the connection. A successful key test does not guarantee model access or sufficient credits for a completion.
 

@@ -34,6 +34,8 @@ class CodeExerciseViewModel(
     val isInterviewMode: Boolean = false,
     /** False when no API key is saved; the AI controls then show the add-key hint and do nothing. */
     val hasApiKey: Boolean = false,
+    /** Present when this studio was opened from a lesson; its attempts then wait for lesson settlement. */
+    private val lessonRunId: String? = null,
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
@@ -152,7 +154,8 @@ class CodeExerciseViewModel(
                         attemptId = newAttemptId(),
                         exerciseId = exercise.id,
                         correct = passed,
-                        aiHintsUsed = aiHintsUsed.toList()
+                        aiHintsUsed = aiHintsUsed.toList(),
+                        lessonRunId = lessonRunId
                     )
                 )
             }

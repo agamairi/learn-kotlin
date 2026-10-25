@@ -10,17 +10,17 @@ import dev.agam.learn.ai.AiTutor
 import dev.agam.learn.data.SecretStore
 import dev.agam.learn.data.SettingsRepository
 import dev.agam.learn.di.AppContainer
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
-/**
- * ViewModel managing learner settings, AI tutor configuration, key lifecycle,
- * and compiler runner connection settings.
- */
+/** ViewModel for learner preferences, AI provider settings and compiler connection settings. */
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val secretStore: SecretStore,
@@ -29,41 +29,51 @@ class SettingsViewModel(
 ) : ViewModel() {
 
     private val scope = coroutineScope ?: viewModelScope
-
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
-    // The AI settings the tutor actually uses (saved values). The connection test checks these,
-    // so an unsaved key or provider is never reported as working.
+    // These values describe what the tutor will read from storage. Unsaved edits cannot be tested.
     private var savedApiKey: String = ""
     private var savedProvider: AiProvider = AiProvider.ANTHROPIC
     private var savedModel: String = ""
+    private var aiSettingsRevision: Long = 0
+    private var modelFetchRequestId: Long = 0
+    private var connectionTestRequestId: Long = 0
+    private val aiSettingsSaveMutex = Mutex()
 
     init {
         loadSettings()
     }
 
     fun loadSettings() {
+        val revisionAtStart = aiSettingsRevision
         scope.launch {
             val appSettings = settingsRepository.getSettings()
-            // A failing Keystore must not take the whole settings screen down; it shows as "no key saved".
-            val apiKey = runCatching { secretStore.get() }.getOrNull().orEmpty()
-            val provider = appSettings.selectedAiProvider
-            // Same default the tutor uses when no model is saved, so the screen never shows a different model.
-            val model = normalizedAiModel(provider, appSettings.selectedAiModel)
-            if (provider == AiProvider.OPENROUTER && appSettings.selectedAiModel != model) {
-                settingsRepository.setAiProvider(provider, model)
+            val apiKey = try {
+                secretStore.get()?.trim().orEmpty()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                ""
             }
+            val provider = appSettings.selectedAiProvider
+            val model = normalizedAiModel(provider, appSettings.selectedAiModel)
+            if (revisionAtStart != aiSettingsRevision) return@launch
+
             savedApiKey = apiKey
             savedProvider = provider
             savedModel = model
-
             _uiState.update {
                 it.copy(
                     dailyGoalXp = appSettings.dailyGoalXp,
                     aiProvider = provider,
                     aiModel = model,
                     apiKey = apiKey,
+                    aiModelSearchQuery = "",
+                    availableAiModels = emptyList(),
+                    isLoadingAiModels = false,
+                    aiModelCatalogMessage = null,
+                    isAiModelCatalogMessageError = false,
                     compilerServerUrl = appSettings.compilerServerUrl.ifBlank { "http://10.0.2.2:8080" },
                     compilerToken = appSettings.compilerServerToken.orEmpty(),
                     isInterviewModeDefault = appSettings.interviewMode,
@@ -77,86 +87,261 @@ class SettingsViewModel(
 
     fun onDailyGoalSelected(goalXp: Int) {
         _uiState.update { it.copy(dailyGoalXp = goalXp) }
-        scope.launch {
-            settingsRepository.setDailyGoalXp(goalXp)
-        }
+        scope.launch { settingsRepository.setDailyGoalXp(goalXp) }
     }
 
     fun onAiProviderSelected(provider: AiProvider) {
+        aiSettingsRevision++
+        modelFetchRequestId++
+        connectionTestRequestId++
         _uiState.update {
             it.copy(
                 aiProvider = provider,
                 aiModel = AiProviderConfig.defaultModel(provider),
-                aiConnectionTestResult = null
+                aiConnectionTestResult = null,
+                isTestingAiConnection = false,
+                isSavedMessageVisible = false,
+                availableAiModels = emptyList(),
+                isLoadingAiModels = false,
+                aiModelCatalogMessage = null,
+                isAiModelCatalogMessageError = false
             )
         }
     }
 
     fun onAiModelSelected(model: String) {
-        _uiState.update { it.copy(aiModel = model, aiConnectionTestResult = null) }
+        aiSettingsRevision++
+        modelFetchRequestId++
+        connectionTestRequestId++
+        _uiState.update {
+            it.copy(
+                aiModel = model,
+                aiConnectionTestResult = null,
+                isTestingAiConnection = false,
+                isSavedMessageVisible = false,
+                isLoadingAiModels = false,
+                aiModelCatalogMessage = null,
+                isAiModelCatalogMessageError = false
+            )
+        }
+    }
+
+    fun onAiModelSearchChanged(query: String) {
+        _uiState.update { it.copy(aiModelSearchQuery = query) }
     }
 
     fun onApiKeyChange(newKey: String) {
-        _uiState.update { it.copy(apiKey = newKey, aiConnectionTestResult = null, keystoreErrorMessage = null) }
+        aiSettingsRevision++
+        modelFetchRequestId++
+        connectionTestRequestId++
+        _uiState.update {
+            it.copy(
+                apiKey = newKey,
+                aiConnectionTestResult = null,
+                isTestingAiConnection = false,
+                keystoreErrorMessage = null,
+                isSavedMessageVisible = false,
+                availableAiModels = emptyList(),
+                isLoadingAiModels = false,
+                aiModelCatalogMessage = null,
+                isAiModelCatalogMessageError = false
+            )
+        }
     }
 
     fun saveAiSettings() {
-        val currentState = _uiState.value
-        val modelToSave = normalizedAiModel(currentState.aiProvider, currentState.aiModel)
-        val persistedModel = if (currentState.aiProvider == AiProvider.OPENROUTER) {
-            modelToSave
-        } else {
-            currentState.aiModel.ifBlank { null }
-        }
+        val stateAtStart = _uiState.value
+        val revisionAtStart = aiSettingsRevision
+        val keyToSave = stateAtStart.apiKey.trim()
+        val modelToSave = normalizedAiModel(stateAtStart.aiProvider, stateAtStart.aiModel)
+
         scope.launch {
-            try {
-                if (currentState.apiKey.isBlank()) {
-                    secretStore.delete()
-                } else {
-                    secretStore.set(currentState.apiKey)
+            aiSettingsSaveMutex.withLock {
+                try {
+                    if (keyToSave.isBlank()) secretStore.delete() else secretStore.set(keyToSave)
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (_: Exception) {
+                    if (revisionAtStart == aiSettingsRevision) {
+                        _uiState.update { it.copy(keystoreErrorMessage = "Unable to save API key to secure storage") }
+                    }
+                    return@withLock
                 }
-                settingsRepository.setAiProvider(
-                    currentState.aiProvider,
-                    persistedModel
-                )
-                savedApiKey = currentState.apiKey
-                savedProvider = currentState.aiProvider
+
+                try {
+                    settingsRepository.setAiProvider(stateAtStart.aiProvider, modelToSave)
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (_: Exception) {
+                    if (revisionAtStart == aiSettingsRevision) {
+                        _uiState.update { it.copy(keystoreErrorMessage = "Unable to save AI preferences") }
+                    }
+                    return@withLock
+                }
+
+                savedApiKey = keyToSave
+                savedProvider = stateAtStart.aiProvider
                 savedModel = modelToSave
-                _uiState.update {
-                    it.copy(
-                        aiModel = if (it.aiProvider == currentState.aiProvider &&
-                            it.aiModel == currentState.aiModel
-                        ) modelToSave else it.aiModel,
-                        isSavedMessageVisible = true,
-                        keystoreErrorMessage = null
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        keystoreErrorMessage = "Unable to save API key to secure storage: ${e.message ?: "Keystore error"}"
-                    )
+                if (revisionAtStart == aiSettingsRevision) {
+                    _uiState.update {
+                        it.copy(
+                            apiKey = keyToSave,
+                            aiModel = modelToSave,
+                            isSavedMessageVisible = true,
+                            keystoreErrorMessage = null,
+                            aiModelCatalogMessage = null,
+                            isAiModelCatalogMessageError = false
+                        )
+                    }
+                    if (keyToSave.isNotBlank()) {
+                        startModelFetch(
+                            provider = stateAtStart.aiProvider,
+                            key = keyToSave,
+                            model = modelToSave,
+                            revision = revisionAtStart
+                        )
+                    }
                 }
             }
         }
     }
 
     fun removeApiKey() {
+        aiSettingsRevision++
+        modelFetchRequestId++
+        connectionTestRequestId++
         _uiState.update {
             it.copy(
                 apiKey = "",
                 aiConnectionTestResult = null,
-                keystoreErrorMessage = null
+                isTestingAiConnection = false,
+                keystoreErrorMessage = null,
+                isSavedMessageVisible = false,
+                availableAiModels = emptyList(),
+                isLoadingAiModels = false,
+                aiModelCatalogMessage = null,
+                isAiModelCatalogMessageError = false
             )
         }
         savedApiKey = ""
         scope.launch {
-            try {
-                secretStore.delete()
-            } catch (e: Exception) {
-                _uiState.update {
+            aiSettingsSaveMutex.withLock {
+                try {
+                    secretStore.delete()
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (_: Exception) {
+                    _uiState.update {
+                        it.copy(keystoreErrorMessage = "Unable to remove API key from secure storage")
+                    }
+                } finally {
+                    savedApiKey = ""
+                }
+            }
+        }
+    }
+
+    /** Refreshes the authenticated catalog using the current saved provider and key. */
+    fun refreshAiModels() {
+        val state = _uiState.value
+        if (state.isInterviewModeDefault) {
+            _uiState.update {
+                it.copy(
+                    aiModelCatalogMessage = "Turn off interview mode to load AI models.",
+                    isAiModelCatalogMessageError = false
+                )
+            }
+            return
+        }
+        val key = state.apiKey.trim()
+        if (key.isBlank()) {
+            _uiState.update {
+                it.copy(
+                    aiModelCatalogMessage = "Enter and save an API key before loading models.",
+                    isAiModelCatalogMessageError = false
+                )
+            }
+            return
+        }
+        val provider = state.aiProvider
+        val model = normalizedAiModel(provider, state.aiModel)
+        if (key != savedApiKey || provider != savedProvider || model != savedModel) {
+            _uiState.update {
+                it.copy(
+                    aiModelCatalogMessage = "Save AI settings first, then load available models.",
+                    isAiModelCatalogMessageError = false
+                )
+            }
+            return
+        }
+        if (aiTutor == null) {
+            _uiState.update {
+                it.copy(
+                    aiModelCatalogMessage = "AI model discovery is not available in this build.",
+                    isAiModelCatalogMessageError = false
+                )
+            }
+            return
+        }
+        startModelFetch(provider, key, model, aiSettingsRevision)
+    }
+
+    private fun startModelFetch(provider: AiProvider, key: String, model: String, revision: Long) {
+        val tutor = aiTutor ?: return
+        if (revision != aiSettingsRevision) return
+        if (_uiState.value.isInterviewModeDefault) {
+            _uiState.update {
+                it.copy(
+                    isLoadingAiModels = false,
+                    aiModelCatalogMessage = "Turn off interview mode to load AI models.",
+                    isAiModelCatalogMessageError = false
+                )
+            }
+            return
+        }
+        val requestId = ++modelFetchRequestId
+        _uiState.update {
+            it.copy(
+                isLoadingAiModels = true,
+                aiModelCatalogMessage = null,
+                isAiModelCatalogMessageError = false
+            )
+        }
+
+        scope.launch {
+            val result = try {
+                tutor.listModels()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                AiResult.Error("AI provider request failed")
+            }
+            val current = _uiState.value
+            if (requestId != modelFetchRequestId || revision != aiSettingsRevision ||
+                provider != current.aiProvider || key != current.apiKey.trim() ||
+                model != normalizedAiModel(current.aiProvider, current.aiModel) ||
+                provider != savedProvider || key != savedApiKey || model != savedModel
+            ) return@launch
+
+            when (result) {
+                is AiResult.Success -> {
+                    val models = result.data.map(String::trim).filter(String::isNotEmpty).distinct()
+                    _uiState.update {
+                        it.copy(
+                            availableAiModels = models,
+                            isLoadingAiModels = false,
+                            aiModelCatalogMessage = if (models.isEmpty()) {
+                                "No text generation models were returned. You can still enter a model ID."
+                            } else null,
+                            isAiModelCatalogMessageError = false
+                        )
+                    }
+                }
+                is AiResult.Error -> _uiState.update {
                     it.copy(
-                        keystoreErrorMessage = "Unable to remove API key from secure storage: ${e.message ?: "Keystore error"}"
+                        isLoadingAiModels = false,
+                        aiModelCatalogMessage = "Couldn't load models: ${result.message}",
+                        isAiModelCatalogMessageError = true
                     )
                 }
             }
@@ -164,9 +349,9 @@ class SettingsViewModel(
     }
 
     fun testAiConnection() {
-        val currentKey = _uiState.value.apiKey
-        if (_uiState.value.isInterviewModeDefault) {
-            // The tutor refuses in interview mode, so do not send a request that can only fail.
+        val state = _uiState.value
+        val currentKey = state.apiKey.trim()
+        if (state.isInterviewModeDefault) {
             _uiState.update {
                 it.copy(
                     aiConnectionTestResult = ConnectionTestResult(
@@ -189,11 +374,9 @@ class SettingsViewModel(
             return
         }
 
-        val state = _uiState.value
-        val isSaved = currentKey == savedApiKey &&
-            state.aiProvider == savedProvider &&
-            normalizedAiModel(state.aiProvider, state.aiModel) == savedModel
-        if (!isSaved) {
+        val provider = state.aiProvider
+        val model = normalizedAiModel(provider, state.aiModel)
+        if (currentKey != savedApiKey || provider != savedProvider || model != savedModel) {
             _uiState.update {
                 it.copy(
                     aiConnectionTestResult = ConnectionTestResult(
@@ -205,33 +388,44 @@ class SettingsViewModel(
             return
         }
 
+        val revision = aiSettingsRevision
+        val requestId = ++connectionTestRequestId
         _uiState.update { it.copy(isTestingAiConnection = true, aiConnectionTestResult = null) }
 
         scope.launch {
             val result = if (aiTutor != null) {
-                when (val res = aiTutor.testConnection()) {
+                when (val response = try {
+                    aiTutor.testConnection()
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (_: Exception) {
+                    AiResult.Error("AI provider request failed")
+                }) {
                     is AiResult.Success -> ConnectionTestResult(
                         isSuccess = true,
-                        message = "Connection verified successfully with ${_uiState.value.aiProvider.name}."
+                        message = "Connection verified successfully with ${provider.name}."
                     )
                     is AiResult.Error -> ConnectionTestResult(
                         isSuccess = false,
-                        message = res.message + (res.cause?.let { " ($it)" } ?: "")
+                        message = response.message
                     )
                 }
             } else {
-                // Never report success without contacting the provider.
                 ConnectionTestResult(
                     isSuccess = false,
                     message = "AI tutor is not available in this build."
                 )
             }
 
-            _uiState.update {
-                it.copy(
-                    isTestingAiConnection = false,
-                    aiConnectionTestResult = result
-                )
+            val current = _uiState.value
+            if (requestId == connectionTestRequestId && revision == aiSettingsRevision &&
+                provider == current.aiProvider && model == normalizedAiModel(current.aiProvider, current.aiModel) &&
+                currentKey == current.apiKey.trim() && provider == savedProvider && model == savedModel &&
+                currentKey == savedApiKey
+            ) {
+                _uiState.update {
+                    it.copy(isTestingAiConnection = false, aiConnectionTestResult = result)
+                }
             }
         }
     }
@@ -245,20 +439,29 @@ class SettingsViewModel(
     }
 
     fun saveCompilerSettings() {
-        val currentState = _uiState.value
+        val state = _uiState.value
         scope.launch {
             settingsRepository.setCompilerServer(
-                url = currentState.compilerServerUrl,
-                token = currentState.compilerToken.ifBlank { null }
+                url = state.compilerServerUrl,
+                token = state.compilerToken.ifBlank { null }
             )
         }
     }
 
     fun toggleInterviewModeDefault(enabled: Boolean) {
-        _uiState.update { it.copy(isInterviewModeDefault = enabled) }
-        scope.launch {
-            settingsRepository.setInterviewMode(enabled)
+        _uiState.update {
+            it.copy(
+                isInterviewModeDefault = enabled,
+                isLoadingAiModels = if (enabled) false else it.isLoadingAiModels,
+                isTestingAiConnection = if (enabled) false else it.isTestingAiConnection,
+                aiConnectionTestResult = if (enabled) null else it.aiConnectionTestResult
+            )
         }
+        if (enabled) {
+            modelFetchRequestId++
+            connectionTestRequestId++
+        }
+        scope.launch { settingsRepository.setInterviewMode(enabled) }
     }
 
     fun setSoundEffectsEnabled(enabled: Boolean) {
@@ -277,23 +480,17 @@ class SettingsViewModel(
     }
 
     private fun normalizedAiModel(provider: AiProvider, model: String?): String =
-        if (provider == AiProvider.OPENROUTER) {
-            model?.trim()?.takeIf { it.isNotEmpty() } ?: AiProviderConfig.OPENROUTER_DEFAULT_MODEL
-        } else {
-            model ?: AiProviderConfig.defaultModel(provider)
-        }
+        AiProviderConfig.normalizeModel(provider, model)
 
     companion object {
         fun provideFactory(appContainer: AppContainer): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return SettingsViewModel(
-                        settingsRepository = appContainer.settingsRepository,
-                        secretStore = appContainer.secretStore,
-                        aiTutor = appContainer.aiTutor
-                    ) as T
-                }
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = SettingsViewModel(
+                    settingsRepository = appContainer.settingsRepository,
+                    secretStore = appContainer.secretStore,
+                    aiTutor = appContainer.aiTutor
+                ) as T
             }
     }
 }

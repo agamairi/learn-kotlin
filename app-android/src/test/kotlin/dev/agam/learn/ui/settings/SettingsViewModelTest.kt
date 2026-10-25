@@ -8,6 +8,7 @@ import dev.agam.learn.data.AppSettings
 import dev.agam.learn.data.SecretStore
 import dev.agam.learn.data.SettingsRepository
 import dev.agam.learn.model.Exercise
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -125,6 +126,124 @@ class SettingsViewModelTest {
         )
         assertEquals(AiProvider.OPENROUTER, reloadedViewModel.uiState.value.aiProvider)
         assertEquals("openai/gpt-4o-mini", reloadedViewModel.uiState.value.aiModel)
+    }
+
+    @Test
+    fun customModelsAndTrimmedKeysAreSavedAndReloadedForEveryProvider() {
+        for (provider in AiProvider.entries) {
+            fakeRepo = FakeSharedSettingsRepository()
+            fakeSecretStore = FakeSecretStore()
+            fakeAiTutor = FakeAiTutor().apply {
+                listModelsResult = AiResult.Success(listOf("discovered-model"))
+            }
+            val viewModel = SettingsViewModel(
+                settingsRepository = fakeRepo,
+                secretStore = fakeSecretStore,
+                aiTutor = fakeAiTutor,
+                coroutineScope = testScope
+            )
+            val typedModel = if (provider == AiProvider.GEMINI) "  models/gemini-custom  " else "  custom-${provider.name.lowercase()}  "
+            val expectedModel = if (provider == AiProvider.GEMINI) "gemini-custom" else typedModel.trim()
+
+            viewModel.onAiProviderSelected(provider)
+            viewModel.onAiModelSelected(typedModel)
+            viewModel.onApiKeyChange("  synthetic-${provider.name.lowercase()}-key  ")
+            viewModel.saveAiSettings()
+
+            assertEquals(provider, runBlocking { fakeRepo.getSettings().selectedAiProvider })
+            assertEquals(expectedModel, runBlocking { fakeRepo.getSettings().selectedAiModel })
+            assertEquals("synthetic-${provider.name.lowercase()}-key", runBlocking { fakeSecretStore.get() })
+            assertEquals(expectedModel, viewModel.uiState.value.aiModel)
+            assertEquals(listOf("discovered-model"), viewModel.uiState.value.availableAiModels)
+            assertEquals(1, fakeAiTutor.listModelsCalls)
+
+            val reloaded = SettingsViewModel(fakeRepo, fakeSecretStore, coroutineScope = testScope).uiState.value
+            assertEquals(provider, reloaded.aiProvider)
+            assertEquals(expectedModel, reloaded.aiModel)
+            assertEquals("synthetic-${provider.name.lowercase()}-key", reloaded.apiKey)
+        }
+    }
+
+    @Test
+    fun modelCatalogRequiresSavedSettingsAndIsBlockedInInterviewMode() {
+        val viewModel = SettingsViewModel(fakeRepo, fakeSecretStore, fakeAiTutor, testScope)
+        viewModel.onApiKeyChange("synthetic-key")
+        viewModel.refreshAiModels()
+        assertEquals("Save AI settings first, then load available models.", viewModel.uiState.value.aiModelCatalogMessage)
+        assertEquals(0, fakeAiTutor.listModelsCalls)
+
+        viewModel.saveAiSettings()
+        assertEquals(1, fakeAiTutor.listModelsCalls)
+        assertEquals(listOf("gpt-6-luna"), viewModel.uiState.value.availableAiModels)
+        viewModel.refreshAiModels()
+        assertEquals(2, fakeAiTutor.listModelsCalls)
+        viewModel.onAiModelSearchChanged("gpt-6")
+        assertEquals("gpt-6", viewModel.uiState.value.aiModelSearchQuery)
+        fakeAiTutor.listModelsResult = AiResult.Error("API key rejected")
+        viewModel.refreshAiModels()
+        assertTrue(viewModel.uiState.value.isAiModelCatalogMessageError)
+        assertTrue(viewModel.uiState.value.aiModelCatalogMessage!!.contains("API key rejected"))
+
+        fakeRepo = FakeSharedSettingsRepository(AppSettings(interviewMode = true))
+        fakeSecretStore = FakeSecretStore()
+        fakeAiTutor = FakeAiTutor()
+        val interviewViewModel = SettingsViewModel(fakeRepo, fakeSecretStore, fakeAiTutor, testScope)
+        interviewViewModel.onApiKeyChange("synthetic-key")
+        interviewViewModel.saveAiSettings()
+        interviewViewModel.refreshAiModels()
+        assertEquals(0, fakeAiTutor.listModelsCalls)
+        assertFalse(interviewViewModel.uiState.value.isAiModelCatalogMessageError)
+        assertEquals("Turn off interview mode to load AI models.", interviewViewModel.uiState.value.aiModelCatalogMessage)
+    }
+
+    @Test
+    fun catalogFailureDoesNotBlockManualCustomModelSaving() {
+        fakeAiTutor.listModelsResult = AiResult.Error("No connection. Check your internet and try again.")
+        val viewModel = SettingsViewModel(fakeRepo, fakeSecretStore, fakeAiTutor, testScope)
+        viewModel.onAiProviderSelected(AiProvider.GEMINI)
+        viewModel.onAiModelSelected("models/gemini-custom-offline")
+        viewModel.onApiKeyChange("synthetic-key")
+        viewModel.saveAiSettings()
+
+        assertEquals("gemini-custom-offline", viewModel.uiState.value.aiModel)
+        assertEquals("gemini-custom-offline", runBlocking { fakeRepo.getSettings().selectedAiModel })
+        assertTrue(viewModel.uiState.value.isAiModelCatalogMessageError)
+        assertTrue(viewModel.uiState.value.aiModelCatalogMessage!!.contains("Couldn't load models"))
+    }
+
+    @Test
+    fun staleModelCatalogResultDoesNotOverwriteNewProviderSelection() = runBlocking {
+        val pending = CompletableDeferred<AiResult<List<String>>>()
+        fakeAiTutor.listModelsAction = { pending.await() }
+        val viewModel = SettingsViewModel(fakeRepo, fakeSecretStore, fakeAiTutor, testScope)
+        viewModel.onApiKeyChange("synthetic-key")
+        viewModel.saveAiSettings()
+        assertTrue(viewModel.uiState.value.isLoadingAiModels)
+
+        viewModel.onAiProviderSelected(AiProvider.GEMINI)
+        pending.complete(AiResult.Success(listOf("stale-model")))
+
+        assertEquals(AiProvider.GEMINI, viewModel.uiState.value.aiProvider)
+        assertTrue(viewModel.uiState.value.availableAiModels.isEmpty())
+        assertFalse(viewModel.uiState.value.isLoadingAiModels)
+    }
+
+    @Test
+    fun staleConnectionTestResultDoesNotOverwriteNewProviderSelection() = runBlocking {
+        val pending = CompletableDeferred<AiResult<Unit>>()
+        fakeAiTutor.testConnectionAction = { pending.await() }
+        val viewModel = SettingsViewModel(fakeRepo, fakeSecretStore, fakeAiTutor, testScope)
+        viewModel.onApiKeyChange("synthetic-key")
+        viewModel.saveAiSettings()
+        viewModel.testAiConnection()
+        assertTrue(viewModel.uiState.value.isTestingAiConnection)
+
+        viewModel.onAiProviderSelected(AiProvider.GEMINI)
+        pending.complete(AiResult.Success(Unit))
+
+        assertEquals(AiProvider.GEMINI, viewModel.uiState.value.aiProvider)
+        assertNull(viewModel.uiState.value.aiConnectionTestResult)
+        assertFalse(viewModel.uiState.value.isTestingAiConnection)
     }
 
     @Test
@@ -295,7 +414,10 @@ class SettingsViewModelTest {
 
     @Test
     fun testConnectionTestWithProviderErrorFails() {
-        fakeAiTutor.testConnectionResult = AiResult.Error("Invalid API key")
+        fakeAiTutor.testConnectionResult = AiResult.Error(
+            "API key rejected",
+            cause = "provider body leaked synthetic-secret"
+        )
         val viewModel = SettingsViewModel(
             settingsRepository = fakeRepo,
             secretStore = fakeSecretStore,
@@ -310,7 +432,9 @@ class SettingsViewModelTest {
         val result = viewModel.uiState.value.aiConnectionTestResult
         assertNotNull(result)
         assertFalse(result!!.isSuccess)
-        assertTrue(result.message.contains("Invalid API key"))
+        assertTrue(result.message.contains("API key rejected"))
+        assertFalse(result.message.contains("provider body"))
+        assertFalse(result.message.contains("synthetic-secret"))
         assertEquals(1, fakeAiTutor.testConnectionCalls)
         assertEquals(0, fakeAiTutor.hintCalls)
     }
@@ -405,12 +529,21 @@ class SettingsViewModelTest {
     private class FakeAiTutor : AiTutor {
         var testConnectionResult: AiResult<Unit> = AiResult.Success(Unit)
         var testConnectionCalls = 0
+        var testConnectionAction: suspend () -> AiResult<Unit> = { testConnectionResult }
+        var listModelsResult: AiResult<List<String>> = AiResult.Success(listOf("gpt-6-luna"))
+        var listModelsCalls = 0
+        var listModelsAction: suspend () -> AiResult<List<String>> = { listModelsResult }
         var hintResult: AiResult<String> = AiResult.Success("OK")
         var hintCalls = 0
 
         override suspend fun testConnection(): AiResult<Unit> {
             testConnectionCalls++
-            return testConnectionResult
+            return testConnectionAction()
+        }
+
+        override suspend fun listModels(): AiResult<List<String>> {
+            listModelsCalls++
+            return listModelsAction()
         }
 
         override suspend fun explainMistake(

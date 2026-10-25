@@ -19,6 +19,7 @@ class SqlDelightProgressRepository(
     private val dailyActivities = database.dailyActivityQueries
     private val reviewCards = database.reviewCardQueries
     private val lessonCompletions = database.lessonCompletionQueries
+    private val lessonRunSettlements = database.lessonRunSettlementQueries
     private val streakFreezes = database.streakFreezeQueries
     private val settings = database.settingsKvQueries
 
@@ -50,6 +51,40 @@ class SqlDelightProgressRepository(
         }
         true
     }
+
+    override suspend fun settleLessonProgress(settlement: LessonProgressSettlement): Boolean =
+        database.transactionWithResult {
+            if (lessonRunSettlements.selectLessonRunSettlement(settlement.runId).executeAsOneOrNull() != null) {
+                return@transactionWithResult false
+            }
+            settlement.attempts.forEach { attempt ->
+                insertResult(attempt.result, attemptId = attempt.attemptId)
+            }
+            settlement.dailyActivity?.let { activity ->
+                dailyActivities.insertDailyActivity(
+                    epoch_day = activity.epochDay,
+                    xp_earned = activity.xpEarned.toLong(),
+                    exercises_completed = activity.exercisesCompleted.toLong(),
+                    goal_met = activity.goalMet.toSqlBoolean()
+                )
+            }
+            settlement.reviewCards.distinctBy { it.itemId }.forEach { card ->
+                reviewCards.insertReviewCardIfAbsent(
+                    item_id = card.itemId,
+                    box = card.box.toLong(),
+                    due_epoch_day = card.dueEpochDay
+                )
+            }
+            settlement.frozenEpochDays.forEach { epochDay -> streakFreezes.insertStreakFreeze(epochDay) }
+            settings.insertSetting(HELD_FREEZES_SETTING, settlement.heldStreakFreezes.coerceIn(0, 2).toString())
+            lessonCompletions.insertLessonCompletion(settlement.lessonId, settlement.completedAtEpochMillis)
+            lessonRunSettlements.insertLessonRunSettlement(
+                run_id = settlement.runId,
+                lesson_id = settlement.lessonId,
+                completed_at_epoch_millis = settlement.completedAtEpochMillis
+            )
+            true
+        }
 
     private fun insertResult(result: ExerciseResult, attemptId: String?) {
         exerciseResults.insertExerciseResult(

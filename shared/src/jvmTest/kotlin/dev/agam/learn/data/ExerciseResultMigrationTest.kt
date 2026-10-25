@@ -1,6 +1,9 @@
 package dev.agam.learn.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import dev.agam.learn.model.DailyActivity
+import dev.agam.learn.model.ExerciseResult
+import dev.agam.learn.model.ReviewCard
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -9,13 +12,70 @@ import kotlin.test.assertFailsWith
 class ExerciseResultMigrationTest {
 
     @Test
+    fun aLessonAttemptCollisionRollsBackTheWholeSettlement() = runTest {
+        val driver = JdbcSqliteDriver("jdbc:sqlite::memory:")
+        try {
+            createAlphaOneSchema(driver)
+            insertAlphaOneRows(driver)
+            LearnDatabase.Schema.migrate(driver, oldVersion = 1, newVersion = 3)
+            val database = LearnDatabase(driver)
+            val repository = SqlDelightProgressRepository(database)
+            repository.commitProgress(
+                ProgressCommit(
+                    attemptId = "collision",
+                    result = repository.getExerciseResults().first(),
+                    dailyActivity = DailyActivity(1L, 10, 1, goalMet = false)
+                )
+            )
+
+            val settlement = LessonProgressSettlement(
+                runId = "run-rollback",
+                lessonId = "lesson-new",
+                completedAtEpochMillis = 99L,
+                attempts = listOf(
+                    StagedLessonAttempt(
+                        attemptId = "must-roll-back",
+                        result = ExerciseResult("new-before-conflict", true, 7, 8L, "lesson-new", "chapter-new"),
+                        completesExercise = true
+                    ),
+                    StagedLessonAttempt(
+                        attemptId = "collision",
+                        result = ExerciseResult("conflicting-result", true, 11, 9L, "lesson-new", "chapter-new"),
+                        completesExercise = true
+                    )
+                ),
+                dailyActivity = DailyActivity(2L, 99, 2, goalMet = true),
+                reviewCards = listOf(ReviewCard("new-seed", 1, 3L)),
+                frozenEpochDays = setOf(201L),
+                heldStreakFreezes = 1
+            )
+
+            assertFailsWith<Exception> { repository.settleLessonProgress(settlement) }
+
+            assertEquals(3, repository.getExerciseResults().size)
+            assertEquals(
+                null,
+                database.exerciseResultQueries.selectResultIdByAttemptId("must-roll-back").executeAsOneOrNull()
+            )
+            assertEquals(null, repository.getDailyActivity(2L))
+            assertEquals(null, repository.getReviewCard("new-seed"))
+            assertEquals(false, repository.isLessonCompleted("lesson-new"))
+            assertEquals(null, database.lessonRunSettlementQueries.selectLessonRunSettlement("run-rollback").executeAsOneOrNull())
+            assertEquals(false, 201L in repository.getFrozenEpochDays())
+            assertEquals(0, repository.getHeldStreakFreezes())
+        } finally {
+            driver.close()
+        }
+    }
+
+    @Test
     fun aVersionOneDatabaseKeepsItsResultsAndGainsUniqueAttemptIds() = runTest {
         val driver = JdbcSqliteDriver("jdbc:sqlite::memory:")
         try {
             createAlphaOneSchema(driver)
             insertAlphaOneRows(driver)
 
-            LearnDatabase.Schema.migrate(driver, oldVersion = 1, newVersion = 2)
+            LearnDatabase.Schema.migrate(driver, oldVersion = 1, newVersion = 3)
 
             val database = LearnDatabase(driver)
             assertEveryAlphaOneRowSurvives(database)
@@ -24,11 +84,36 @@ class ExerciseResultMigrationTest {
                 listOf(200L),
                 database.streakFreezeQueries.selectAllStreakFreezes().executeAsList()
             )
+            database.lessonRunSettlementQueries.insertLessonRunSettlement("run-1", "lesson-1", 123L)
+            assertEquals(
+                "run-1",
+                database.lessonRunSettlementQueries.selectLessonRunSettlement("run-1").executeAsOneOrNull()
+            )
 
             assertEveryGeneratedSelectCanRun(database)
 
             val repository = SqlDelightProgressRepository(database)
             assertEquals(2, repository.getExerciseResults().size, "Existing rows survive the migration")
+
+            val alreadySettledAttempt = repository.getExerciseResults().first()
+            assertEquals(
+                false,
+                repository.settleLessonProgress(
+                    LessonProgressSettlement(
+                        runId = "run-1",
+                        lessonId = "lesson-1",
+                        completedAtEpochMillis = 200L,
+                        attempts = listOf(
+                            StagedLessonAttempt("new-attempt", alreadySettledAttempt, completesExercise = true)
+                        ),
+                        dailyActivity = DailyActivity(101L, 10, 1, goalMet = false),
+                        reviewCards = emptyList(),
+                        frozenEpochDays = emptySet(),
+                        heldStreakFreezes = 0
+                    )
+                )
+            )
+            assertEquals(null, repository.getDailyActivity(101L))
 
             // Legacy rows have no attempt id, so they never collide with each other.
             val committed = repository.commitProgress(

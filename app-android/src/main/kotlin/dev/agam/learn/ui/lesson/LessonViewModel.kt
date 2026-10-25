@@ -7,6 +7,7 @@ import dev.agam.learn.ai.AiResult
 import dev.agam.learn.ai.AiTutor
 import dev.agam.learn.content.CourseRepository
 import dev.agam.learn.data.ExerciseAttempt
+import dev.agam.learn.data.LessonRunSettlementOutcome
 import dev.agam.learn.data.ProgressRecorder
 import dev.agam.learn.data.ProgressRepository
 import dev.agam.learn.data.newAttemptId
@@ -21,14 +22,23 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.withContext
 
 /**
  * ViewModel managing the state machine for lesson explanation, exercise progression,
  * grading, XP accumulation, and results presentation.
  *
- * Results are written through [ProgressRecorder]. Code drills and multi-part problems are graded in
- * their own studio screens, which record their attempts; this screen only advances when it finds a
- * passing stored result for them.
+ * Results are staged through [ProgressRecorder] and become durable together when the learner
+ * completes the lesson and its end-of-lesson mistake round.
  */
 class LessonViewModel(
     private val courseRepository: CourseRepository,
@@ -74,11 +84,9 @@ class LessonViewModel(
     private var mistakeReviewTotal = 0
     private var mistakeReviewCorrectCount = 0
 
-    /** Identifies this visit to the lesson. Attempt ids are built from it, so each attempt is recorded once. */
-    private val runId: String = newAttemptId()
-
-    /** When this visit started. The lesson's XP is the XP recorded for it since then. */
-    private var runStartedAtMillis: Long = 0L
+    /** Identifies this visit to the lesson and scopes attempts from both the player and studios. */
+    private var runId: String = newAttemptId()
+    val lessonRunId: String get() = runId
 
     private var nextEventId: Long = 1L
     private fun generateEventId(): Long = nextEventId++
@@ -86,12 +94,17 @@ class LessonViewModel(
     private fun generatePresentationAttemptId(exerciseId: String): String =
         "$runId:$exerciseId:${nextPresentationAttemptOrdinal++}"
 
+    private var pendingRecordCount = 0
+    private var pendingRecordsComplete = CompletableDeferred(Unit)
+    private var settlementJob: Job? = null
+    private var settlementJobRunId: String? = null
+
     /**
      * Route of the studio screen that completes [exercise], or null for exercises the lesson grades itself.
      */
     fun routeForExercise(exercise: Exercise): String? = when (exercise) {
-        is Exercise.WriteFunction -> Screen.CodeExercise.createRoute(exercise.id)
-        is Exercise.MultiPartProblem -> Screen.Problem.createRoute(exercise.id)
+        is Exercise.WriteFunction -> Screen.CodeExercise.createRoute(exercise.id, runId)
+        is Exercise.MultiPartProblem -> Screen.Problem.createRoute(exercise.id, runId)
         else -> null
     }
 
@@ -105,15 +118,23 @@ class LessonViewModel(
     ) {
         if (!forceReload && activeLesson?.id == lessonId && activeCourseRequestId == courseId) return
 
-        runStartedAtMillis = progressRecorder.now().toEpochMilliseconds()
+        val previousRunId = runId
+        runId = newAttemptId()
+        nextPresentationAttemptOrdinal = 1L
+        val requestedRunId = runId
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            progressRecorder.abandonLessonRun(previousRunId)
+            if (requestedRunId != runId) return@launch
+            _uiState.update {
+                if (requestedRunId != runId) it else it.copy(isLoading = true, errorMessage = null)
+            }
             val courses = courseRepository.listCourses()
+            if (requestedRunId != runId) return@launch
             val targetCourse = courses.firstOrNull { it.id == courseId } ?: courses.firstOrNull()
 
             if (targetCourse == null) {
                 _uiState.update {
-                    it.copy(
+                    if (requestedRunId != runId) it else it.copy(
                         isLoading = false,
                         errorMessage = "Course '$courseId' not found."
                     )
@@ -135,11 +156,25 @@ class LessonViewModel(
 
             if (foundLesson == null) {
                 _uiState.update {
-                    it.copy(
+                    if (requestedRunId != runId) it else it.copy(
                         isLoading = false,
                         errorMessage = "Lesson '$lessonId' not found."
                     )
                 }
+                return@launch
+            }
+
+            if (!progressRecorder.beginLessonRun(foundLesson.id, requestedRunId)) {
+                _uiState.update {
+                    if (requestedRunId != runId) it else it.copy(
+                        isLoading = false,
+                        errorMessage = "Could not start this lesson run. Please try again."
+                    )
+                }
+                return@launch
+            }
+            if (requestedRunId != runId) {
+                progressRecorder.abandonLessonRun(requestedRunId)
                 return@launch
             }
 
@@ -153,7 +188,7 @@ class LessonViewModel(
             mistakeReviewCorrectCount = 0
 
             _uiState.update {
-                it.copy(
+                if (requestedRunId != runId) it else it.copy(
                     isLoading = false,
                     courseId = targetCourse.id,
                     lessonId = foundLesson.id,
@@ -186,15 +221,7 @@ class LessonViewModel(
     fun onStartPractice() {
         if (_uiState.value.step !is LessonStep.Explanation) return
         if (exercises.isEmpty()) {
-            _uiState.update {
-                it.copy(
-                    step = LessonStep.Completed(
-                        totalXp = 0,
-                        correctCount = 0,
-                        totalCount = 0
-                    )
-                )
-            }
+            completeLesson()
             return
         }
 
@@ -293,6 +320,7 @@ class LessonViewModel(
         val newlyMastered = isCorrect && masteredExerciseIds.add(exercise.id)
         if (newlyMastered && state.isMistakeReview) mistakeReviewCorrectCount += 1
         val attemptId = generatePresentationAttemptId(exercise.id)
+        val answerRunId = runId
 
         val newStreak = if (isCorrect) state.consecutiveCorrectStreak + 1 else 0
         val isMilestone = isCorrect && newStreak > 0 && (newStreak % 5 == 0)
@@ -314,16 +342,17 @@ class LessonViewModel(
             )
         }
 
-        viewModelScope.launch {
+        launchRecord {
             progressRecorder.record(
                 ExerciseAttempt(
                     attemptId = attemptId,
                     exerciseId = exercise.id,
                     correct = isCorrect,
-                    isLessonRetry = state.isMistakeReview
+                    isLessonRetry = state.isMistakeReview,
+                    lessonRunId = answerRunId
                 )
             )
-            refreshLessonXp()
+            refreshLessonXp(answerRunId)
         }
     }
 
@@ -339,27 +368,32 @@ class LessonViewModel(
     /**
      * Called when a studio screen (code drill or multi-part problem) returns after a passing check.
      * The studio has already recorded the attempt, so this only advances the lesson, and only when
-     * the stored results say the exercise passed.
+     * this run's staged results say the exercise passed.
      */
-    fun onStudioExerciseCompleted(exerciseId: String) {
+    fun onStudioExerciseCompleted(exerciseId: String, completedRunId: String? = runId) {
+        val expectedRunId = completedRunId ?: return
+        if (expectedRunId != runId) return
         val currentStep = _uiState.value.step as? LessonStep.ExercisePlaying ?: return
         if (currentStep.exercise.id != exerciseId || _uiState.value.isAnswerChecked) return
 
         viewModelScope.launch {
-            val passed = progressRepository.getExerciseResultsForExercise(exerciseId).any { it.correct }
+            val passed = progressRecorder.lessonRunHasPassed(expectedRunId, exerciseId)
+            if (expectedRunId != runId) return@launch
             if (!passed) return@launch
-            val xp = lessonXpThisRun()
+            val xp = progressRecorder.lessonRunXp(expectedRunId)
+            if (expectedRunId != runId) return@launch
             val latest = _uiState.value
             val latestPlaying = latest.step as? LessonStep.ExercisePlaying
             if (latestPlaying == null || latestPlaying.exercise.id != exerciseId || latest.isAnswerChecked) {
                 return@launch
             }
-            masteredExerciseIds.add(exerciseId)
             _uiState.update { state ->
+                if (expectedRunId != runId) return@update state
                 val playing = state.step as? LessonStep.ExercisePlaying
                 if (playing == null || playing.exercise.id != exerciseId || state.isAnswerChecked) {
                     return@update state
                 }
+                masteredExerciseIds.add(exerciseId)
                 val newStreak = state.consecutiveCorrectStreak + 1
                 val isMilestone = newStreak > 0 && (newStreak % 5 == 0)
                 val eventId = generateEventId()
@@ -385,17 +419,12 @@ class LessonViewModel(
         }
     }
 
-    /** XP recorded for this lesson since this visit started, read from the stored results. */
-    private suspend fun lessonXpThisRun(): Int {
-        val lessonId = activeLesson?.id ?: return 0
-        return progressRepository.getExerciseResultsForLesson(lessonId)
-            .filter { it.epochMillis >= runStartedAtMillis }
-            .sumOf { it.xpAwarded }
-    }
-
-    private suspend fun refreshLessonXp() {
-        val xp = lessonXpThisRun()
+    /** XP earned so far in this run; it remains provisional until settlement. */
+    private suspend fun refreshLessonXp(expectedRunId: String) {
+        val xp = progressRecorder.lessonRunXp(expectedRunId)
+        if (expectedRunId != runId) return
         _uiState.update { state ->
+            if (expectedRunId != runId) return@update state
             val step = state.step
             state.copy(
                 xpEarnedInLesson = xp,
@@ -492,16 +521,13 @@ class LessonViewModel(
     }
 
     private fun completeLesson() {
-        if (_uiState.value.step is LessonStep.Completed) return
+        if (_uiState.value.step is LessonStep.Completed || _uiState.value.step is LessonStep.Completing) return
         val lessonId = activeLesson?.id
+        if (lessonId == null || !masteredExerciseIds.containsAll(exercises.map { it.id })) return
+        val settlementRunId = runId
         _uiState.update {
-            it.copy(
-                step = LessonStep.Completed(
-                    totalXp = it.xpEarnedInLesson,
-                    correctCount = masteredExerciseIds.size.coerceAtMost(exercises.size),
-                    totalCount = exercises.size
-                ),
-                correctExercisesCount = masteredExerciseIds.size.coerceAtMost(exercises.size),
+            if (settlementRunId != runId) it else it.copy(
+                step = LessonStep.Completing,
                 pendingMistakeCount = 0,
                 isMistakeReview = false,
                 isAnswerChecked = false,
@@ -509,12 +535,102 @@ class LessonViewModel(
                 feedbackEvent = null
             )
         }
-        if (lessonId != null) {
-            viewModelScope.launch {
-                progressRecorder.completeLesson(lessonId)
-                refreshLessonXp()
+        startSettlement(lessonId, settlementRunId)
+    }
+
+    private fun launchRecord(block: suspend () -> Unit) {
+        if (pendingRecordCount == 0) pendingRecordsComplete = CompletableDeferred()
+        pendingRecordCount += 1
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                // A checked answer is already accepted by the lesson flow. Finish staging it even
+                // if the destination is popped; an explicit abandon then discards the whole run.
+                withContext(NonCancellable) { block() }
+            } finally {
+                pendingRecordCount -= 1
+                if (pendingRecordCount == 0) pendingRecordsComplete.complete(Unit)
             }
         }
+    }
+
+    private fun startSettlement(lessonId: String, settlementRunId: String) {
+        if (settlementJob?.isActive == true && settlementJobRunId == settlementRunId) return
+        settlementJobRunId = settlementRunId
+        settlementJob = viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                withContext(NonCancellable) {
+                    pendingRecordsComplete.await()
+                    when (progressRecorder.settleLessonRun(lessonId, settlementRunId)) {
+                        is LessonRunSettlementOutcome.Settled,
+                        LessonRunSettlementOutcome.Duplicate -> showCompletedSummary(settlementRunId)
+                        LessonRunSettlementOutcome.Rejected -> showSettlementFailure(
+                            settlementRunId,
+                            "This lesson run is missing a completed answer. Retry saving or return to the lesson."
+                        )
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                showSettlementFailure(
+                    settlementRunId,
+                    "We couldn't save this lesson yet. Your progress is still here; try again."
+                )
+            }
+        }
+    }
+
+    private suspend fun showCompletedSummary(expectedRunId: String) {
+        val xp = progressRecorder.lessonRunXp(expectedRunId)
+        if (expectedRunId != runId) return
+        _uiState.update { state ->
+            if (expectedRunId != runId) return@update state
+            state.copy(
+                xpEarnedInLesson = xp,
+                step = LessonStep.Completed(
+                    totalXp = xp,
+                    correctCount = masteredExerciseIds.size.coerceAtMost(exercises.size),
+                    totalCount = exercises.size
+                ),
+                correctExercisesCount = masteredExerciseIds.size.coerceAtMost(exercises.size)
+            )
+        }
+    }
+
+    private fun showSettlementFailure(expectedRunId: String, message: String) {
+        _uiState.update { state ->
+            if (expectedRunId != runId) state else state.copy(step = LessonStep.SettlementFailed(message))
+        }
+    }
+
+    fun retrySettlement() {
+        val lessonId = activeLesson?.id ?: return
+        if (_uiState.value.step !is LessonStep.SettlementFailed) return
+        val settlementRunId = runId
+        _uiState.update { it.copy(step = LessonStep.Completing) }
+        startSettlement(lessonId, settlementRunId)
+    }
+
+    /** Drops any unfinished staging before leaving the lesson destination. */
+    fun abandonLessonRun(onAbandoned: () -> Unit) {
+        val leavingRunId = runId
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            progressRecorder.abandonLessonRun(leavingRunId)
+            onAbandoned()
+        }
+    }
+
+    override fun onCleared() {
+        val leavingRunId = runId
+        val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        cleanupScope.launch {
+            try {
+                progressRecorder.abandonLessonRun(leavingRunId)
+            } finally {
+                cleanupScope.cancel()
+            }
+        }
+        super.onCleared()
     }
 
     /**

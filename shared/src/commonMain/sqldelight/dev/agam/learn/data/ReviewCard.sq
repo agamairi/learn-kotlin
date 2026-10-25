@@ -8,6 +8,10 @@ insertReviewCard:
 INSERT OR REPLACE INTO review_card (item_id, box, due_epoch_day)
 VALUES (?, ?, ?);
 
+insertReviewCardIfAbsent:
+INSERT OR IGNORE INTO review_card (item_id, box, due_epoch_day)
+VALUES (?, ?, ?);
+
 selectAllReviewCards:
 SELECT * FROM review_card ORDER BY due_epoch_day ASC, item_id ASC;
 

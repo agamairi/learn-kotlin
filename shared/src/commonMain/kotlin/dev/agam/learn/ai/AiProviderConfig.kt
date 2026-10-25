@@ -24,10 +24,11 @@ object AiProviderConfig {
     const val GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
     const val GEMINI_MODELS_URL = "$GEMINI_BASE_URL/models"
     const val GEMINI_API_KEY_HEADER = "x-goog-api-key"
-    const val GEMINI_DEFAULT_MODEL = "gemini-4-argon"
-    const val GEMINI_FAST_MODEL = "gemini-3.5-flash-lite"
+    const val GEMINI_DEFAULT_MODEL = "gemini-3.5-flash-lite"
+    const val GEMINI_FAST_MODEL = GEMINI_DEFAULT_MODEL
 
     const val OPENROUTER_CHAT_COMPLETIONS_URL = "https://openrouter.ai/api/v1/chat/completions"
+    const val OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
     const val OPENROUTER_KEY_URL = "https://openrouter.ai/api/v1/key"
     const val OPENROUTER_AUTHORIZATION_HEADER = "Authorization"
     const val OPENROUTER_DEFAULT_MODEL = "openrouter/auto"
@@ -36,7 +37,14 @@ object AiProviderConfig {
     const val CONTENT_TYPE_JSON = "application/json"
 
     fun geminiGenerateContentUrl(model: String): String =
-        "$GEMINI_BASE_URL/models/$model:generateContent"
+        "$GEMINI_BASE_URL/models/${normalizeModel(AiProvider.GEMINI, model)}:generateContent"
+
+    /** Normalize text-field model IDs before sending them to provider APIs. */
+    fun normalizeModel(provider: AiProvider, model: String?): String {
+        val normalized = model?.trim()?.takeIf(String::isNotEmpty)
+            ?: defaultModel(provider)
+        return if (provider == AiProvider.GEMINI) normalized.removePrefix("models/") else normalized
+    }
 
     fun defaultModel(provider: AiProvider): String = when (provider) {
         AiProvider.ANTHROPIC -> ANTHROPIC_DEFAULT_MODEL

@@ -44,6 +44,9 @@ class DynamicAiTutor(
     override suspend fun testConnection(): AiResult<Unit> =
         createTutorImpl().testConnection()
 
+    override suspend fun listModels(): AiResult<List<String>> =
+        createTutorImpl().listModels()
+
     override suspend fun explainMistake(
         exercise: Exercise,
         userAnswer: String,

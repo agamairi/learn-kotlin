@@ -5,6 +5,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpMethod
+import io.ktor.http.URLBuilder
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -35,11 +36,10 @@ internal class OpenRouterAiClient(
                         OpenRouterMessage(role = "system", content = systemPrompt),
                         OpenRouterMessage(role = "user", content = userPrompt)
                     ),
-                    maxCompletionTokens = maxTokens,
-                    temperature = 0.2
+                    maxCompletionTokens = maxTokens
                 )
             )
-        }.getOrElse { return AiClientResult.Failure(networkFailure = true) }
+        }.getOrElse { return requestFailure(it) }
 
         if (response.status.value !in 200..299) return failureFrom(response)
 
@@ -47,13 +47,13 @@ internal class OpenRouterAiClient(
             val parsed = responseJson.decodeFromString<OpenRouterResponse>(response.bodyAsText())
             val text = parsed.choices.firstOrNull()?.message?.content
                 ?.takeIf { it.isNotBlank() }
-                ?: return AiClientResult.Failure()
+                ?: return emptyResponse()
             AiClientResult.Text(text)
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (_: Exception) {
             // A 2xx error object or malformed completion must not look like a successful answer.
-            AiClientResult.Failure()
+            invalidResponse()
         }
     }
 
@@ -64,9 +64,32 @@ internal class OpenRouterAiClient(
             url = AiProviderConfig.OPENROUTER_KEY_URL
         ) {
             header(AiProviderConfig.OPENROUTER_AUTHORIZATION_HEADER, "Bearer $apiKey")
-        }.getOrElse { return AiClientResult.Failure(networkFailure = true) }
+        }.getOrElse { return requestFailure(it) }
 
         return if (response.status.value in 200..299) AiClientResult.Text("") else failureFrom(response)
+    }
+
+    override suspend fun listModels(apiKey: String): AiClientResult {
+        val url = URLBuilder(AiProviderConfig.OPENROUTER_MODELS_URL).apply {
+            parameters.append("output_modalities", "text")
+        }.buildString()
+        val response = httpClient.executeStatus(HttpMethod.Get, url) {
+            header(AiProviderConfig.OPENROUTER_AUTHORIZATION_HEADER, "Bearer $apiKey")
+        }.getOrElse { return requestFailure(it) }
+        if (response.status.value !in 200..299) return failureFrom(response)
+
+        return try {
+            val models = responseJson.decodeFromString<OpenRouterModelsResponse>(response.bodyAsText())
+                .data
+                .filter { model -> model.architecture?.outputModalities?.contains("text") != false }
+                .map { it.id }
+                .distinct()
+            AiClientResult.Models(models)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            invalidResponse()
+        }
     }
 }
 
@@ -74,8 +97,7 @@ internal class OpenRouterAiClient(
 private data class OpenRouterRequest(
     val model: String,
     val messages: List<OpenRouterMessage>,
-    @SerialName("max_completion_tokens") val maxCompletionTokens: Int,
-    val temperature: Double
+    @SerialName("max_completion_tokens") val maxCompletionTokens: Int
 )
 
 @Serializable
@@ -89,3 +111,17 @@ private data class OpenRouterChoice(val message: OpenRouterResponseMessage)
 
 @Serializable
 private data class OpenRouterResponseMessage(val content: String? = null)
+
+@Serializable
+private data class OpenRouterModelsResponse(val data: List<OpenRouterModel> = emptyList())
+
+@Serializable
+private data class OpenRouterModel(
+    val id: String,
+    val architecture: OpenRouterArchitecture? = null
+)
+
+@Serializable
+private data class OpenRouterArchitecture(
+    @SerialName("output_modalities") val outputModalities: List<String> = emptyList()
+)
