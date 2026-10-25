@@ -23,7 +23,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.agam.learn.ai.AI_API_KEY_MISSING_MESSAGE
@@ -118,9 +117,9 @@ fun FeedbackBanner(
                 enabled = continueEnabled,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = buttonColor,
-                    contentColor = Color.White,
+                    contentColor = if (isCorrect) extendedColors.onSuccess else MaterialTheme.colorScheme.onError,
                     disabledContainerColor = buttonColor,
-                    disabledContentColor = Color.White
+                    disabledContentColor = if (isCorrect) extendedColors.onSuccess else MaterialTheme.colorScheme.onError
                 ),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier

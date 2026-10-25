@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import dev.agam.learn.runner.Diagnostic
 import dev.agam.learn.runner.RunOutcome
 import dev.agam.learn.runner.TestFailure
+import dev.agam.learn.ui.theme.extendedColors
 
 /**
  * Renders the outcome of a code execution or test run.
@@ -47,26 +48,28 @@ fun RunOutcomeView(
 ) {
     if (outcome == null) return
 
+    val colorScheme = MaterialTheme.colorScheme
+    val extendedColors = MaterialTheme.extendedColors
     val (containerColor, contentColor, borderColor) = when (outcome) {
         is RunOutcome.Passed -> Triple(
-            Color(0xFFE8F5E9),
-            Color(0xFF1B5E20),
-            Color(0xFFA5D6A7)
+            extendedColors.successContainer,
+            extendedColors.onSuccessContainer,
+            extendedColors.success
         )
         is RunOutcome.TestsFailed, is RunOutcome.CompileError -> Triple(
-            Color(0xFFFFEBEE),
-            Color(0xFFB71C1C),
-            Color(0xFFEF9A9A)
+            colorScheme.errorContainer,
+            colorScheme.onErrorContainer,
+            colorScheme.error
         )
         is RunOutcome.Timeout -> Triple(
-            Color(0xFFFFF8E1),
-            Color(0xFFF57F17),
-            Color(0xFFFFE082)
+            colorScheme.tertiaryContainer,
+            colorScheme.onTertiaryContainer,
+            colorScheme.tertiary
         )
         is RunOutcome.Unavailable -> Triple(
-            Color(0xFFECEFF1),
-            Color(0xFF37474F),
-            Color(0xFFCFD8DC)
+            colorScheme.surfaceVariant,
+            colorScheme.onSurfaceVariant,
+            colorScheme.outline
         )
     }
 

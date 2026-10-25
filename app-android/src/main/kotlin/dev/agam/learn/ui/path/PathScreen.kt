@@ -192,8 +192,8 @@ private fun CourseProgressCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+        color = MaterialTheme.colorScheme.primary,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f))
     ) {
         Column(
             modifier = Modifier
@@ -219,13 +219,13 @@ private fun CourseProgressCard(
                         text = "YOUR KOTLIN TRAIL",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                     Text(
                         text = courseTitle,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
@@ -237,13 +237,13 @@ private fun CourseProgressCard(
                 Text(
                     text = "$completed of $total lessons",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
                 Text(
                     text = "${(progress * 100).toInt()}%",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
             LinearProgressIndicator(
@@ -252,8 +252,8 @@ private fun CourseProgressCard(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp)),
-                color = MaterialTheme.colorScheme.secondary,
-                trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                color = MaterialTheme.colorScheme.tertiary,
+                trackColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.22f),
                 strokeCap = StrokeCap.Round
             )
         }
@@ -267,6 +267,26 @@ private fun ChapterProgressCard(
     chapter: ChapterUiModel
 ) {
     val extendedColors = MaterialTheme.extendedColors
+    val (chapterSurface, chapterContent, chapterAccent, chapterAccentContent) = when ((number - 1) % 3) {
+        0 -> listOf(
+            MaterialTheme.colorScheme.secondaryContainer,
+            MaterialTheme.colorScheme.onSecondaryContainer,
+            MaterialTheme.colorScheme.secondary,
+            MaterialTheme.colorScheme.onSecondary
+        )
+        1 -> listOf(
+            MaterialTheme.colorScheme.tertiaryContainer,
+            MaterialTheme.colorScheme.onTertiaryContainer,
+            MaterialTheme.colorScheme.tertiary,
+            MaterialTheme.colorScheme.onTertiary
+        )
+        else -> listOf(
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.onPrimaryContainer,
+            MaterialTheme.colorScheme.primary,
+            MaterialTheme.colorScheme.onPrimary
+        )
+    }
     val progress = if (chapter.totalLessonsCount > 0) {
         chapter.completedLessonsCount.toFloat() / chapter.totalLessonsCount
     } else {
@@ -284,8 +304,8 @@ private fun ChapterProgressCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        color = chapterSurface,
+        border = BorderStroke(1.dp, chapterAccent.copy(alpha = 0.28f)),
         shadowElevation = 2.dp
     ) {
         Column(
@@ -301,13 +321,13 @@ private fun ChapterProgressCard(
             ) {
                 Surface(
                     shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.secondaryContainer
+                    color = chapterAccent
                 ) {
                     Text(
                         text = "CHAPTER $number / $chapterCount",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        color = chapterAccentContent,
                         modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
                     )
                 }
@@ -316,20 +336,20 @@ private fun ChapterProgressCard(
                     text = "${chapter.completedLessonsCount}/${chapter.totalLessonsCount}",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isComplete) extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isComplete) extendedColors.success else chapterContent
                 )
             }
             Text(
                 text = chapter.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = chapterContent
             )
             if (chapter.summary.isNotBlank()) {
                 Text(
                     text = chapter.summary,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = chapterContent
                 )
             }
             LinearProgressIndicator(
@@ -338,8 +358,8 @@ private fun ChapterProgressCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp)),
-                color = if (isComplete) extendedColors.success else MaterialTheme.colorScheme.secondary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                color = if (isComplete) extendedColors.success else chapterAccent,
+                trackColor = chapterContent.copy(alpha = 0.14f),
                 strokeCap = StrokeCap.Round
             )
         }
@@ -357,7 +377,7 @@ private fun WindingTrail(
         }
     }
     var trailCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-    val secondary = MaterialTheme.colorScheme.secondary
+    val pathColor = MaterialTheme.colorScheme.primary
     val trackShadow = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.14f)
     val lockedTrack = MaterialTheme.colorScheme.outlineVariant
 
@@ -405,7 +425,7 @@ private fun WindingTrail(
                     val isLockedSegment = lessons[index + 1].status == LessonStatus.LOCKED
                     drawPath(
                         path = path,
-                        color = if (isLockedSegment) lockedTrack else secondary,
+                        color = if (isLockedSegment) lockedTrack else pathColor,
                         style = Stroke(
                             width = if (isLockedSegment) 5.dp.toPx() else 7.dp.toPx(),
                             cap = StrokeCap.Round,
@@ -482,25 +502,29 @@ private fun WindingLessonStep(
     val extendedColors = MaterialTheme.extendedColors
     val faceColor = when {
         isCompleted -> extendedColors.success
-        isUnlocked -> MaterialTheme.colorScheme.secondary
+        isUnlocked -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
     val faceContentColor = when {
         isCompleted -> extendedColors.onSuccess
-        isUnlocked -> MaterialTheme.colorScheme.onSecondary
+        isUnlocked -> MaterialTheme.colorScheme.onPrimary
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     val bevelColor = when {
-        isCompleted -> extendedColors.success.copy(alpha = 0.7f)
-        isUnlocked -> Color(0xFF0F766E)
+        isCompleted -> darken(extendedColors.success, 0.72f)
+        isUnlocked -> darken(MaterialTheme.colorScheme.primary, 0.72f)
         else -> MaterialTheme.colorScheme.outlineVariant
     }
     val labelSurface = when {
         isCompleted -> extendedColors.successContainer
-        isUnlocked -> MaterialTheme.colorScheme.secondaryContainer
+        isUnlocked -> MaterialTheme.colorScheme.primaryContainer
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
-    val labelColor = MaterialTheme.colorScheme.onSurface
+    val labelColor = when {
+        isCompleted -> extendedColors.onSuccessContainer
+        isUnlocked -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurface
+    }
     val statusLabel = when {
         isCompleted -> "Completed"
         isUnlocked -> "Ready"
@@ -612,8 +636,8 @@ private fun WindingLessonStep(
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Medium,
                         color = when {
-                            isCompleted -> extendedColors.success
-                            isUnlocked -> MaterialTheme.colorScheme.primary
+                            isCompleted -> extendedColors.onSuccessContainer
+                            isUnlocked -> MaterialTheme.colorScheme.onPrimaryContainer
                             else -> MaterialTheme.colorScheme.onSurfaceVariant
                         },
                         textAlign = TextAlign.Center
@@ -642,3 +666,10 @@ private fun laneFraction(index: Int): Float = when (index % 6) {
     1, 4 -> 0.25f
     else -> 0.75f
 }
+
+private fun darken(color: Color, factor: Float): Color = Color(
+    red = color.red * factor,
+    green = color.green * factor,
+    blue = color.blue * factor,
+    alpha = color.alpha
+)

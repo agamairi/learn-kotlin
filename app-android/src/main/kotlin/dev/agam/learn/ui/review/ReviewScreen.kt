@@ -47,6 +47,7 @@ import dev.agam.learn.ui.experience.LocalLearningFeedback
 import dev.agam.learn.ui.code.MarkdownText
 import dev.agam.learn.ui.components.BrandArtwork
 import dev.agam.learn.ui.components.BrandAsset
+import dev.agam.learn.ui.theme.extendedColors
 import kotlinx.coroutines.flow.collect
 
 /**
@@ -467,7 +468,7 @@ private fun ActiveReviewSessionView(
                         Text(
                             text = if (state.isAnswerCorrect) "✓ Correct" else "Expected output:\n${exercise.expectedOutput}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (state.isAnswerCorrect) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                            color = if (state.isAnswerCorrect) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.error,
                             softWrap = true,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -490,8 +491,9 @@ private fun ActiveReviewSessionView(
     // Feedback banner
     if (state.isAnswerChecked) {
         Spacer(modifier = Modifier.height(14.dp))
-        val bannerBg = if (state.isAnswerCorrect) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
-        val bannerColor = if (state.isAnswerCorrect) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+        val extendedColors = MaterialTheme.extendedColors
+        val bannerBg = if (state.isAnswerCorrect) extendedColors.successContainer else MaterialTheme.colorScheme.errorContainer
+        val bannerColor = if (state.isAnswerCorrect) extendedColors.onSuccessContainer else MaterialTheme.colorScheme.onErrorContainer
 
         Card(
             modifier = Modifier.fillMaxWidth(),

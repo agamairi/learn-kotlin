@@ -54,7 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -74,6 +73,7 @@ import dev.agam.learn.ui.lesson.components.LessonQuestionHeader
 import dev.agam.learn.ui.lesson.components.LessonSummary
 import dev.agam.learn.ui.lesson.components.MultipleChoiceCard
 import dev.agam.learn.ui.lesson.components.PredictOutputCard
+import dev.agam.learn.ui.theme.extendedColors
 
 /**
  * Full-screen lesson player supporting introduction, exercise steps, feedback, and summary.
@@ -381,7 +381,7 @@ fun LessonScreen(
                                             text = "Check",
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (uiState.canCheckAnswer) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = if (uiState.canCheckAnswer) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -529,6 +529,7 @@ fun AiPracticeSheet(
 
                 when (card) {
                     is Exercise.MultipleChoice -> {
+                val extendedColors = MaterialTheme.extendedColors
                         Text(
                             text = card.prompt,
                             style = MaterialTheme.typography.titleMedium
@@ -541,14 +542,14 @@ fun AiPracticeSheet(
                             val isSelected = state.selectedOptionIndex == index
                             val isCorrect = index == card.correctIndex
                             val borderColor = when {
-                                state.isAnswerChecked && isCorrect -> Color(0xFF2E7D32)
+                                state.isAnswerChecked && isCorrect -> extendedColors.success
                                 state.isAnswerChecked && isSelected && !isCorrect -> MaterialTheme.colorScheme.error
                                 isSelected -> MaterialTheme.colorScheme.primary
                                 else -> MaterialTheme.colorScheme.outlineVariant
                             }
                             val bgColor = when {
-                                state.isAnswerChecked && isCorrect -> Color(0xFFE8F5E9)
-                                state.isAnswerChecked && isSelected && !isCorrect -> Color(0xFFFFEBEE)
+                                state.isAnswerChecked && isCorrect -> extendedColors.successContainer
+                                state.isAnswerChecked && isSelected && !isCorrect -> MaterialTheme.colorScheme.errorContainer
                                 isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
                                 else -> MaterialTheme.colorScheme.surface
                             }
@@ -577,7 +578,7 @@ fun AiPracticeSheet(
                                     Icon(
                                         imageVector = Icons.Default.Check,
                                         contentDescription = "Correct",
-                                        tint = Color(0xFF2E7D32),
+                                        tint = extendedColors.success,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 } else if (state.isAnswerChecked && isSelected && !isCorrect) {
@@ -629,7 +630,7 @@ fun AiPracticeSheet(
                                 Text(
                                     text = if (isBlankCorrect) "✓ Correct" else "✗ Accepted: ${blank.accepted.joinToString(", ")}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (isBlankCorrect) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                                    color = if (isBlankCorrect) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.error,
                                     modifier = Modifier.padding(start = 64.dp, bottom = 4.dp)
                                 )
                             }

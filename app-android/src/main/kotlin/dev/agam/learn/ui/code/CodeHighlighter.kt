@@ -8,6 +8,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import dev.agam.learn.ui.theme.LightCodeComment
+import dev.agam.learn.ui.theme.LightCodeKeyword
+import dev.agam.learn.ui.theme.LightCodeNumber
+import dev.agam.learn.ui.theme.LightCodeString
 
 /**
  * VisualTransformation providing simple Kotlin syntax highlighting for keywords,
@@ -15,10 +19,10 @@ import androidx.compose.ui.text.input.VisualTransformation
  */
 class KeywordVisualTransformation(
     private val keywords: Set<String> = DEFAULT_KEYWORDS,
-    private val keywordColor: Color = Color(0xFF6200EE),
-    private val stringColor: Color = Color(0xFF2E7D32),
-    private val commentColor: Color = Color(0xFF757575),
-    private val numberColor: Color = Color(0xFFE65100)
+    private val keywordColor: Color = LightCodeKeyword,
+    private val stringColor: Color = LightCodeString,
+    private val commentColor: Color = LightCodeComment,
+    private val numberColor: Color = LightCodeNumber
 ) : VisualTransformation {
 
     override fun filter(text: AnnotatedString): TransformedText {

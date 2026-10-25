@@ -40,6 +40,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.agam.learn.ui.theme.extendedColors
 
 /**
  * Inserts a string at the current cursor position in a [TextFieldValue], replacing any selected text.
@@ -76,8 +77,15 @@ fun CodeEditor(
     readOnly: Boolean = false,
     keywords: Set<String> = KeywordVisualTransformation.DEFAULT_KEYWORDS
 ) {
-    val keywordTransformation = remember(keywords) {
-        KeywordVisualTransformation(keywords = keywords)
+    val extendedColors = MaterialTheme.extendedColors
+    val keywordTransformation = remember(keywords, extendedColors) {
+        KeywordVisualTransformation(
+            keywords = keywords,
+            keywordColor = extendedColors.codeKeyword,
+            stringColor = extendedColors.codeString,
+            commentColor = extendedColors.codeComment,
+            numberColor = extendedColors.codeNumber
+        )
     }
 
     val logicalLineStarts = remember(value.text) {
@@ -147,6 +155,7 @@ fun CodeEditor(
                 .fillMaxWidth()
                 .heightIn(min = 160.dp, max = 360.dp)
                 .padding(vertical = 8.dp)
+            .background(extendedColors.codeBackground)
                 .verticalScroll(editorScrollState)
         ) {
             // Logical line numbers sit beside the first visual row of each source line.

@@ -268,20 +268,19 @@ private fun AnimatedMilestoneFlightOverlay(
 }
 
 /**
- * Lightweight canvas confetti burst rendering 16 particles in brand teal/indigo/amber colors.
+ * Lightweight canvas confetti burst rendering particles from the active theme palette.
  */
 @Composable
 private fun ConfettiBurst(
     progress: Float,
     modifier: Modifier = Modifier
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val confettiColors = listOf(
-        Color(0xFF0F766E), // Teal
-        Color(0xFF4338CA), // Indigo
-        Color(0xFF2DD4BF), // Bright teal
-        Color(0xFFD97706), // Amber
-        Color(0xFF059669), // Emerald
-        Color(0xFF818CF8)  // Light indigo
+        colorScheme.primary,
+        colorScheme.secondary,
+        colorScheme.tertiary,
+        MaterialTheme.extendedColors.success
     )
 
     Canvas(

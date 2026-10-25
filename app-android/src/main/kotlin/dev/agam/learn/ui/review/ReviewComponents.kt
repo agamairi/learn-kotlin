@@ -36,12 +36,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.ui.code.MarkdownText
+import dev.agam.learn.ui.theme.extendedColors
 
 /**
  * Exercise card renderer for MultipleChoice exercises in review.
@@ -54,6 +54,7 @@ fun MultipleChoiceCard(
     isAnswerChecked: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val extendedColors = MaterialTheme.extendedColors
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -103,15 +104,15 @@ fun MultipleChoiceCard(
                 val isCorrect = index == exercise.correctIndex
 
                 val borderColor = when {
-                    isAnswerChecked && isCorrect -> Color(0xFF2E7D32)
+                    isAnswerChecked && isCorrect -> extendedColors.success
                     isAnswerChecked && isSelected && !isCorrect -> MaterialTheme.colorScheme.error
                     isSelected -> MaterialTheme.colorScheme.primary
                     else -> MaterialTheme.colorScheme.outlineVariant
                 }
 
                 val bgColor = when {
-                    isAnswerChecked && isCorrect -> Color(0xFFE8F5E9)
-                    isAnswerChecked && isSelected && !isCorrect -> Color(0xFFFFEBEE)
+                    isAnswerChecked && isCorrect -> extendedColors.successContainer
+                    isAnswerChecked && isSelected && !isCorrect -> MaterialTheme.colorScheme.errorContainer
                     isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
                     else -> MaterialTheme.colorScheme.surface
                 }
@@ -144,7 +145,7 @@ fun MultipleChoiceCard(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Correct",
-                                tint = Color(0xFF2E7D32),
+                                tint = extendedColors.success,
                                 modifier = Modifier.size(20.dp)
                             )
                         } else if (isSelected) {
@@ -255,7 +256,7 @@ fun ClozeCard(
                     Text(
                         text = if (isCorrect) "✓ Correct" else "✗ Accepted: ${blank.accepted.joinToString(", ")}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (isCorrect) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                        color = if (isCorrect) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(start = 64.dp, bottom = 4.dp)
                     )
                 }
