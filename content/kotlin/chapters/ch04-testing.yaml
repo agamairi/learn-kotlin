@@ -28,6 +28,11 @@ lessons:
           - placeholder: ____1
             accepted:
               - assertEquals
+            options:
+              - assertEquals
+              - assertSame
+              - assertEquivalent
+              - assertThat
             case_sensitive: true
         explanation: "`assertEquals(expected, actual)` gives a clear failure when the values differ."
       - type: multiple_choice
@@ -73,6 +78,11 @@ lessons:
           - placeholder: ____1
             accepted:
               - Test
+            options:
+              - Test
+              - TestCase
+              - UnitTest
+              - Check
             case_sensitive: true
         explanation: The tests use `org.junit.Test`, not the Kotlin test annotation.
 
@@ -119,6 +129,11 @@ lessons:
           - placeholder: ____1
             accepted:
               - failures
+            options:
+              - failures
+              - errors
+              - failed
+              - fails
             case_sensitive: true
         explanation: Incrementing the shared failure count lets the final line summarize the run.
       - type: multiple_choice
@@ -181,6 +196,42 @@ lessons:
               require(amountCents >= 0) { "amount must be non-negative, was $amountCents" }
               return (amountCents * basisPoints + 5_000) / 10_000 + 30
           }
+        guided:
+          template: "fun feeCents(amountCents: Long, basisPoints: Int = 290): Long {\n    ____1 { \"amount must be non-negative, was $amountCents\" }\n    return (____2) ____3 ____4\n}\n"
+          blanks:
+            - placeholder: ____1
+              accepted:
+                - require(amountCents >= 0)
+              options:
+                - require(amountCents >= 0)
+                - require(amountCents > 0)
+                - require(amountCents <= 0)
+                - check(amountCents >= 0)
+            - placeholder: ____2
+              accepted:
+                - amountCents * basisPoints + 5_000
+              options:
+                - amountCents * basisPoints
+                - amountCents * basisPoints + 5_000
+                - amountCents * basisPoints + 500
+                - amountCents * basisPoints + 10_000
+            - placeholder: ____3
+              accepted:
+                - / 10_000
+              options:
+                - / 1_000
+                - / 100
+                - / 10_000
+                - / 100_000
+            - placeholder: ____4
+              accepted:
+                - + 30
+              options:
+                - + 300
+                - + 3
+                - '- 30'
+                - + 30
+          explanation: Validate non-negative cents, apply basis points with half-up integer rounding, and add the fixed fee.
         hints:
           - Validate the amount before doing arithmetic.
           - Add 5,000 before integer division by 10,000 for half-up rounding.

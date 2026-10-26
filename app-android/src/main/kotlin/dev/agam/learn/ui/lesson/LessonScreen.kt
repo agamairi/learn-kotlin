@@ -175,7 +175,8 @@ fun LessonScreen(
                         IconButton(onClick = onNavigateBack) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Exit lesson"
+                                contentDescription = "Exit lesson",
+                                modifier = Modifier.size(28.dp)
                             )
                         }
                     },
@@ -199,7 +200,7 @@ fun LessonScreen(
                                             BrandArtwork(
                                                 asset = BrandAsset.StreakFlame,
                                                 contentDescription = "Consecutive correct streak",
-                                                modifier = Modifier.size(16.dp)
+                                                modifier = Modifier.size(24.dp)
                                             )
                                             Text(
                                                 text = "${uiState.consecutiveCorrectStreak}",
@@ -224,7 +225,7 @@ fun LessonScreen(
                                             imageVector = Icons.Default.Star,
                                             contentDescription = "XP",
                                             tint = MaterialTheme.colorScheme.tertiary,
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(20.dp)
                                         )
                                         Text(
                                             text = "+${uiState.xpEarnedInLesson} pending",
@@ -356,7 +357,7 @@ fun LessonScreen(
                                         )
                                         CodeBlock(code = exercise.starterCode)
                                         Text(
-                                            text = "Interactive coding exercise. Complete this drill in the Code Studio.",
+                                            text = "Interactive coding exercise. Build the code in the code puzzle.",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -364,7 +365,7 @@ fun LessonScreen(
                                             onClick = { viewModel.routeForExercise(exercise)?.let(onOpenExercise) },
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
-                                            Text("Open in Code Studio")
+                                            Text("Open code puzzle")
                                         }
                                     }
                                 }
@@ -383,7 +384,7 @@ fun LessonScreen(
                                             onClick = { viewModel.routeForExercise(exercise)?.let(onOpenExercise) },
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
-                                            Text("Open Problem Studio")
+                                            Text("Open multipart puzzle")
                                         }
                                     }
                                 }
@@ -544,7 +545,8 @@ fun AiPracticeSheet(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Close practice sheet"
+                        contentDescription = "Close practice sheet",
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }
@@ -630,14 +632,14 @@ fun AiPracticeSheet(
                                         imageVector = Icons.Default.Check,
                                         contentDescription = "Correct",
                                         tint = extendedColors.success,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 } else if (state.isAnswerChecked && isSelected && !isCorrect) {
                                     Icon(
                                         imageVector = Icons.Default.Close,
                                         contentDescription = "Incorrect",
                                         tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 }
                             }

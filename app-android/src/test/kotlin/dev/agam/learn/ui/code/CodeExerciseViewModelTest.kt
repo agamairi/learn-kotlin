@@ -4,17 +4,22 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import dev.agam.learn.ai.AiResult
 import dev.agam.learn.ai.AiTutor
+import dev.agam.learn.model.Blank
+import dev.agam.learn.model.CodePuzzle
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.runner.CodeRunner
 import dev.agam.learn.runner.Diagnostic
 import dev.agam.learn.runner.RunOutcome
 import dev.agam.learn.runner.SourceFile
 import dev.agam.learn.runner.TestFailure
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -24,6 +29,7 @@ import org.junit.Before
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import dev.agam.learn.data.ProgressRecorder
+import dev.agam.learn.fake.ControlledProgressRepository
 import dev.agam.learn.fake.FakeProgressRepository
 import dev.agam.learn.fake.courseOf
 import dev.agam.learn.fake.progressRecorderFor
@@ -40,6 +46,12 @@ class CodeExerciseViewModelTest {
 
     private fun storedActivities() = runBlocking { progress.getDailyActivities() }
     private val testScope = CoroutineScope(Dispatchers.Unconfined)
+
+    private suspend fun awaitCheckFinished(viewModel: CodeExerciseViewModel) {
+        withTimeout(5_000) {
+            while (viewModel.uiState.value.isChecking) delay(1)
+        }
+    }
 
     @Before
     fun setup() {
@@ -216,7 +228,7 @@ class CodeExerciseViewModelTest {
     @Test
     fun codePassOpenedFromALessonStaysProvisionalUntilTheLessonSettles() = runBlocking {
         val runId = "code-lesson-run"
-        recorder.beginLessonRun("lesson-test", runId)
+        assertTrue(recorder.beginLessonRun("lesson-test", runId))
         fakeRunner.testResult = RunOutcome.Passed(testsRun = 3, stdout = "")
 
         val viewModel = CodeExerciseViewModel(
@@ -610,6 +622,297 @@ class CodeExerciseViewModelTest {
         assertEquals(listOf(true, false, false), feedback)
 
         collection.cancel()
+    }
+
+    @Test
+    fun testOfflineGuidedPuzzleGradingPassAndAwards25Xp() = runBlocking {
+        val runId = "test-guided-run-1"
+
+        val guidedExercise = Exercise.WriteFunction(
+            id = "guided-func-1",
+            prompt = "Double a number",
+            starterCode = "fun double(x: Int): Int = TODO()",
+            hiddenTests = "class Test",
+            referenceSolution = "fun double(x: Int): Int = x * 2",
+            guided = CodePuzzle(
+                template = "fun double(x: Int): Int = ____1",
+                blanks = listOf(
+                    Blank(
+                        placeholder = "____1",
+                        accepted = listOf("x * 2"),
+                        options = listOf("x * 2", "x + 2", "x - 2", "x / 2")
+                    )
+                )
+            )
+        )
+        val rec = progressRecorderFor(progress, listOf(courseOf(guidedExercise)))
+        assertTrue(rec.beginLessonRun("lesson-test", runId))
+
+        val viewModel = CodeExerciseViewModel(
+            exercise = guidedExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = rec,
+            lessonRunId = runId,
+            coroutineScope = testScope
+        )
+
+        // Initial template reflects placeholder
+        assertTrue(viewModel.uiState.value.code.text.contains("« Blank 1 »"))
+
+        // Select correct option
+        viewModel.selectOption("____1", "x * 2")
+        assertEquals("fun double(x: Int): Int = x * 2", viewModel.uiState.value.code.text)
+        assertFalse(viewModel.uiState.value.isAnswerChecked)
+
+        // Check puzzle offline
+        viewModel.checkCode()
+        awaitCheckFinished(viewModel)
+
+        assertTrue(viewModel.uiState.value.isAnswerChecked)
+        assertTrue(viewModel.uiState.value.isPassed)
+        assertTrue(viewModel.uiState.value.canComplete)
+        assertEquals(1, viewModel.uiState.value.feedback.size)
+        assertTrue(viewModel.uiState.value.feedback[0].isCorrect)
+
+        // Selections lock after check: selecting another option while checked does nothing
+        viewModel.selectOption("____1", "x + 2")
+        assertEquals("x * 2", viewModel.uiState.value.puzzleAnswers["____1"])
+
+        // First pass awards 25 XP
+        assertEquals(25, rec.lessonRunXp(runId))
+        assertTrue(rec.lessonRunHasPassed(runId, "guided-func-1"))
+    }
+
+    @Test
+    fun testOfflineGuidedPuzzleWrongRetryAnd15XpOnRetry() = runBlocking {
+        val runId = "test-guided-run-2"
+        val guidedExercise = Exercise.WriteFunction(
+            id = "guided-func-retry",
+            prompt = "Double a number",
+            starterCode = "fun double(x: Int): Int = TODO()",
+            hiddenTests = "class Test",
+            referenceSolution = "fun double(x: Int): Int = x * 2",
+            guided = CodePuzzle(
+                template = "fun double(x: Int): Int = ____1",
+                blanks = listOf(
+                    Blank(
+                        placeholder = "____1",
+                        accepted = listOf("x * 2"),
+                        options = listOf("x * 2", "x + 2", "x - 2", "x / 2")
+                    )
+                )
+            )
+        )
+        val rec = progressRecorderFor(progress, listOf(courseOf(guidedExercise)))
+        assertTrue(rec.beginLessonRun("lesson-test", runId))
+
+        val viewModel = CodeExerciseViewModel(
+            exercise = guidedExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = rec,
+            lessonRunId = runId,
+            coroutineScope = testScope
+        )
+
+        // Select WRONG option
+        viewModel.selectOption("____1", "x + 2")
+        viewModel.checkCode()
+        awaitCheckFinished(viewModel)
+
+        assertTrue(viewModel.uiState.value.isAnswerChecked)
+        assertFalse(viewModel.uiState.value.isPassed)
+        assertFalse(viewModel.uiState.value.canComplete)
+        assertFalse(viewModel.uiState.value.feedback[0].isCorrect)
+        assertEquals(0, rec.lessonRunXp(runId))
+
+        // Retry unlocks selections
+        viewModel.retryPuzzle()
+        assertFalse(viewModel.uiState.value.isAnswerChecked)
+        assertFalse(viewModel.uiState.value.isPassed)
+
+        // Select CORRECT option and check again
+        viewModel.selectOption("____1", "x * 2")
+        viewModel.checkCode()
+        awaitCheckFinished(viewModel)
+
+        assertTrue(viewModel.uiState.value.isAnswerChecked)
+        assertTrue(viewModel.uiState.value.isPassed)
+        assertTrue(viewModel.uiState.value.canComplete)
+
+        // Retry pass awards 15 XP
+        assertEquals(15, rec.lessonRunXp(runId))
+    }
+
+    @Test
+    fun testOfflineGuidedPuzzleCheckDisabledUntilEveryBlankAnswered() = runBlocking {
+        val multiBlankExercise = Exercise.WriteFunction(
+            id = "guided-multi-blank",
+            prompt = "Sum two numbers",
+            starterCode = "fun sum(a: Int, b: Int): Int = TODO()",
+            hiddenTests = "class Test",
+            referenceSolution = "fun sum(a: Int, b: Int): Int = a + b",
+            guided = CodePuzzle(
+                template = "fun sum(a: Int, b: Int): Int = ____1 + ____2",
+                blanks = listOf(
+                    Blank(placeholder = "____1", accepted = listOf("a"), options = listOf("a", "b", "0", "1")),
+                    Blank(placeholder = "____2", accepted = listOf("b"), options = listOf("a", "b", "0", "1"))
+                )
+            )
+        )
+
+        val guidedRecorder = progressRecorderFor(progress, listOf(courseOf(multiBlankExercise)))
+        val viewModel = CodeExerciseViewModel(
+            exercise = multiBlankExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = guidedRecorder,
+            coroutineScope = testScope
+        )
+
+        // Answer only blank 1
+        viewModel.selectOption("____1", "a")
+        viewModel.checkCode()
+
+        // Check was ignored because blank 2 is missing
+        assertFalse(viewModel.uiState.value.isAnswerChecked)
+        assertFalse(viewModel.uiState.value.isPassed)
+
+        // Answer blank 2
+        viewModel.selectOption("____2", "b")
+        viewModel.checkCode()
+        awaitCheckFinished(viewModel)
+
+        // Now checked and passes
+        assertTrue(viewModel.uiState.value.isAnswerChecked)
+        assertTrue(viewModel.uiState.value.isPassed)
+    }
+
+    @Test
+    fun guidedPassWaitsForStagedRecordAndIgnoresChangesAndDoubleChecksWhilePending() = runBlocking {
+        val exercise = Exercise.WriteFunction(
+            id = "guided-pending-record",
+            prompt = "Return 42",
+            starterCode = "fun answer(): Int = TODO()",
+            hiddenTests = "class Test",
+            referenceSolution = "fun answer(): Int = 42",
+            guided = CodePuzzle(
+                template = "fun answer(): Int = ____1",
+                blanks = listOf(Blank("____1", listOf("42"), options = listOf("42", "0", "1", "2")))
+            )
+        )
+        val repository = ControlledProgressRepository(FakeProgressRepository()).apply {
+            gatedExerciseId = exercise.id
+        }
+        val progressRecorder = progressRecorderFor(repository, listOf(courseOf(exercise)))
+        val runId = "guided-pending-run"
+        assertTrue(progressRecorder.beginLessonRun("lesson-test", runId))
+        val viewModel = CodeExerciseViewModel(
+            exercise = exercise,
+            codeRunner = fakeRunner,
+            progressRecorder = progressRecorder,
+            lessonRunId = runId,
+            coroutineScope = testScope
+        )
+        viewModel.selectOption("____1", "42")
+
+        viewModel.checkCode()
+        withTimeout(5_000) { repository.historyReadEntered.await() }
+
+        assertTrue(viewModel.uiState.value.isChecking)
+        assertFalse(viewModel.uiState.value.isAnswerChecked)
+        assertFalse(viewModel.uiState.value.canComplete)
+        viewModel.checkCode()
+        viewModel.selectOption("____1", "0")
+        assertEquals(1, repository.gatedHistoryReadCount)
+        assertEquals("42", viewModel.uiState.value.puzzleAnswers["____1"])
+
+        repository.releaseHistoryRead.complete(Unit)
+        awaitCheckFinished(viewModel)
+
+        assertFalse(viewModel.uiState.value.isChecking)
+        assertTrue(viewModel.uiState.value.isPassed)
+        assertTrue(viewModel.uiState.value.canComplete)
+        assertTrue(progressRecorder.lessonRunHasPassed(runId, exercise.id))
+    }
+
+    @Test
+    fun ambiguousProgressWriteCanBeRetriedWithTheSameAttemptWithoutDoubleCredit() = runBlocking {
+        val exercise = Exercise.WriteFunction(
+            id = "guided-ambiguous-write",
+            prompt = "Return 42",
+            starterCode = "fun answer(): Int = TODO()",
+            hiddenTests = "class Test",
+            referenceSolution = "fun answer(): Int = 42",
+            guided = CodePuzzle(
+                template = "fun answer(): Int = ____1",
+                blanks = listOf(Blank("____1", listOf("42"), options = listOf("42", "0", "1", "2")))
+            )
+        )
+        val storage = FakeProgressRepository()
+        val repository = ControlledProgressRepository(storage).apply { throwAfterNextCommit = true }
+        val progressRecorder = progressRecorderFor(repository, listOf(courseOf(exercise)))
+        val viewModel = CodeExerciseViewModel(
+            exercise = exercise,
+            codeRunner = fakeRunner,
+            progressRecorder = progressRecorder,
+            coroutineScope = testScope
+        )
+        viewModel.selectOption("____1", "42")
+
+        viewModel.checkCode()
+        awaitCheckFinished(viewModel)
+
+        assertFalse(viewModel.uiState.value.isChecking)
+        assertFalse(viewModel.uiState.value.isAnswerChecked)
+        assertFalse(viewModel.uiState.value.canComplete)
+        assertNotNull(viewModel.uiState.value.recordError)
+        viewModel.selectOption("____1", "0")
+        assertEquals("42", viewModel.uiState.value.puzzleAnswers["____1"])
+        assertEquals(1, storage.getExerciseResults().size)
+        assertEquals(25, storage.getDailyActivities().single().xpEarned)
+
+        viewModel.checkCode()
+        awaitCheckFinished(viewModel)
+
+        assertTrue(viewModel.uiState.value.isPassed)
+        assertTrue(viewModel.uiState.value.canComplete)
+        assertNull(viewModel.uiState.value.recordError)
+        assertEquals(1, storage.getExerciseResults().size)
+        assertEquals(25, storage.getDailyActivities().single().xpEarned)
+    }
+
+    @Test
+    fun testAbandonedLessonRunDoesNotRetainPass() = runBlocking {
+        val runId = "abandon-run"
+        val guidedExercise = Exercise.WriteFunction(
+            id = "guided-abandon",
+            prompt = "Return 1",
+            starterCode = "fun one(): Int = TODO()",
+            hiddenTests = "class Test",
+            referenceSolution = "fun one(): Int = 1",
+            guided = CodePuzzle(
+                template = "fun one(): Int = ____1",
+                blanks = listOf(Blank("____1", listOf("1"), options = listOf("1", "2", "3", "4")))
+            )
+        )
+        val rec = progressRecorderFor(progress, listOf(courseOf(guidedExercise)))
+        assertTrue(rec.beginLessonRun("lesson-test", runId))
+
+        val viewModel = CodeExerciseViewModel(
+            exercise = guidedExercise,
+            codeRunner = fakeRunner,
+            progressRecorder = rec,
+            lessonRunId = runId,
+            coroutineScope = testScope
+        )
+
+        viewModel.selectOption("____1", "1")
+        viewModel.checkCode()
+        awaitCheckFinished(viewModel)
+        assertTrue(rec.lessonRunHasPassed(runId, "guided-abandon"))
+
+        // Abandon run
+        rec.abandonLessonRun(runId)
+        assertFalse(rec.lessonRunHasPassed(runId, "guided-abandon"))
     }
 
     private class FakeCodeRunner : CodeRunner {

@@ -37,8 +37,8 @@ fun LessonQuestionHeader(
         is Exercise.MultipleChoice -> "Multiple Choice" to "Choose the single best answer below"
         is Exercise.Cloze -> "Fill in the Blanks" to "Complete the code by filling in the blanks"
         is Exercise.PredictOutput -> "Predict Output" to "Trace this program and predict stdout"
-        is Exercise.WriteFunction -> "Code Studio Drill" to "Write and verify your function"
-        is Exercise.MultiPartProblem -> "Stripe Problem Studio" to "Solve the multi-step problem"
+        is Exercise.WriteFunction -> "Code puzzle" to "Build the code by choosing code blanks"
+        is Exercise.MultiPartProblem -> "Multipart puzzle" to "Build the code one stage at a time"
     }
 
     Row(
@@ -87,7 +87,7 @@ fun LessonQuestionHeader(
                     ) {
                         BrandArtwork(
                             asset = BrandAsset.StreakFlame,
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier.size(22.dp),
                             contentDescription = null
                         )
                         Text(

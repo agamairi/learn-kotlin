@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.agam.learn.ui.components.BrandAsset
 import dev.agam.learn.ui.components.BrandArtwork
 import dev.agam.learn.ui.experience.LocalReducedMotion
@@ -252,7 +253,9 @@ private fun AnimatedMilestoneFlightOverlay(
                         )
                         Text(
                             text = "✨",
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = (MaterialTheme.typography.titleMedium.fontSize.value + 4).sp
+                            )
                         )
                     }
 

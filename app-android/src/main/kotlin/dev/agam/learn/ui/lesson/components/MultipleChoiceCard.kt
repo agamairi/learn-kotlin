@@ -152,7 +152,7 @@ fun MultipleChoiceCard(
 
                     Box(
                         modifier = Modifier
-                            .width(24.dp)
+                            .width(28.dp)
                             .heightIn(min = 28.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -161,14 +161,14 @@ fun MultipleChoiceCard(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Correct",
                                 tint = markerColor,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         } else if (isAnswerChecked && isSelected && !isOptionCorrect) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Incorrect",
                                 tint = markerColor,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         } else {
                             Text(

@@ -24,6 +24,11 @@ lessons:
             accepted:
               - println
             case_sensitive: true
+            options:
+              - print
+              - println
+              - printLine
+              - printf
         explanation: println outputs a line to console.
       - type: predict_output
         id: po-add
@@ -45,6 +50,18 @@ lessons:
               @Test fun testSum() { assertEquals(3, sum(1, 2)) }
           }
         reference_solution: "fun sum(a: Int, b: Int): Int = a + b"
+        guided:
+          template: "____1 ____2(a: Int, b: Int): Int = ____3"
+          blanks:
+            - placeholder: "____1"
+              accepted: ["fun"]
+              options: ["class", "fun", "val", "return"]
+            - placeholder: "____2"
+              accepted: ["sum"]
+              options: ["add", "sum", "main", "value"]
+            - placeholder: "____3"
+              accepted: ["a + b"]
+              options: ["a - b", "a * b", "a + b", "a / b"]
         hints:
           - Use the + operator
         explanation: Simple addition.
@@ -58,6 +75,18 @@ lessons:
             starter_code: "fun inc(x: Int): Int = TODO()"
             hidden_tests: "class IncTest"
             reference_solution: "fun inc(x: Int): Int = x + 1"
+            guided:
+              template: "____1 ____2(x: Int): Int = ____3"
+              blanks:
+                - placeholder: "____1"
+                  accepted: ["fun"]
+                  options: ["class", "fun", "val", "return"]
+                - placeholder: "____2"
+                  accepted: ["inc"]
+                  options: ["dec", "inc", "main", "value"]
+                - placeholder: "____3"
+                  accepted: ["x + 1"]
+                  options: ["x - 1", "x * 1", "x + 1", "x / 1"]
             expected: Returns x + 1.
         faq:
           - question: Can x be negative?

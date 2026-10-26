@@ -9,14 +9,21 @@ import dev.agam.learn.ai.DynamicAiTutor
 import dev.agam.learn.data.ExerciseAttempt
 import dev.agam.learn.data.ProblemPartAttempt
 import dev.agam.learn.data.ProgressRecorder
+import dev.agam.learn.data.RecordOutcome
 import dev.agam.learn.data.newAttemptId
+import dev.agam.learn.domain.AnswerGrader
+import dev.agam.learn.domain.CodePuzzleBlankFeedback
+import dev.agam.learn.domain.DefaultAnswerGrader
 import dev.agam.learn.model.Exercise
+import dev.agam.learn.model.FaqItem
 import dev.agam.learn.model.ProblemPart
 import dev.agam.learn.runner.CodeRunner
 import dev.agam.learn.runner.RunOutcome
 import dev.agam.learn.runner.SourceFile
 import dev.agam.learn.ui.code.AiDialogState
+import dev.agam.learn.ui.lesson.components.renderPuzzleCode
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -30,8 +37,41 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel managing multi-part problem progression, timer, per-part code storage,
- * and compiler execution.
+ * State representation for the Multi-part Problem screen.
+ */
+data class MultiPartProblemUiState(
+    val problemId: String = "",
+    val prompt: String = "",
+    val story: String = "",
+    val parts: List<ProblemPart> = emptyList(),
+    val faq: List<FaqItem> = emptyList(),
+    val currentPartIndex: Int = 0,
+    val unlockedPartCount: Int = 1,
+    val currentCode: TextFieldValue = TextFieldValue(""),
+    val isRunning: Boolean = false,
+    val isChecking: Boolean = false,
+    val currentOutcome: RunOutcome? = null,
+    val isCurrentPartPassed: Boolean = false,
+    /** True only when every part passes. */
+    val allPartsPassed: Boolean = false,
+    val isInterviewMode: Boolean = false,
+    val isAiAvailable: Boolean = false,
+    val hasApiKey: Boolean = false,
+    val timerSeconds: Int = 45 * 60,
+    val isTimerRunning: Boolean = false,
+    val aiDialogState: AiDialogState? = null,
+    val partPuzzleAnswers: Map<Int, Map<String, String>> = emptyMap(),
+    val partChecked: Map<Int, Boolean> = emptyMap(),
+    val partPassed: Map<Int, Boolean> = emptyMap(),
+    val partFeedback: Map<Int, List<CodePuzzleBlankFeedback>> = emptyMap(),
+    val recordError: String? = null,
+    val onSelectOption: (placeholder: String, option: String) -> Unit = { _, _ -> },
+    val onRetry: () -> Unit = {}
+)
+
+/**
+ * ViewModel managing multi-part problem progression, timer, offline multi-blank code puzzles,
+ * and backwards-compatible compiler execution.
  */
 class MultiPartProblemViewModel(
     private val problem: Exercise.MultiPartProblem,
@@ -41,12 +81,15 @@ class MultiPartProblemViewModel(
     isInterviewModeDefault: Boolean = false,
     /** False when no API key is saved; the AI controls then show the add-key hint and do nothing. */
     hasApiKey: Boolean = false,
-    /** Present when this studio was opened from a lesson; its attempts then wait for lesson settlement. */
+    /** Present when this problem was opened from a lesson; its attempts then wait for lesson settlement. */
     private val lessonRunId: String? = null,
-    coroutineScope: CoroutineScope? = null
+    coroutineScope: CoroutineScope? = null,
+    private val answerGrader: AnswerGrader = DefaultAnswerGrader()
 ) : ViewModel() {
 
     private val scope = coroutineScope ?: viewModelScope
+    private val pendingPartAttemptIds = mutableMapOf<Int, String>()
+    private var parentCompletionRecorded = false
 
     /** Identifies this visit to the problem; the completion is recorded once per visit. */
     private val runId: String = newAttemptId()
@@ -69,7 +112,18 @@ class MultiPartProblemViewModel(
 
     init {
         val initialPart = problem.parts.firstOrNull()
-        val initialCode = TextFieldValue(initialPart?.starterCode ?: "")
+        val initialGuided = initialPart?.guided
+        val initialCode = if (initialGuided != null) {
+            TextFieldValue(
+                renderPuzzleCode(
+                    initialGuided.template,
+                    initialGuided.blanks.map { it.placeholder },
+                    emptyMap()
+                )
+            )
+        } else {
+            TextFieldValue(initialPart?.starterCode ?: "")
+        }
         partCodes[0] = initialCode
 
         _uiState = MutableStateFlow(
@@ -86,7 +140,9 @@ class MultiPartProblemViewModel(
                 isAiAvailable = aiTutor != null,
                 hasApiKey = hasApiKey,
                 timerSeconds = 45 * 60,
-                isTimerRunning = false
+                isTimerRunning = false,
+                onSelectOption = { placeholder, option -> selectOption(placeholder, option) },
+                onRetry = { retryCurrentPart() }
             )
         )
     }
@@ -96,9 +152,59 @@ class MultiPartProblemViewModel(
     /** One-shot feedback for graded part checks, with no replay when the screen is revisited. */
     val feedbackEvents: SharedFlow<Boolean> = _feedbackEvents.asSharedFlow()
 
-    /**
-     * Any edit to a part clears that part's pass, so the pass always belongs to the source on screen.
-     */
+    fun selectOption(placeholder: String, option: String) {
+        val state = _uiState.value
+        val currentIndex = state.currentPartIndex
+        if (state.isChecking || state.recordError != null || state.partChecked[currentIndex] == true) return
+        val currentPart = problem.parts.getOrNull(currentIndex) ?: return
+        val puzzle = currentPart.guided ?: return
+        val blank = puzzle.blanks.firstOrNull { it.placeholder == placeholder } ?: return
+        val offeredOption = blank.options.firstOrNull { it == option } ?: return
+        _uiState.update { current ->
+            if (current.isChecking || current.recordError != null || current.partChecked[currentIndex] == true) return@update current
+            val currentAnswers = current.partPuzzleAnswers[currentIndex].orEmpty().toMutableMap()
+            currentAnswers[placeholder] = offeredOption
+            val updatedMap = current.partPuzzleAnswers + (currentIndex to currentAnswers)
+
+            val currentPart = problem.parts.getOrNull(currentIndex)
+            val guided = currentPart?.guided
+            val rendered = if (guided != null) {
+                renderPuzzleCode(
+                    guided.template,
+                    guided.blanks.map { it.placeholder },
+                    currentAnswers
+                )
+            } else {
+                current.currentCode.text
+            }
+            partCodes[currentIndex] = TextFieldValue(rendered)
+            current.copy(
+                partPuzzleAnswers = updatedMap,
+                currentCode = TextFieldValue(rendered),
+                recordError = null
+            )
+        }
+    }
+
+    fun retryCurrentPart() {
+        if (_uiState.value.isChecking || _uiState.value.recordError != null) return
+        val currentIndex = _uiState.value.currentPartIndex
+        partPassed.remove(currentIndex)
+        _uiState.update { current ->
+            val updatedChecked = current.partChecked + (currentIndex to false)
+            val updatedPassed = current.partPassed + (currentIndex to false)
+            val updatedFeedback = current.partFeedback + (currentIndex to emptyList())
+            current.copy(
+                partChecked = updatedChecked,
+                partPassed = updatedPassed,
+                partFeedback = updatedFeedback,
+                isCurrentPartPassed = false,
+                allPartsPassed = false,
+                recordError = null
+            )
+        }
+    }
+
     fun onCodeChange(newCode: TextFieldValue) {
         val currentIndex = _uiState.value.currentPartIndex
         val changed = partCodes[currentIndex]?.text != newCode.text
@@ -117,8 +223,21 @@ class MultiPartProblemViewModel(
     private fun allPartsPassed(): Boolean = problem.parts.indices.all { partPassed[it] == true }
 
     fun selectPart(index: Int) {
-        if (index >= _uiState.value.unlockedPartCount || index >= problem.parts.size) return
-        val codeForPart = partCodes[index] ?: TextFieldValue(problem.parts[index].starterCode ?: "")
+        if (_uiState.value.isChecking || index >= _uiState.value.unlockedPartCount || index >= problem.parts.size) return
+        val currentPart = problem.parts[index]
+        val guided = currentPart.guided
+        val currentAnswers = _uiState.value.partPuzzleAnswers[index].orEmpty()
+        val codeForPart = if (guided != null) {
+            TextFieldValue(
+                renderPuzzleCode(
+                    guided.template,
+                    guided.blanks.map { it.placeholder },
+                    currentAnswers
+                )
+            )
+        } else {
+            partCodes[index] ?: TextFieldValue(currentPart.starterCode ?: "")
+        }
         _uiState.update {
             it.copy(
                 currentPartIndex = index,
@@ -131,6 +250,7 @@ class MultiPartProblemViewModel(
 
     fun revealNextPart() {
         val currentState = _uiState.value
+        if (currentState.isChecking) return
         val nextIndex = currentState.currentPartIndex + 1
         if (nextIndex >= problem.parts.size) return
         if (!currentState.isCurrentPartPassed) return
@@ -138,8 +258,17 @@ class MultiPartProblemViewModel(
         val newUnlockedCount = maxOf(currentState.unlockedPartCount, nextIndex + 1)
         val nextPart = problem.parts[nextIndex]
 
-        // Next part code defaults to working code from previous part if next part has no custom starter code
-        val initialNextCode = if (!partCodes.containsKey(nextIndex)) {
+        val nextGuided = nextPart.guided
+        val initialNextCode = if (nextGuided != null) {
+            val answers = currentState.partPuzzleAnswers[nextIndex].orEmpty()
+            TextFieldValue(
+                renderPuzzleCode(
+                    nextGuided.template,
+                    nextGuided.blanks.map { it.placeholder },
+                    answers
+                )
+            )
+        } else if (!partCodes.containsKey(nextIndex)) {
             val codeText = nextPart.starterCode ?: currentState.currentCode.text
             TextFieldValue(codeText)
         } else {
@@ -158,6 +287,9 @@ class MultiPartProblemViewModel(
         }
     }
 
+    /**
+     * Compiler run action retained for developer/backwards testing. Unreachable in normal UI.
+     */
     fun runCode() {
         val currentCode = _uiState.value.currentCode.text
         _uiState.update { it.copy(isRunning = true, currentOutcome = null) }
@@ -178,18 +310,111 @@ class MultiPartProblemViewModel(
     }
 
     /**
-     * Runs the hidden tests for the current part. Each graded check is recorded once. A part's pass
-     * counts only while the part still holds the source that was checked. When every part has passed,
-     * the problem completion is recorded once.
+     * Checks the current part. For guided puzzles, performs offline deterministic local grading.
+     * When puzzle data is absent, falls back to codeRunner for backwards-compatible test calls.
      */
     fun checkPart() {
         val state = _uiState.value
         if (state.isChecking) return
         val currentIndex = state.currentPartIndex
         val currentPart = problem.parts.getOrNull(currentIndex) ?: return
-        val checkedSource = state.currentCode.text
+        val guided = currentPart.guided
 
-        // Set before launching, so a second tap while this check runs is ignored.
+        if (guided != null) {
+            if (state.partChecked[currentIndex] == true) return
+            val currentAnswers = state.partPuzzleAnswers[currentIndex].orEmpty()
+            val allAnswered = guided.blanks.isNotEmpty() && guided.blanks.all {
+                val answer = currentAnswers[it.placeholder]
+                !answer.isNullOrBlank() && it.options.isNotEmpty() && answer in it.options
+            }
+            if (!allAnswered) return
+
+            val partAttemptId = pendingPartAttemptIds.getOrPut(currentIndex) { newAttemptId() }
+            _uiState.update { it.copy(isChecking = true, recordError = null) }
+
+            val gradeResult = answerGrader.gradeCodePuzzleWithFeedback(guided, currentAnswers)
+            val passed = gradeResult.isCorrect
+
+            scope.launch {
+                val partOutcome = try {
+                    progressRecorder.record(
+                        ProblemPartAttempt(
+                            attemptId = partAttemptId,
+                            problemId = problem.id,
+                            partId = currentPart.id,
+                            correct = passed,
+                            lessonRunId = lessonRunId
+                        )
+                    )
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    null
+                }
+
+                if (partOutcome == null || partOutcome == RecordOutcome.Rejected) {
+                    _uiState.update {
+                        it.copy(
+                            isChecking = false,
+                            recordError = "Could not save progress. Check again to retry."
+                        )
+                    }
+                    return@launch
+                }
+
+                if (passed) {
+                    partPassed[currentIndex] = true
+                    if (allPartsPassed() && !parentCompletionRecorded) {
+                        val parentOutcome = try {
+                            progressRecorder.record(
+                            ExerciseAttempt(
+                                attemptId = "$runId:complete",
+                                exerciseId = problem.id,
+                                correct = true,
+                                lessonRunId = lessonRunId
+                            )
+                            )
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            null
+                        }
+                        if (parentOutcome == null || parentOutcome == RecordOutcome.Rejected) {
+                            _uiState.update {
+                                it.copy(
+                                    isChecking = false,
+                                    recordError = "Could not save progress. Check again to retry."
+                                )
+                            }
+                            return@launch
+                        }
+                        parentCompletionRecorded = true
+                    }
+                }
+
+                pendingPartAttemptIds.remove(currentIndex)
+                _feedbackEvents.tryEmit(passed)
+                _uiState.update { current ->
+                    val updatedPassed = current.partPassed + (currentIndex to passed)
+                    val updatedChecked = current.partChecked + (currentIndex to true)
+                    val updatedFeedback = current.partFeedback + (currentIndex to gradeResult.feedback)
+                    val isAllPassed = parentCompletionRecorded && allPartsPassed()
+                    current.copy(
+                        isChecking = false,
+                        partChecked = updatedChecked,
+                        partPassed = updatedPassed,
+                        partFeedback = updatedFeedback,
+                        isCurrentPartPassed = passed,
+                        allPartsPassed = isAllPassed,
+                        recordError = null
+                    )
+                }
+            }
+            return
+        }
+
+        // Backwards compatibility branch for legacy exercises without guided puzzle data
+        val checkedSource = state.currentCode.text
         _uiState.update { it.copy(isChecking = true, currentOutcome = null) }
 
         scope.launch {

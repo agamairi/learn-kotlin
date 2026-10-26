@@ -1,5 +1,7 @@
 package dev.agam.learn.content.compiler
 
+import dev.agam.learn.model.Blank
+import dev.agam.learn.model.CodePuzzle
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.model.ProblemPart
 
@@ -11,6 +13,9 @@ internal object ExerciseValidator {
 
     private const val MIN_OPTIONS = 2
     private const val MAX_OPTIONS = 5
+    private const val EXACT_BLANK_OPTIONS = 4
+    private const val MIN_CODE_PUZZLE_BLANKS = 3
+    private const val MAX_CODE_PUZZLE_BLANKS = 5
 
     private val PLACEHOLDER = Regex("____\\d+")
     private val UNNUMBERED_BLANK = Regex("____(?!\\d)")
@@ -63,27 +68,109 @@ internal object ExerciseValidator {
         val inTemplate = PLACEHOLDER.findAll(exercise.template).map { it.value }.toList()
         exercise.blanks.forEachIndexed { index, blank ->
             val blankPath = "$path.blanks[$index]"
-            if (!PLACEHOLDER.matches(blank.placeholder)) {
-                site.reportError("$blankPath.placeholder", "placeholder '${blank.placeholder}' must look like ____1")
-            }
-            val occurrences = inTemplate.count { it == blank.placeholder }
-            if (occurrences != 1) {
-                site.reportError(
-                    "$blankPath.placeholder",
-                    "placeholder '${blank.placeholder}' appears $occurrences times in template; it must appear exactly once"
-                )
-            }
-            if (blank.accepted.isEmpty()) {
-                site.reportError("$blankPath.accepted", "must list at least one accepted answer")
-            }
-            blank.accepted.forEachIndexed { answerIndex, answer ->
-                site.requireText("$blankPath.accepted[$answerIndex]", answer, "accepted answer")
-            }
+            validateBlank(site, blankPath, blank, inTemplate, requireOptions = !exercise.aiGenerated)
         }
         inTemplate.distinct().filter { it !in declared }.forEach { placeholder ->
             site.reportError("$path.template", "template contains '$placeholder' with no matching blank")
         }
         site.requireText("$path.explanation", exercise.explanation, "explanation")
+    }
+
+    private fun validateBlank(
+        site: ContentSite,
+        blankPath: String,
+        blank: Blank,
+        inTemplate: List<String>,
+        requireOptions: Boolean
+    ) {
+        if (!PLACEHOLDER.matches(blank.placeholder)) {
+            site.reportError("$blankPath.placeholder", "placeholder '${blank.placeholder}' must look like ____1")
+        }
+        val occurrences = inTemplate.count { it == blank.placeholder }
+        if (occurrences != 1) {
+            site.reportError(
+                "$blankPath.placeholder",
+                "placeholder '${blank.placeholder}' appears $occurrences times in template; it must appear exactly once"
+            )
+        }
+        if (blank.accepted.isEmpty()) {
+            site.reportError("$blankPath.accepted", "must list at least one accepted answer")
+        }
+        blank.accepted.forEachIndexed { answerIndex, answer ->
+            site.requireText("$blankPath.accepted[$answerIndex]", answer, "accepted answer")
+        }
+
+        if (requireOptions || blank.options.isNotEmpty()) {
+            if (blank.options.size != EXACT_BLANK_OPTIONS) {
+                site.reportError("$blankPath.options", "must declare exactly $EXACT_BLANK_OPTIONS options, found ${blank.options.size}")
+            }
+            blank.options.forEachIndexed { optionIndex, option ->
+                site.requireText("$blankPath.options[$optionIndex]", option, "option")
+            }
+            val distinctOptions = blank.options.map { it.trim() }.distinct()
+            if (distinctOptions.size != blank.options.size) {
+                site.reportError("$blankPath.options", "options must be distinct")
+            }
+            val matchingCount = blank.options.count { option ->
+                blank.accepted.any { accepted ->
+                    if (blank.caseSensitive) option.trim() == accepted.trim()
+                    else option.trim().equals(accepted.trim(), ignoreCase = true)
+                }
+            }
+            if (matchingCount != 1) {
+                site.reportError(
+                    "$blankPath.options",
+                    "options must contain exactly one accepted equivalent, found $matchingCount"
+                )
+            }
+        }
+    }
+
+    private fun validateCodePuzzle(site: ContentSite, path: String, puzzle: CodePuzzle, referenceSolution: String) {
+        site.requireText("$path.template", puzzle.template, "template")
+        if (UNNUMBERED_BLANK.containsMatchIn(puzzle.template)) {
+            site.reportError("$path.template", "has a blank written as ____ without a number; use ____1, ____2, ...")
+        }
+        if (puzzle.blanks.size !in MIN_CODE_PUZZLE_BLANKS..MAX_CODE_PUZZLE_BLANKS) {
+            site.reportError(
+                "$path.blanks",
+                "must declare $MIN_CODE_PUZZLE_BLANKS to $MAX_CODE_PUZZLE_BLANKS blanks, found ${puzzle.blanks.size}"
+            )
+        }
+        val declared = puzzle.blanks.map { it.placeholder }
+        duplicates(declared).forEach { placeholder ->
+            site.reportError("$path.blanks", "placeholder '$placeholder' is declared more than once")
+        }
+
+        val inTemplate = PLACEHOLDER.findAll(puzzle.template).map { it.value }.toList()
+        puzzle.blanks.forEachIndexed { index, blank ->
+            val blankPath = "$path.blanks[$index]"
+            validateBlank(site, blankPath, blank, inTemplate, requireOptions = true)
+        }
+        inTemplate.distinct().filter { it !in declared }.forEach { placeholder ->
+            site.reportError("$path.template", "template contains '$placeholder' with no matching blank")
+        }
+        site.requireOptionalText("$path.explanation", puzzle.explanation, "explanation")
+
+        val acceptedOptions = puzzle.blanks.map { blank ->
+            blank.options.singleOrNull { option ->
+                blank.accepted.any { accepted ->
+                    if (blank.caseSensitive) option.trim() == accepted.trim()
+                    else option.trim().equals(accepted.trim(), ignoreCase = true)
+                }
+            }
+        }
+        if (acceptedOptions.all { it != null } && referenceSolution.isNotBlank()) {
+            val reconstructed = puzzle.blanks.zip(acceptedOptions).fold(puzzle.template) { code, (blank, option) ->
+                code.replace(blank.placeholder, option!!)
+            }
+            if (reconstructed.replace("\r\n", "\n") != referenceSolution.replace("\r\n", "\n")) {
+                site.reportError(
+                    "$path.template",
+                    "filling the accepted choices does not reconstruct reference_solution exactly"
+                )
+            }
+        }
     }
 
     private fun validatePredictOutput(site: ContentSite, path: String, exercise: Exercise.PredictOutput) {
@@ -103,6 +190,12 @@ internal object ExerciseValidator {
         site.requireText("$path.reference_solution", exercise.referenceSolution, "reference_solution")
         site.requireHints("$path.hints", exercise.hints)
         site.requireOptionalText("$path.explanation", exercise.explanation, "explanation")
+        val guided = exercise.guided
+        if (guided == null) {
+            site.reportError("$path.guided", "must provide guided code puzzle data")
+        } else {
+            validateCodePuzzle(site, "$path.guided", guided, exercise.referenceSolution)
+        }
     }
 
     private fun validateMultiPartProblem(site: ContentSite, path: String, exercise: Exercise.MultiPartProblem) {
@@ -123,6 +216,12 @@ internal object ExerciseValidator {
         site.requireText("$path.reference_solution", part.referenceSolution, "reference_solution")
         site.requireText("$path.expected", part.expected, "expected")
         site.requireHints("$path.hints", part.hints)
+        val guided = part.guided
+        if (guided == null) {
+            site.reportError("$path.guided", "must provide guided code puzzle data")
+        } else {
+            validateCodePuzzle(site, "$path.guided", guided, part.referenceSolution)
+        }
     }
 
     /** Hidden tests are JUnit 4 classes; the schema forbids kotlin.test. */

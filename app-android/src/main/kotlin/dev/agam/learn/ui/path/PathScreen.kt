@@ -556,17 +556,17 @@ private fun WindingLessonStep(
                             isCompleted -> Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
-                                modifier = Modifier.size(31.dp)
+                                modifier = Modifier.size(35.dp)
                             )
                             isUnlocked -> Icon(
                                 imageVector = Icons.Default.PlayArrow,
                                 contentDescription = null,
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(36.dp)
                             )
                             else -> Icon(
                                 imageVector = Icons.Default.Lock,
                                 contentDescription = null,
-                                modifier = Modifier.size(25.dp)
+                                modifier = Modifier.size(29.dp)
                             )
                         }
                     }

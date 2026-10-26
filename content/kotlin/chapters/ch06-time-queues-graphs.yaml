@@ -27,6 +27,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["removeFirst"]
+            options:
+              - removeFirst
+              - removeLast
+              - pollLast
+              - drop
             case_sensitive: true
         explanation: The oldest value is at the front of the deque and must be removed when the new value makes the window too large.
       - type: predict_output
@@ -60,10 +65,10 @@ lessons:
         id: kotlin-ch06-queues-mc-window
         prompt: 'With an inclusive 60-second window, which timestamp is kept when `now` is 100?'
         options:
-          - 39
-          - 40
-          - 101
-          - 0
+          - '39'
+          - '40'
+          - '101'
+          - '0'
         correct_index: 1
         explanation: 'The inclusive lower edge is `now - 60`, so 40 is still inside the window.'
       - type: cloze
@@ -74,6 +79,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["-"]
+            options:
+              - '-'
+              - +
+              - '*'
+              - /
             case_sensitive: true
         explanation: 'Subtract 60 from `now` for the inclusive lower edge.'
       - type: write_function
@@ -101,6 +111,34 @@ lessons:
         reference_solution: |
           fun countRecent(timestamps: List<Long>, now: Long): Int =
               timestamps.count { it in (now - 60)..now }
+        guided:
+          template: "fun countRecent(timestamps: List<Long>, now: Long): Int =\n    ____1 { ____2____3 }\n"
+          blanks:
+            - placeholder: ____1
+              accepted:
+                - timestamps.count
+              options:
+                - timestamps.filter
+                - timestamps.takeWhile
+                - timestamps.sumOf
+                - timestamps.count
+            - placeholder: ____2
+              accepted:
+                - it in (now - 60)
+              options:
+                - it in (now - 60)
+                - it in (now - 120)
+                - it >= (now - 60)
+                - it in (now - 30)
+            - placeholder: ____3
+              accepted:
+                - ..now
+              options:
+                - ..<now
+                - ..now
+                - ..now + 60
+                - ..now - 1
+          explanation: Filter and count events whose timestamps fall in the closed interval [now - 60, now].
         hints:
           - Translate “last 60 seconds” into a lower and upper bound before writing the predicate.
           - The range includes both endpoints.
@@ -135,6 +173,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["node"]
+            options:
+              - node
+              - next
+              - start
+              - goal
             case_sensitive: true
         explanation: 'The current `node` is the predecessor used later to rebuild the path.'
       - type: predict_output
@@ -190,6 +233,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["getOrPut"]
+            options:
+              - getOrPut
+              - getOrDefault
+              - putIfAbsent
+              - getOrElse
             case_sensitive: true
         explanation: '`getOrPut` returns the existing mutable list or creates it once.'
       - type: write_function
@@ -251,6 +299,42 @@ lessons:
               }
               return null
           }
+        guided:
+          template: "data class PathResult(val cost: Int, val path: List<String>)\n\nfun cheapestPath(spec: String, start: String, goal: String): PathResult? {\n    val graph = mutableMapOf<String, MutableList<Pair<String, Int>>>()\n    for (part in spec.split(\",\").filter { it.isNotBlank() }) {\n        val (from, to, costText) = part.split(\":\")\n        graph.getOrPut(from) { mutableListOf() }.add(to to costText.toInt())\n    }\n    val best = mutableMapOf(start to 0)\n    val previous = mutableMapOf<String, String?>()\n    val queue = java.util.PriorityQueue<Pair<Int, String>>(____1)\n    queue.add(0 to start)\n    while (queue.isNotEmpty()) {\n        val (cost, node) = queue.poll()\n        ____2\n        if (node == goal) {\n            val path = ____3\n            return PathResult(cost, path)\n        }\n        for ((next, edgeCost) in graph[node].orEmpty()) {\n            val nextCost = cost + edgeCost\n            ____4 {\n                best[next] = nextCost\n                previous[next] = node\n                queue.add(nextCost to next)\n            }\n        }\n    }\n    return null\n}\n"
+          blanks:
+            - placeholder: ____1
+              accepted:
+                - compareBy { it.first }
+              options:
+                - compareByDescending { it.first }
+                - compareBy { it.second }
+                - compareBy { it.first }
+                - compareByDescending { it.second }
+            - placeholder: ____2
+              accepted:
+                - if (cost > best.getValue(node)) continue
+              options:
+                - if (cost >= best.getValue(node)) continue
+                - if (cost < best.getValue(node)) continue
+                - if (node == start) continue
+                - if (cost > best.getValue(node)) continue
+            - placeholder: ____3
+              accepted:
+                - generateSequence(goal) { previous[it] }.toList().reversed()
+              options:
+                - generateSequence(goal) { previous[it] }.toList().reversed()
+                - generateSequence(start) { previous[it] }.toList()
+                - generateSequence(goal) { previous[it] }.toList()
+                - previous.values.filterNotNull()
+            - placeholder: ____4
+              accepted:
+                - 'if (nextCost < (best[next] ?: Int.MAX_VALUE))'
+              options:
+                - 'if (nextCost > (best[next] ?: Int.MAX_VALUE))'
+                - 'if (nextCost < (best[next] ?: Int.MAX_VALUE))'
+                - 'if (nextCost > (best[next] ?: 0))'
+                - 'if (nextCost < (best[next] ?: 0))'
+          explanation: Dijkstra shortest path tracking accumulated costs in a min-priority queue and reconstructing path from predecessor map.
         hints:
           - Build an adjacency map, then keep a best-known cost and predecessor for each node.
           - 'Use `PriorityQueue<Pair<Int, String>>` ordered by the first value.'

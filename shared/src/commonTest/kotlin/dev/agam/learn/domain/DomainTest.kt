@@ -1,6 +1,7 @@
 package dev.agam.learn.domain
 
 import dev.agam.learn.model.Blank
+import dev.agam.learn.model.CodePuzzle
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.model.ExerciseResult
 import dev.agam.learn.model.ReviewCard
@@ -238,5 +239,141 @@ class AnswerGraderTest {
         assertTrue(grader.gradePredictOutput(exercise, "first \r\nsecond\t\n\n"))
         assertFalse(grader.gradePredictOutput(exercise, " first\nsecond"))
         assertFalse(grader.gradePredictOutput(exercise, "first\n second"))
+    }
+
+    @Test
+    fun codePuzzleGradesBlanksWithFeedback() {
+        val puzzle = CodePuzzle(
+            template = "fun double(x: Int): Int = ____1\nfun add(a: Int, b: Int): Int = ____2",
+            blanks = listOf(
+                Blank(
+                    placeholder = "____1",
+                    accepted = listOf("x * 2"),
+                    options = listOf("x * 2", "x + 2", "x / 2", "x * x")
+                ),
+                Blank(
+                    placeholder = "____2",
+                    accepted = listOf("a + b"),
+                    options = listOf("a + b", "a - b", "a * b", "b - a")
+                )
+            ),
+            explanation = "Simple arithmetic one-liners."
+        )
+
+        val pass = grader.gradeCodePuzzleWithFeedback(
+            puzzle,
+            mapOf("____1" to "x * 2", "____2" to "a + b")
+        )
+        assertTrue(pass.isCorrect)
+        assertEquals(2, pass.feedback.size)
+        assertTrue(pass.feedback.all { it.isCorrect })
+
+        val partial = grader.gradeCodePuzzleWithFeedback(
+            puzzle,
+            mapOf("____1" to "x * 2", "____2" to "a - b")
+        )
+        assertFalse(partial.isCorrect)
+        assertTrue(partial.feedback[0].isCorrect)
+        assertFalse(partial.feedback[1].isCorrect)
+
+        val missing = grader.gradeCodePuzzle(
+            puzzle,
+            mapOf("____1" to "x * 2")
+        )
+        assertFalse(missing)
+    }
+
+    @Test
+    fun codePuzzleRejectsEmptyPuzzles() {
+        val emptyPuzzle = CodePuzzle(
+            template = "fun empty() = 1",
+            blanks = emptyList()
+        )
+        assertFalse(grader.gradeCodePuzzle(emptyPuzzle, emptyMap()))
+        val result = grader.gradeCodePuzzleWithFeedback(emptyPuzzle, emptyMap())
+        assertFalse(result.isCorrect)
+        assertTrue(result.feedback.isEmpty())
+    }
+
+    @Test
+    fun codePuzzleRejectsAnswersNotOfferedInOptions() {
+        val puzzle = CodePuzzle(
+            template = "val result = ____1",
+            blanks = listOf(
+                Blank(
+                    placeholder = "____1",
+                    accepted = listOf("a + b", "b + a"),
+                    options = listOf("a + b", "a - b", "a * b", "a / b")
+                )
+            )
+        )
+        // "b + a" is accepted in the model, but NOT offered in the options
+        val unoffered = grader.gradeCodePuzzleWithFeedback(
+            puzzle,
+            mapOf("____1" to "b + a")
+        )
+        assertFalse(unoffered.isCorrect)
+        assertFalse(unoffered.feedback.single().isCorrect)
+
+        // "a + b" is in the options and accepted
+        val offered = grader.gradeCodePuzzleWithFeedback(
+            puzzle,
+            mapOf("____1" to "a + b")
+        )
+        assertTrue(offered.isCorrect)
+        assertTrue(offered.feedback.single().isCorrect)
+
+        // Option trimming works
+        val trimmed = grader.gradeCodePuzzleWithFeedback(
+            puzzle,
+            mapOf("____1" to "  a + b  ")
+        )
+        assertTrue(trimmed.isCorrect)
+    }
+
+    @Test
+    fun codePuzzleRejectsAnswersWhenNoChoicesAreConfigured() {
+        val malformedPuzzle = CodePuzzle(
+            template = "val result = ____1",
+            blanks = listOf(Blank(placeholder = "____1", accepted = listOf("a + b")))
+        )
+
+        val result = grader.gradeCodePuzzleWithFeedback(
+            malformedPuzzle,
+            mapOf("____1" to "a + b")
+        )
+
+        assertFalse(result.isCorrect)
+        assertFalse(result.feedback.single().isCorrect)
+    }
+
+    @Test
+    fun codePuzzleCaseSensitivityRules() {
+        val sensitivePuzzle = CodePuzzle(
+            template = "val x: ____1 = 1L",
+            blanks = listOf(
+                Blank(
+                    placeholder = "____1",
+                    accepted = listOf("Long"),
+                    caseSensitive = true,
+                    options = listOf("Long", "long", "Int", "Double")
+                )
+            )
+        )
+        assertTrue(grader.gradeCodePuzzle(sensitivePuzzle, mapOf("____1" to "Long")))
+        assertFalse(grader.gradeCodePuzzle(sensitivePuzzle, mapOf("____1" to "long")))
+
+        val insensitivePuzzle = CodePuzzle(
+            template = "val x: ____1 = 1L",
+            blanks = listOf(
+                Blank(
+                    placeholder = "____1",
+                    accepted = listOf("Long"),
+                    caseSensitive = false,
+                    options = listOf("Long", "long", "Int", "Double")
+                )
+            )
+        )
+        assertTrue(grader.gradeCodePuzzle(insensitivePuzzle, mapOf("____1" to "long")))
     }
 }

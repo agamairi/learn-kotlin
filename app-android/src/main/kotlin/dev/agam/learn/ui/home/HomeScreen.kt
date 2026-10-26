@@ -11,6 +11,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -56,6 +58,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.agam.learn.di.LocalAppContainer
@@ -132,7 +135,7 @@ fun HomeScreen(
                             ) {
                                 BrandArtwork(
                                     asset = BrandAsset.StreakFlame,
-                                    modifier = Modifier.size(16.dp),
+                                    modifier = Modifier.size(24.dp),
                                     contentDescription = null
                                 )
                                 Text(
@@ -166,7 +169,9 @@ fun HomeScreen(
                                 ) {
                                     Text(
                                         text = "❄",
-                                        style = MaterialTheme.typography.labelSmall,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = (MaterialTheme.typography.labelSmall.fontSize.value + 4).sp
+                                        ),
                                         color = MaterialTheme.colorScheme.secondary
                                     )
                                     Text(
@@ -435,7 +440,7 @@ private fun NextLessonCard(
                     imageVector = Icons.Filled.CheckCircle,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(20.dp)
                 )
                 Text(
                     text = "${continueInfo.exerciseCount} interactive ${if (continueInfo.exerciseCount == 1) "exercise" else "exercises"}",
@@ -467,7 +472,7 @@ private fun NextLessonCard(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
@@ -536,7 +541,7 @@ private fun CompletedCurriculumCard(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
@@ -579,7 +584,7 @@ private fun DailyGoalCard(
                 ) {
                     BrandArtwork(
                         asset = BrandAsset.XpSpark,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(24.dp),
                         contentDescription = null
                     )
                     Text(
@@ -640,6 +645,7 @@ private fun DailyGoalCard(
 /**
  * Spaced repetition review queue card with badge count and review action.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SpacedReviewCard(
     reviewDueCount: Int,
@@ -668,7 +674,7 @@ private fun SpacedReviewCard(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,
@@ -676,22 +682,26 @@ private fun SpacedReviewCard(
                     ) {
                         BrandArtwork(
                             asset = BrandAsset.ReviewCards,
-                            modifier = Modifier.size(22.dp),
+                            modifier = Modifier.size(26.dp),
                             contentDescription = null
                         )
                     }
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        maxItemsInEachRow = 2
                     ) {
                         Text(
                             text = "Spaced Review",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Surface(
                             shape = RoundedCornerShape(999.dp),
@@ -744,7 +754,7 @@ private fun SpacedReviewCard(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -780,9 +790,10 @@ private fun LearningPathCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -790,13 +801,15 @@ private fun LearningPathCard(
                         imageVector = Icons.AutoMirrored.Filled.List,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                     Text(
                         text = "Learning Path",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 Row(
@@ -807,13 +820,15 @@ private fun LearningPathCard(
                         text = "View path",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }

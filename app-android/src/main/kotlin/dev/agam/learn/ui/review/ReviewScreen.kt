@@ -37,8 +37,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -416,7 +419,14 @@ private fun ActiveReviewSessionView(
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "📦 Leitner Box ${currentItem.card.box}",
+            text = buildAnnotatedString {
+                withStyle(
+                    SpanStyle(fontSize = (MaterialTheme.typography.labelLarge.fontSize.value + 4).sp)
+                ) {
+                    append("📦")
+                }
+                append(" Leitner Box ${currentItem.card.box}")
+            },
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -580,7 +590,20 @@ private fun ActiveReviewSessionView(
                 onClick = onNextCard,
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text(if (state.currentCardIndex + 1 < state.sessionItems.size) "Next Card →" else "Finish Review 🎉")
+                Text(
+                    text = buildAnnotatedString {
+                        if (state.currentCardIndex + 1 < state.sessionItems.size) {
+                            append("Next Card →")
+                        } else {
+                            append("Finish Review ")
+                            withStyle(
+                                SpanStyle(fontSize = (MaterialTheme.typography.labelLarge.fontSize.value + 4).sp)
+                            ) {
+                                append("🎉")
+                            }
+                        }
+                    }
+                )
             }
         }
     }

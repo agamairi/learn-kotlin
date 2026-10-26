@@ -109,7 +109,7 @@ fun PredictOutputCard(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Correct",
                         tint = extendedColors.success,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                     Text(
                         text = "Correct output",
@@ -122,7 +122,7 @@ fun PredictOutputCard(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Incorrect",
                         tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                     Text(
                         text = "Incorrect output",

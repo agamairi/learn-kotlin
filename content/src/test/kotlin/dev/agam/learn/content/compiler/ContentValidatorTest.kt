@@ -2,6 +2,7 @@ package dev.agam.learn.content.compiler
 
 import dev.agam.learn.model.Blank
 import dev.agam.learn.model.Chapter
+import dev.agam.learn.model.CodePuzzle
 import dev.agam.learn.model.Course
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.model.FaqItem
@@ -157,7 +158,8 @@ class ContentValidatorTest {
             starterCode = "fun a(): Int = TODO()",
             hiddenTests = "import org.junit.Test",
             referenceSolution = "fun a(): Int = 1",
-            hints = listOf("one", "two", "three", "four")
+            hints = listOf("one", "two", "three", "four"),
+            guided = defaultPuzzle()
         )
 
         val issue = errors(chapter(lessons = listOf(lesson(listOf(exercise))))).single()
@@ -172,12 +174,181 @@ class ContentValidatorTest {
             prompt = "Prompt",
             starterCode = "fun a(): Int = TODO()",
             hiddenTests = "import kotlin.test.assertEquals",
-            referenceSolution = "fun a(): Int = 1"
+            referenceSolution = "fun a(): Int = 1",
+            guided = defaultPuzzle()
         )
 
         val issue = errors(chapter(lessons = listOf(lesson(listOf(exercise))))).single()
         assertEquals("$.lessons[0].exercises[0].hidden_tests", issue.path)
         assertTrue(issue.message.contains("JUnit 4"))
+    }
+
+    @Test
+    fun bundledClozeMustHaveFourOptions() {
+        val badBlank = Blank(placeholder = "____1", accepted = listOf("answer"), options = listOf("answer", "other"))
+        val issues = errors(
+            chapter(lessons = listOf(lesson(listOf(cloze("cloze-options", "val x = ____1", listOf(badBlank))))))
+        )
+        val issue = issues.single()
+        assertEquals("$.lessons[0].exercises[0].blanks[0].options", issue.path)
+        assertTrue(issue.message.contains("must declare exactly 4 options"))
+    }
+
+    @Test
+    fun blankOptionsMustBeDistinct() {
+        val badBlank = Blank(
+            placeholder = "____1",
+            accepted = listOf("a"),
+            options = listOf("a", "b", "c", "b")
+        )
+        val issues = errors(
+            chapter(lessons = listOf(lesson(listOf(cloze("cloze-distinct", "val x = ____1", listOf(badBlank))))))
+        )
+        val issue = issues.single()
+        assertEquals("$.lessons[0].exercises[0].blanks[0].options", issue.path)
+        assertTrue(issue.message.contains("options must be distinct"))
+    }
+
+    @Test
+    fun blankOptionsMustHaveExactlyOneAcceptedEquivalent() {
+        val noMatch = Blank(
+            placeholder = "____1",
+            accepted = listOf("accepted"),
+            options = listOf("d1", "d2", "d3", "d4")
+        )
+        val twoMatches = Blank(
+            placeholder = "____1",
+            accepted = listOf("a", "b"),
+            options = listOf("a", "b", "c", "d")
+        )
+        val issues1 = errors(
+            chapter(lessons = listOf(lesson(listOf(cloze("cloze-nomatch", "val x = ____1", listOf(noMatch))))))
+        )
+        assertTrue(issues1.single().message.contains("exactly one accepted equivalent, found 0"))
+
+        val issues2 = errors(
+            chapter(lessons = listOf(lesson(listOf(cloze("cloze-twomatch", "val x = ____1", listOf(twoMatches))))))
+        )
+        assertTrue(issues2.single().message.contains("exactly one accepted equivalent, found 2"))
+    }
+
+    @Test
+    fun guidedPuzzleRequiresOneCaseSensitiveMatchingChoice() {
+        val puzzle = defaultPuzzle().copy(
+            blanks = defaultPuzzle().blanks.mapIndexed { index, item ->
+                if (index == 0) item.copy(options = listOf("fun", "FUN", "val", "var")) else item
+            }
+        )
+        val exercise = Exercise.WriteFunction(
+            id = "wf-choice-case",
+            prompt = "Prompt",
+            starterCode = "fun a(): Int = TODO()",
+            hiddenTests = "import org.junit.Test",
+            referenceSolution = "fun a(): Int = 1",
+            guided = puzzle
+        )
+        assertEquals(emptyList(), errors(chapter(lessons = listOf(lesson(listOf(exercise))))))
+
+        val caseInsensitive = puzzle.copy(
+            blanks = puzzle.blanks.mapIndexed { index, item ->
+                if (index == 0) item.copy(caseSensitive = false) else item
+            }
+        )
+        val issues = errors(chapter(lessons = listOf(lesson(listOf(exercise.copy(guided = caseInsensitive))))))
+        assertTrue(issues.any { it.path.endsWith(".options") && it.message.contains("found 2") })
+    }
+
+    @Test
+    fun guidedPuzzleMustUseThreeToFiveBlanks() {
+        val tooFew = defaultPuzzle().copy(blanks = defaultPuzzle().blanks.take(2))
+        val exercise = Exercise.WriteFunction(
+            id = "wf-too-few-blanks",
+            prompt = "Prompt",
+            starterCode = "fun a(): Int = TODO()",
+            hiddenTests = "import org.junit.Test",
+            referenceSolution = "fun a(): Int = 1",
+            guided = tooFew
+        )
+        val issues = errors(chapter(lessons = listOf(lesson(listOf(exercise)))))
+        assertTrue(issues.any { it.path.endsWith(".blanks") && it.message.contains("3 to 5 blanks") })
+    }
+
+    @Test
+    fun guidedPuzzleAcceptedChoicesMustReconstructTheReferenceExactly() {
+        val wrongTemplate = CodePuzzle(
+            template = "fun ____1 ____2(): Int = ____3 + 0",
+            blanks = listOf(
+                blank("____1", accepted = listOf("fun"), options = listOf("fun", "val", "var", "class")),
+                blank("____2", accepted = listOf("a"), options = listOf("a", "b", "c", "d")),
+                blank("____3", accepted = listOf("1"), options = listOf("1", "2", "3", "4"))
+            )
+        )
+        val exercise = Exercise.WriteFunction(
+            id = "wf-reconstruction",
+            prompt = "Prompt",
+            starterCode = "fun a(): Int = TODO()",
+            hiddenTests = "import org.junit.Test",
+            referenceSolution = "fun a(): Int = 1",
+            guided = wrongTemplate
+        )
+        val issues = errors(chapter(lessons = listOf(lesson(listOf(exercise)))))
+        assertTrue(issues.any { it.path.endsWith(".template") && it.message.contains("does not reconstruct reference_solution exactly") })
+    }
+
+    @Test
+    fun writeFunctionMustProvideGuidedPuzzle() {
+        val exercise = Exercise.WriteFunction(
+            id = "wf-no-guided",
+            prompt = "Prompt",
+            starterCode = "fun a(): Int = TODO()",
+            hiddenTests = "import org.junit.Test",
+            referenceSolution = "fun a(): Int = 1",
+            guided = null
+        )
+        val issues = errors(chapter(lessons = listOf(lesson(listOf(exercise)))))
+        val issue = issues.single()
+        assertEquals("$.lessons[0].exercises[0].guided", issue.path)
+        assertTrue(issue.message.contains("must provide guided code puzzle data"))
+    }
+
+    @Test
+    fun multipartPartMustProvideGuidedPuzzle() {
+        val partWithoutGuided = ProblemPart(
+            id = "mp-part-no-guided",
+            prompt = "Part prompt",
+            hiddenTests = "class PartTest",
+            referenceSolution = "fun part() = 1",
+            expected = "Returns one.",
+            guided = null
+        )
+        val problem = Exercise.MultiPartProblem(
+            id = "mp-missing-guided",
+            prompt = "Prompt",
+            story = "Story",
+            parts = listOf(partWithoutGuided)
+        )
+        val issues = errors(chapter(lessons = listOf(lesson(listOf(problem)))))
+        val issue = issues.single()
+        assertEquals("$.lessons[0].exercises[0].parts[0].guided", issue.path)
+        assertTrue(issue.message.contains("must provide guided code puzzle data"))
+    }
+
+    @Test
+    fun guidedPuzzleTemplateMustMatchPlaceholders() {
+        val puzzle = CodePuzzle(
+            template = "fun solution() = ____1 + ____2",
+            blanks = listOf(blank("____1", accepted = listOf("1"), options = listOf("1", "2", "3", "4")))
+        )
+        val exercise = Exercise.WriteFunction(
+            id = "wf-puzzle-mismatch",
+            prompt = "Prompt",
+            starterCode = "fun solution() = TODO()",
+            hiddenTests = "import org.junit.Test",
+            referenceSolution = "fun solution() = 1",
+            guided = puzzle
+        )
+        val issues = errors(chapter(lessons = listOf(lesson(listOf(exercise)))))
+        assertTrue(issues.any { it.path.endsWith(".template") && it.message.contains("'____2' with no matching blank") })
     }
 
     @Test
@@ -282,17 +453,41 @@ class ContentValidatorTest {
     private fun cloze(id: String, template: String, blanks: List<Blank>) =
         Exercise.Cloze(id = id, prompt = "Prompt", template = template, blanks = blanks, explanation = "Because")
 
-    private fun blank(placeholder: String) = Blank(placeholder = placeholder, accepted = listOf("answer"))
+    private fun blank(
+        placeholder: String,
+        accepted: List<String> = listOf("answer"),
+        options: List<String> = listOf("answer", "distractor1", "distractor2", "distractor3")
+    ) = Blank(placeholder = placeholder, accepted = accepted, options = options)
+
+    private fun defaultPuzzle(referenceSolution: String = "fun a(): Int = 1"): CodePuzzle {
+        val match = Regex("fun ([A-Za-z_][A-Za-z0-9_]*)\\(\\)(: Int)? = (.+)").matchEntire(referenceSolution)
+            ?: error("Test reference solution must be a one-line function: $referenceSolution")
+        val name = match.groupValues[1]
+        val returnType = match.groupValues[2]
+        val body = match.groupValues[3]
+        val signature = if (returnType.isEmpty()) "____1 ____2()" else "____1 ____2()$returnType"
+        return CodePuzzle(
+            template = "$signature = ____3",
+            blanks = listOf(
+                blank("____1", accepted = listOf("fun"), options = listOf("fun", "val", "var", "class")),
+                blank("____2", accepted = listOf(name), options = listOf(name, "b", "c", "d")),
+                blank("____3", accepted = listOf(body), options = listOf(body, "2", "3", "0"))
+            ),
+            explanation = "Returns the reference value."
+        )
+    }
 
     private fun part(
         id: String,
         hiddenTests: String = "class PartTest",
-        referenceSolution: String = "fun part() = 1"
+        referenceSolution: String = "fun part() = 1",
+        guided: CodePuzzle? = defaultPuzzle(referenceSolution)
     ) = ProblemPart(
         id = id,
         prompt = "Part prompt",
         hiddenTests = hiddenTests,
         referenceSolution = referenceSolution,
-        expected = "Returns one."
+        expected = "Returns one.",
+        guided = guided
     )
 }

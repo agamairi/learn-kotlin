@@ -69,6 +69,7 @@ class ContentCompilerTest {
                               - placeholder: ____1
                                 accepted: ["true"]
                                 case_sensitive: "false"
+                                options: ["false", "true", "null", "0"]
                             explanation: The literal true.
                 """
             )
@@ -122,6 +123,7 @@ class ContentCompilerTest {
                             blanks:
                               - placeholder: ____1
                                 accepted: ["x"]
+                                options: ["x", "y", "0", "null"]
                             explanation: Needs two blanks.
                 """,
                 "content/kotlin/chapters/ch02-second.yaml" to """
@@ -153,6 +155,18 @@ class ContentCompilerTest {
                               - id: mp-no-tests-p1
                                 prompt: Part one.
                                 reference_solution: "fun a() = 1"
+                                guided:
+                                  template: "____1 ____2() = ____3"
+                                  blanks:
+                                    - placeholder: ____1
+                                      accepted: ["fun"]
+                                      options: ["class", "fun", "val", "return"]
+                                    - placeholder: ____2
+                                      accepted: ["a"]
+                                      options: ["b", "a", "main", "value"]
+                                    - placeholder: ____3
+                                      accepted: ["1"]
+                                      options: ["0", "1", "2", "-1"]
                                 expected: Returns one.
                 """
             )
@@ -220,6 +234,7 @@ class ContentCompilerTest {
                             blanks:
                               - placeholder: ____1
                                 accepted: ["x"]
+                                options: ["x", "y", "0", "null"]
                                 case_sensitive: maybe
                             explanation: Blank.
                 """

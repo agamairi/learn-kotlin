@@ -27,10 +27,20 @@ lessons:
           - placeholder: ____1
             accepted:
               - Long
+            options:
+              - Long
+              - Int
+              - Double
+              - Float
             case_sensitive: true
           - placeholder: ____2
             accepted:
               - L
+            options:
+              - L
+              - l
+              - D
+              - F
             case_sensitive: true
         explanation: Store cents in a `Long`, and use `L` to make the literal a `Long`.
       - type: multiple_choice
@@ -67,10 +77,20 @@ lessons:
           - placeholder: ____1
             accepted:
               - '?.'
+            options:
+              - ?.
+              - .
+              - '!!.'
+              - '::'
             case_sensitive: true
           - placeholder: ____2
             accepted:
               - '?:'
+            options:
+              - '?:'
+              - ??
+              - '||'
+              - ?.let
             case_sensitive: true
         explanation: "`?.` skips the call for null, and `?:` supplies the fallback value."
       - type: multiple_choice
@@ -127,6 +147,11 @@ lessons:
           - placeholder: ____1
             accepted:
               - require
+            options:
+              - require
+              - check
+              - assert
+              - verify
             case_sensitive: true
         explanation: "`require` throws `IllegalArgumentException` when its condition is false."
       - type: multiple_choice
@@ -211,6 +236,42 @@ lessons:
               val result = dollars * 100 + fraction
               return if (negative) -result else result
           }
+        guided:
+          template: "fun formatCents(cents: Long): String {\n    val sign = if (cents < 0) \"-\" else \"\"\n    val amount = kotlin.math.abs(cents)\n    return \"$sign\\$${amount / 100}.${(____1).toString().padStart(2, '0')}\"\n}\n\nfun parseCents(text: String): Long? {\n    val trimmed = text.trim()\n    val negative = trimmed.startsWith(\"-\")\n    val unsigned = if (negative) trimmed.drop(1) else trimmed\n    val pieces = unsigned.split(\".\")\n    if (____2) return null\n    val dollars = pieces[0].toLongOrNull() ?: return null\n    val fraction = when (pieces.getOrNull(1)?.length ?: 0) {\n        0 -> 0\n        1 -> pieces[1].toLongOrNull()?.times(10) ?: return null\n        2 -> pieces[1].toLongOrNull() ?: return null\n        else -> return null\n    }\n    val result = ____3\n    return ____4\n}\n"
+          blanks:
+            - placeholder: ____1
+              accepted:
+                - amount % 100
+              options:
+                - amount % 100
+                - amount / 100
+                - amount % 10
+                - amount - 100
+            - placeholder: ____2
+              accepted:
+                - pieces.size > 2 || pieces.any { it.isEmpty() }
+              options:
+                - pieces.size > 2 && pieces.any { it.isEmpty() }
+                - pieces.size > 2 || pieces.any { it.isEmpty() }
+                - pieces.size != 2
+                - pieces.isEmpty()
+            - placeholder: ____3
+              accepted:
+                - dollars * 100 + fraction
+              options:
+                - dollars + fraction * 100
+                - dollars * 10 + fraction
+                - dollars * 100 + fraction
+                - (dollars + fraction) * 100
+            - placeholder: ____4
+              accepted:
+                - if (negative) -result else result
+              options:
+                - result
+                - if (negative) result else -result
+                - -result
+                - if (negative) -result else result
+          explanation: Format cents using modulo and padding, and parse by validating the decimal split and scaling whole dollars.
         hints:
           - Separate the sign and use `abs`, `/`, and `%` for formatting.
           - For parsing, split once on `.`, parse the whole part with `toLongOrNull`, and multiply a one-digit fraction by 10.

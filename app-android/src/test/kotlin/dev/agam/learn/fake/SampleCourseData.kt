@@ -2,6 +2,7 @@ package dev.agam.learn.fake
 
 import dev.agam.learn.model.Blank
 import dev.agam.learn.model.Chapter
+import dev.agam.learn.model.CodePuzzle
 import dev.agam.learn.model.Course
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.model.FaqItem
@@ -50,8 +51,9 @@ object SampleCourseData {
                                     blanks = listOf(
                                         Blank(
                                             placeholder = "____1",
-                                            accepted = listOf("\$name", "\${name}"),
-                                            caseSensitive = true
+                                            accepted = listOf("\$name"),
+                                            caseSensitive = true,
+                                            options = listOf("\$name", "name", "@name", "#name")
                                         )
                                     ),
                                     explanation = "Kotlin string templates use the `$` symbol to interpolate variables."
@@ -70,7 +72,23 @@ object SampleCourseData {
                                     hiddenTests = "import org.junit.Test\nimport org.junit.Assert.assertEquals\n\nclass GreetTest {\n    @Test\n    fun testGreet() {\n        assertEquals(\"Hello, Agam!\", greet(\"Agam\"))\n    }\n}\n",
                                     referenceSolution = "fun greet(name: String): String = \"Hello, \$name!\"\n",
                                     hints = listOf("Use string interpolation with \$name"),
-                                    explanation = "Expression body syntax makes one-line functions concise."
+                                    explanation = "Expression body syntax makes one-line functions concise.",
+                                    guided = CodePuzzle(
+                                        template = "fun greet(name: String): String = ____1\n",
+                                        blanks = listOf(
+                                            Blank(
+                                                placeholder = "____1",
+                                                accepted = listOf("\"Hello, \$name!\""),
+                                                options = listOf(
+                                                    "\"Hello, \$name!\"",
+                                                    "\"Hello, name!\"",
+                                                    "\"Hello, @name!\"",
+                                                    "\"Hello!\""
+                                                )
+                                            )
+                                        ),
+                                        explanation = "Expression body with string template."
+                                    )
                                 ),
                                 Exercise.MultiPartProblem(
                                     id = "mp-ledger-intro",
@@ -83,7 +101,23 @@ object SampleCourseData {
                                             starterCode = "fun calculateBalance(credits: List<Long>, debits: List<Long>): Long = TODO()\n",
                                             hiddenTests = "import org.junit.Test\nimport org.junit.Assert.assertEquals\n\nclass BalanceTest {\n    @Test\n    fun testBalance() {\n        assertEquals(70L, calculateBalance(listOf(100L), listOf(30L)))\n    }\n}\n",
                                             referenceSolution = "fun calculateBalance(credits: List<Long>, debits: List<Long>): Long = credits.sum() - debits.sum()\n",
-                                            expected = "Returns credits sum minus debits sum."
+                                            expected = "Returns credits sum minus debits sum.",
+                                            guided = CodePuzzle(
+                                                template = "fun calculateBalance(credits: List<Long>, debits: List<Long>): Long = ____1\n",
+                                                blanks = listOf(
+                                                    Blank(
+                                                        placeholder = "____1",
+                                                        accepted = listOf("credits.sum() - debits.sum()"),
+                                                        options = listOf(
+                                                            "credits.sum() - debits.sum()",
+                                                            "credits.sum() + debits.sum()",
+                                                            "debits.sum() - credits.sum()",
+                                                            "credits.sum()"
+                                                        )
+                                                    )
+                                                ),
+                                                explanation = "Subtract debits sum from credits sum."
+                                            )
                                         )
                                     ),
                                     faq = listOf(

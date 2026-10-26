@@ -2,7 +2,7 @@
 
 ## What it is
 
-learn-kotlin is an Android app for learning Kotlin. Lessons are grouped into chapters. Lessons use these exercise types: multiple choice, fill in the blank, predict the output, write a function, and multi-part problems. Code exercises run on a real Kotlin compiler, so your code is compiled and tested. You earn XP for correct answers and work toward a daily XP goal, 50 XP by default. A streak counts a day when that day's goal is met. The effective day rolls over at 4 am local time, so early-morning practice counts toward the day before. You earn one streak freeze for every 7 consecutive goal days, hold at most 2, and a freeze is spent automatically on a missed day. Review uses a five-box Leitner schedule. A correct answer moves a card to a longer gap of 1, 2, 4, 8 or 16 days. A wrong answer sends the card back to the first box. An optional AI tutor can explain mistakes and give hints, using your own API key. The first course, Kotlin for the Stripe Android screen, is built for interview prep.
+learn-kotlin is an Android app for learning Kotlin. Lessons are grouped into chapters. Lessons use multiple choice, tap-to-fill code blanks, predict-the-output questions, and guided multipart code puzzles. Code puzzles are graded locally from authored choices and need no keyboard or compiler connection. Lesson XP stays pending until you finish the entire lesson, including its mistake round; leaving early discards that run. The daily XP goal is 50 XP by default. A streak counts a day when that day's goal is met. The effective day rolls over at 4 am local time, so early-morning practice counts toward the day before. You earn one streak freeze for every 7 consecutive goal days, hold at most 2, and a freeze is spent automatically on a missed day. Review uses a five-box Leitner schedule. A correct answer moves a card to a longer gap of 1, 2, 4, 8 or 16 days. A wrong answer sends the card back to the first box. An optional AI tutor can explain mistakes and give hints, using your own API key. The first course, Kotlin for the Stripe Android screen, is built for interview prep.
 
 ## Install a release
 
@@ -20,47 +20,19 @@ v0.3.0 adds an end-of-lesson mistake round. Missed quiz questions wait until the
 
 v0.4.0 fixes the AI tutor treating normal provider response metadata as a connection failure. AI Settings accepts a custom model ID for every provider, fetches available models after saving a key, and supports refresh and search. Lesson answers and code-studio results now stay pending until the entire lesson, including the mistake round, is finished; quitting discards that run without adding XP, daily-goal credit, or a lesson completion. Code Studio also offers local Kotlin autocomplete using the current source and common language/library suggestions.
 
+v0.5.0 replaces the learner-facing Code Studio with guided code puzzles. Choose one of four code options for each numbered blank, check your answers, and work through multipart stages without running a server. The original exercise and part IDs retain progress compatibility. Navigation, dashboard, status, and action icons are larger. The original compiler-verified solutions remain the source for the puzzle scaffolds.
+
 The app needs Android 8.0 (API 26) or newer. Install the APK by sideloading it. When Android asks, allow installs from the app you opened the file with, such as your browser or file manager.
 
-Lessons and review work offline. Code exercises need the compiler server, and the AI tutor needs internet access and your own API key. Sections 3 and 4 explain both.
+Lessons, code puzzles, and review work offline. The optional AI tutor needs internet access and your own API key.
 
-## Code exercises and the compiler server
+## Optional compiler tooling for content authors
 
-Code exercises send your code to kotlin-compiler-server. You run this server on your laptop. Code exercises do not work unless the server is running.
+The app's code puzzles do not use a compiler server. The server remains available to verify course reference solutions and expected outputs during content development.
 
-To start the server:
+Follow [`tools/compiler-server/README.md`](tools/compiler-server/README.md) to build the pinned stable Kotlin 2.4.21 server and run it on the laptop's loopback interface. Run `./gradlew :content:verifyContent` against it after changing reference code or expected outputs. Normal app builds validate puzzle structure and reconstruction locally; GitHub CI does not start the compiler server.
 
-1. Start Docker Desktop.
-2. Clone https://github.com/JetBrains/kotlin-compiler-server and check out commit `325cdb872475891da66fc4c9b05763de8f011e16`. The upstream project has no release tags, so pin the commit.
-3. Build the clone on your Mac, not in Docker. Follow `tools/compiler-server/README.md`. It needs JDK 17 and JDK 21.
-4. From the repo root, start the container. Set `KCS_CLONE` to the path of your clone:
-
-   ```sh
-   KCS_CLONE=/path/to/kotlin-compiler-server tools/compiler-server/run.sh
-   ```
-
-   The script builds the Docker image the first time. Run it with `--rebuild` after you rebuild the clone.
-
-5. Check that the server is up. It prints `OK`.
-
-   ```sh
-   curl -s http://127.0.0.1:8080/health
-   ```
-
-The container restarts with Docker Desktop, unless you stop it. Stop it with `docker rm -f kotlin-compiler-server`. Running `tools/compiler-server/run.sh` again also clears a stuck learner process. If port 8080 is in use, run `KCS_PORT=8090 tools/compiler-server/run.sh` and use port 8090 in the app URL.
-
-The server listens on 127.0.0.1 only. Docker publishes the port on the loopback address, so other devices on your network cannot reach it. Keep it that way. The server has no authentication. Learner code runs as root in the container and can reach the internet. Learner code can also forge a passing result. `docs/spike-report.md` has the details. Use this setup for one person's practice only.
-
-The server uses stable Kotlin 2.4.21. Apply the pinned version patch and build it as described in `tools/compiler-server/README.md`. The Android app uses Kotlin 2.2.10, so compiler messages can differ between the two.
-
-To point the app at the server:
-
-- **Android emulator:** The default server URL is `http://10.0.2.2:8080`. That address reaches your laptop's loopback interface, so you do not need to change it.
-- **Phone over USB:** Run `adb reverse tcp:8080 tcp:8080`. Then open Settings, set **Server URL** to `http://localhost:8080`, and tap **Save Compiler Settings**. Run the `adb reverse` command again after you reconnect the phone.
-
-The app allows plain HTTP only for `localhost`, `127.0.0.1` and `10.0.2.2`. See `app-android/src/main/res/xml/network_security_config.xml`.
-
-The **Bearer Token (optional)** field in Settings is optional. The local server does not check it.
+The developer runner has no authentication or code isolation suitable for public hosting. Keep it on loopback for author verification. Legacy runtime clients and tests remain in the repository, but the learner UI has no compiler URL/token setup or compiler-dependent exercise controls.
 
 ## AI tutor
 
@@ -82,11 +54,11 @@ Requests use your key and go to the provider you chose. When you choose OpenRout
 
 Hidden tests are not sent. Your provider's terms and data policy apply to these requests.
 
-The AI menu appears on code exercises and multi-part problems. Card lessons have no AI buttons.
+The AI menu appears on guided code puzzles and multi-part problems. Checked card answers can also offer **More like this**. Multi-part problems hide AI controls while the mock timer runs.
 
 - **Explain my mistake** asks for an explanation in three sentences or fewer.
-- **Hint** asks for a hint at level 1, 2 or 3. Level 1 is a nudge. Level 2 is an approach. Level 3 is close to the solution. On code exercises, the level is one more than the number of hint cards you have opened, up to 3.
-- AI hints on code exercises cost 2, 5 and 10 XP for levels 1, 2 and 3.
+- On guided code puzzles, choose **Hint 1**, **Hint 2**, or **Hint 3**: a nudge, an approach, or a near-solution hint. Authored course hints are separate. Multi-part problems offer a level-1 nudge.
+- AI hints on guided code puzzles deduct 2, 5 and 10 XP for levels 1, 2 and 3 from the first-pass award; each distinct level is charged once. Multi-part nudges do not change the part award.
 - **More like this** makes 3 extra AI-generated practice cards labeled unverified. They award no XP and do not enter review.
 - **Review my code** asks for up to three short bullets on readability and idiomatic Kotlin.
 
@@ -131,7 +103,7 @@ Two Gradle tasks work with the content.
 
 `./gradlew :content:compileContent` checks the YAML against the schema. It then writes `app-android/src/main/assets/courses/kotlin-stripe.json`, which the app reads. Every app build runs this task first. Commit the regenerated JSON with your YAML changes.
 
-`./gradlew :content:verifyContent` checks the exercises against the running compiler server, using their reference solutions and expected outputs. It needs the server from section 3. The default URL is `http://127.0.0.1:8080`. For another port, add `-PcompilerServerUrl=http://127.0.0.1:8090`. The task rewrites `docs/content-verification.md`, so review that report before you commit it. The task fails if any check fails. Warnings appear in the report and do not fail the task.
+`./gradlew :content:verifyContent` checks the exercises against the running compiler server, using their reference solutions and expected outputs. It needs the optional author-verification server described above. The default URL is `http://127.0.0.1:8080`. For another port, add `-PcompilerServerUrl=http://127.0.0.1:8090`. The task rewrites `docs/content-verification.md`, so review that report before you commit it. The task fails if any check fails. Warnings appear in the report and do not fail the task.
 
 ## Project layout
 
@@ -150,9 +122,9 @@ This is not built yet. The steps are in `docs/PLAN.md`, section 4 ("Adding a lan
 
 - Kotlin is the only language, and there is one course.
 - The app is for one person. There are no accounts and no sync. Progress is stored on the device.
-- Code exercises need the compiler server on your laptop. There is no hosted runner.
+- Code puzzles teach through authored choices rather than arbitrary code execution. There is no learner-facing compiler or hosted runner.
 - The compiler server is for personal practice only. It has no authentication, learner code runs as root with internet access, and learner code can forge a pass. Learner code can also stop the server from answering until you restart it with `tools/compiler-server/run.sh`. The server handles one request at a time.
-- The hidden tests for code exercises ship inside the app. Anyone with the APK can read them. That is fine for one person. A public release needs server-side tests.
+- Puzzle answer keys, reference code and author tests ship in the app for offline self-study; they are readable from the APK.
 - AI answers are not verified. Only the course exercises are checked against the compiler.
 - The stable APK is a non-debuggable release build signed with the same development certificate as the alpha builds for update compatibility. A separate private production signing key would require a new installation; this release remains for personal use.
 - Provider model names and API details can change. Check `docs/AI_PROVIDERS.md` before a wider release.

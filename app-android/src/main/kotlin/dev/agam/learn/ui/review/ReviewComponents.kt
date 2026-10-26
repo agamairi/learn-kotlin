@@ -146,14 +146,14 @@ fun MultipleChoiceCard(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Correct",
                                 tint = extendedColors.success,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         } else if (isSelected) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Incorrect",
                                 tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }

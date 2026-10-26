@@ -1,6 +1,5 @@
 package dev.agam.learn.ui.problem
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,20 +19,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedFilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -44,39 +42,11 @@ import androidx.compose.ui.unit.dp
 import dev.agam.learn.ai.AI_API_KEY_MISSING_MESSAGE
 import dev.agam.learn.model.FaqItem
 import dev.agam.learn.model.ProblemPart
-import dev.agam.learn.runner.RunOutcome
 import dev.agam.learn.ui.code.AiDialogState
 import dev.agam.learn.ui.code.AiResponseDialog
 import dev.agam.learn.ui.code.AiTutorMenuButton
-import dev.agam.learn.ui.code.CodeEditor
 import dev.agam.learn.ui.code.MarkdownText
-import dev.agam.learn.ui.code.RunOutcomeView
-
-/**
- * State representation for the Multi-part Problem screen.
- */
-data class MultiPartProblemUiState(
-    val problemId: String = "",
-    val prompt: String = "",
-    val story: String = "",
-    val parts: List<ProblemPart> = emptyList(),
-    val faq: List<FaqItem> = emptyList(),
-    val currentPartIndex: Int = 0,
-    val unlockedPartCount: Int = 1,
-    val currentCode: TextFieldValue = TextFieldValue(""),
-    val isRunning: Boolean = false,
-    val isChecking: Boolean = false,
-    val currentOutcome: RunOutcome? = null,
-    val isCurrentPartPassed: Boolean = false,
-    /** True only when every part passes on the source currently in the editor. */
-    val allPartsPassed: Boolean = false,
-    val isInterviewMode: Boolean = false,
-    val isAiAvailable: Boolean = false,
-    val hasApiKey: Boolean = false,
-    val timerSeconds: Int = 45 * 60,
-    val isTimerRunning: Boolean = false,
-    val aiDialogState: AiDialogState? = null
-)
+import dev.agam.learn.ui.lesson.components.CodePuzzleCard
 
 /**
  * Stateless composable for the Multi-Part Problem screen.
@@ -85,25 +55,35 @@ data class MultiPartProblemUiState(
 @Composable
 fun MultiPartProblemScreen(
     state: MultiPartProblemUiState,
-    onCodeChange: (TextFieldValue) -> Unit,
-    onSelectPart: (Int) -> Unit,
-    onRevealNextPart: () -> Unit,
-    onRunClick: () -> Unit,
-    onCheckClick: () -> Unit,
-    onToggleInterviewMode: (Boolean) -> Unit,
-    onToggleTimer: () -> Unit,
-    onResetTimer: () -> Unit,
-    onExplainMistakeClick: () -> Unit,
-    onAskHintClick: () -> Unit,
-    onReviewCodeClick: () -> Unit,
-    onDismissOutcome: () -> Unit,
-    onDismissAiDialog: () -> Unit,
+    onCodeChange: (TextFieldValue) -> Unit = {},
+    onSelectPart: (Int) -> Unit = {},
+    onRevealNextPart: () -> Unit = {},
+    onRunClick: () -> Unit = {},
+    onCheckClick: () -> Unit = {},
+    onToggleInterviewMode: (Boolean) -> Unit = {},
+    onToggleTimer: () -> Unit = {},
+    onResetTimer: () -> Unit = {},
+    onExplainMistakeClick: () -> Unit = {},
+    onAskHintClick: () -> Unit = {},
+    onReviewCodeClick: () -> Unit = {},
+    onDismissOutcome: () -> Unit = {},
+    onDismissAiDialog: () -> Unit = {},
     onNavigateBack: (() -> Unit)? = null,
     onFinish: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSelectOption: ((String, String) -> Unit)? = null,
+    onRetryClick: (() -> Unit)? = null
 ) {
     val scrollState = rememberScrollState()
     val currentPart = state.parts.getOrNull(state.currentPartIndex)
+    val currentGuided = currentPart?.guided
+    val optionSelector = onSelectOption ?: state.onSelectOption
+    val retryHandler = onRetryClick ?: state.onRetry
+
+    val currentPartAnswers = state.partPuzzleAnswers[state.currentPartIndex].orEmpty()
+    val isCurrentPartChecked = state.partChecked[state.currentPartIndex] == true
+    val isCurrentPartPassed = state.partPassed[state.currentPartIndex] == true
+    val currentPartFeedback = state.partFeedback[state.currentPartIndex].orEmpty()
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -125,21 +105,23 @@ fun MultiPartProblemScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Back",
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                     Text(
-                        text = "Problem Studio",
+                        text = "Code puzzle",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
+
             // Header: Timer & Interview Mode Toggle
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ProblemTimer(
                     secondsRemaining = state.timerSeconds,
@@ -149,6 +131,7 @@ fun MultiPartProblemScreen(
                 )
 
                 Row(
+                    modifier = Modifier.heightIn(min = 48.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -158,7 +141,6 @@ fun MultiPartProblemScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    // Locked while the mock timer runs: the mode can change only when no timer is running.
                     Switch(
                         checked = state.isInterviewMode,
                         onCheckedChange = onToggleInterviewMode,
@@ -169,7 +151,7 @@ fun MultiPartProblemScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Problem Story Card
+            // Problem Story Card: Build the code
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -179,7 +161,7 @@ fun MultiPartProblemScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = state.prompt.ifBlank { "Multi-Part Problem" },
+                        text = state.prompt.ifBlank { "Build the code" },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -217,7 +199,7 @@ fun MultiPartProblemScreen(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                state.parts.forEachIndexed { index, part ->
+                state.parts.forEachIndexed { index, _ ->
                     val isUnlocked = index < state.unlockedPartCount
                     val isSelected = index == state.currentPartIndex
 
@@ -231,7 +213,8 @@ fun MultiPartProblemScreen(
                                 text = if (isUnlocked) "Part ${index + 1}" else "🔒 Part ${index + 1}"
                             )
                         },
-                        enabled = isUnlocked
+                        enabled = isUnlocked,
+                        modifier = Modifier.heightIn(min = 48.dp)
                     )
                 }
             }
@@ -265,119 +248,145 @@ fun MultiPartProblemScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Code Editor from ui.code
-            CodeEditor(
-                value = state.currentCode,
-                onValueChange = onCodeChange,
-                modifier = Modifier.fillMaxWidth()
-            )
+            // Current Part Code Puzzle or safe local unavailable message
+            if (currentGuided != null) {
+                CodePuzzleCard(
+                    puzzle = currentGuided,
+                    answers = currentPartAnswers,
+                    onAnswerChange = optionSelector,
+                    isAnswerChecked = isCurrentPartChecked,
+                    feedback = currentPartFeedback,
+                    modifier = Modifier.fillMaxWidth(),
+                    isInteractionLocked = state.isChecking || state.recordError != null
+                )
 
-            Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-            // Action Buttons
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Run Button
-                OutlinedButton(
-                    onClick = onRunClick,
-                    enabled = !state.isRunning && !state.isChecking,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    if (state.isRunning) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Running...")
-                    } else {
-                        Text("▶ Run")
-                    }
+                val allBlanksAnswered = currentGuided.blanks.isNotEmpty() && currentGuided.blanks.all {
+                    val answer = currentPartAnswers[it.placeholder]
+                    !answer.isNullOrBlank() && it.options.isNotEmpty() && answer in it.options
                 }
 
-                // Check Button
-                Button(
-                    onClick = onCheckClick,
-                    enabled = !state.isRunning && !state.isChecking,
-                    shape = RoundedCornerShape(8.dp)
+                // Action Buttons
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (state.isChecking) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Checking...")
-                    } else {
-                        Text("✓ Check Part")
+                    // Check Part Button
+                    if (!isCurrentPartChecked) {
+                        Button(
+                            onClick = onCheckClick,
+                            enabled = allBlanksAnswered && !state.isChecking,
+                            modifier = Modifier.heightIn(min = 48.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(if (state.recordError == null) "✓ Check Part" else "Retry saving")
+                        }
+                    } else if (!state.isChecking && !isCurrentPartPassed) {
+                        OutlinedButton(
+                            onClick = retryHandler,
+                            modifier = Modifier.heightIn(min = 48.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Try again")
+                        }
                     }
-                }
 
-                // Reveal Next Part Button (only active when current part tests pass and next part is available)
-                val hasNextPart = state.currentPartIndex + 1 < state.parts.size
-                val nextPartLocked = state.unlockedPartCount <= state.currentPartIndex + 1
-                if (hasNextPart && nextPartLocked) {
-                    Button(
-                        onClick = onRevealNextPart,
-                        enabled = state.isCurrentPartPassed,
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary
-                        )
-                    ) {
-                        Text("🔓 Reveal Part ${state.currentPartIndex + 2}")
-                    }
-                } else if (!hasNextPart && state.isCurrentPartPassed) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "🎉 All parts completed!",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        if (onFinish != null && state.allPartsPassed) {
-                            Button(
-                                onClick = onFinish,
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("Complete & Return to Lesson")
+                    // Reveal Next Part Button
+                    val hasNextPart = state.currentPartIndex + 1 < state.parts.size
+                    val nextPartLocked = state.unlockedPartCount <= state.currentPartIndex + 1
+                    if (hasNextPart && nextPartLocked) {
+                        Button(
+                            onClick = onRevealNextPart,
+                            enabled = isCurrentPartPassed,
+                            modifier = Modifier.heightIn(min = 48.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiary
+                            )
+                        ) {
+                            Text("🔓 Reveal Part ${state.currentPartIndex + 2}")
+                        }
+                    } else if (!hasNextPart && isCurrentPartPassed) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "🎉 All parts completed!",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            if (onFinish != null && state.allPartsPassed) {
+                                Button(
+                                    onClick = onFinish,
+                                    modifier = Modifier.heightIn(min = 48.dp),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Complete & Return to Lesson")
+                                }
                             }
                         }
                     }
+
+                    // AI Tutor Menu (hidden in interview mode; disabled with a hint until a key is saved)
+                    if (state.isAiAvailable && !state.isInterviewMode && !state.isTimerRunning) {
+                        AiTutorMenuButton(
+                            onExplainMistake = onExplainMistakeClick,
+                            onAskHint = onAskHintClick,
+                            onReviewCode = onReviewCodeClick,
+                            enabled = !state.isChecking && state.hasApiKey
+                        )
+                    }
                 }
 
-                // AI Tutor Menu (hidden in interview mode; disabled with a hint until a key is saved)
-                if (state.isAiAvailable && !state.isInterviewMode && !state.isTimerRunning) {
-                    AiTutorMenuButton(
-                        onExplainMistake = onExplainMistakeClick,
-                        onAskHint = onAskHintClick,
-                        onReviewCode = onReviewCodeClick,
-                        enabled = !state.isRunning && !state.isChecking && state.hasApiKey
+                state.recordError?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
+            } else {
+                // Safe local unavailable message when guided puzzle data is absent
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Unavailable",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Text(
+                            text = "Offline code puzzle is not available for this part.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
+
             if (state.isAiAvailable && !state.isInterviewMode && !state.isTimerRunning && !state.hasApiKey) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = AI_API_KEY_MISSING_MESSAGE,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Results Panel
-            if (state.currentOutcome != null) {
-                Spacer(modifier = Modifier.height(14.dp))
-                RunOutcomeView(
-                    outcome = state.currentOutcome,
-                    onDismiss = onDismissOutcome
                 )
             }
         }
@@ -408,14 +417,6 @@ private fun MultiPartProblemScreenPreview() {
                         hiddenTests = "",
                         referenceSolution = "",
                         expected = "Parsed transaction list."
-                    ),
-                    ProblemPart(
-                        id = "part2",
-                        prompt = "Calculate account balance after applying transactions.",
-                        starterCode = null,
-                        hiddenTests = "",
-                        referenceSolution = "",
-                        expected = "Balance calculation."
                     )
                 ),
                 faq = listOf(
@@ -423,24 +424,10 @@ private fun MultiPartProblemScreenPreview() {
                 ),
                 currentPartIndex = 0,
                 unlockedPartCount = 1,
-                currentCode = TextFieldValue("fun parseTransactions(lines: List<String>): List<Transaction> {\n    return emptyList()\n}"),
                 isInterviewMode = false,
                 isAiAvailable = true,
                 hasApiKey = true
-            ),
-            onCodeChange = {},
-            onSelectPart = {},
-            onRevealNextPart = {},
-            onRunClick = {},
-            onCheckClick = {},
-            onToggleInterviewMode = {},
-            onToggleTimer = {},
-            onResetTimer = {},
-            onExplainMistakeClick = {},
-            onAskHintClick = {},
-            onReviewCodeClick = {},
-            onDismissOutcome = {},
-            onDismissAiDialog = {}
+            )
         )
     }
 }

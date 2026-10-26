@@ -44,15 +44,20 @@ lessons:
           - placeholder: ____1
             accepted:
               - toLongOrNull
+            options:
+              - toLongOrNull
+              - toLong
+              - toLongOrDefault
+              - asLongOrNull
             case_sensitive: true
         explanation: "`toLongOrNull` avoids a number-format exception for text such as `abc`."
       - type: multiple_choice
         id: ch02-strings-splitting-mc-blank
         prompt: What is the result of `"   ".isBlank()`?
         options:
-          - false
-          - true
-          - null
+          - 'false'
+          - 'true'
+          - 'null'
         correct_index: 1
         explanation: "`isBlank` treats whitespace-only text as blank."
       - type: cloze
@@ -63,6 +68,11 @@ lessons:
           - placeholder: ____1
             accepted:
               - padStart
+            options:
+              - padStart
+              - padEnd
+              - fillStart
+              - leftPad
             case_sensitive: true
         explanation: "`padStart` adds characters on the left until the requested length is reached."
       - type: predict_output
@@ -109,6 +119,11 @@ lessons:
           - placeholder: ____1
             accepted:
               - matchEntire
+            options:
+              - matchEntire
+              - matches
+              - find
+              - containsMatchIn
             case_sensitive: true
         explanation: "`matchEntire` rejects extra text before or after the intended pattern."
       - type: multiple_choice
@@ -161,6 +176,42 @@ lessons:
                   val (key, value) = part.split("=", limit = 2)
                   key to value.toInt()
               }
+        guided:
+          template: "fun parseSettings(text: String): Map<String, Int> =\n    ____1\n    else ____2 { part ->\n        val (key, value) = part.split(\"=\", ____3)\n        ____4\n    }\n"
+          blanks:
+            - placeholder: ____1
+              accepted:
+                - if (text.isEmpty()) emptyMap()
+              options:
+                - if (text.isEmpty()) emptyMap()
+                - if (text.isEmpty()) emptyList()
+                - emptyMap()
+                - if (text.isEmpty()) null
+            - placeholder: ____2
+              accepted:
+                - text.split(";").associate
+              options:
+                - text.split(",").associate
+                - text.split(";").associate
+                - text.split(";").map
+                - text.split(";").associateBy
+            - placeholder: ____3
+              accepted:
+                - limit = 2
+              options:
+                - limit = 1
+                - limit = 3
+                - limit = 2
+                - limit = 0
+            - placeholder: ____4
+              accepted:
+                - key to value.toInt()
+              options:
+                - key to value
+                - key.toInt() to value
+                - value.toInt() to key
+                - key to value.toInt()
+          explanation: Split key-value settings by delimiter, bounding the split limit to avoid dropping extra equals signs.
         hints:
           - Split the input into semicolon-separated parts, then split each part at `=`.
           - "`associate` turns a sequence of key/value pairs into a map."

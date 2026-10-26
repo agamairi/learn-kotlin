@@ -108,6 +108,42 @@ lessons:
                       return results
                   }
               }
+            guided:
+              template: "data class Payment(val id: String, val amountCents: Long)\n\nenum class SendResult { SUCCESS, RETRYABLE, PERMANENT }\n\nenum class ProcessResult { SENT, WILL_RETRY, MOVED_TO_FAILED, EMPTY }\n\nfun interface PaymentSender {\n    fun send(payment: Payment, idempotencyKey: String): SendResult\n}\n\nclass OfflineQueue(private val sender: PaymentSender) {\n    private val queue = ArrayDeque<Payment>()\n    private val knownIds = mutableSetOf<String>()\n    private val failedPayments = mutableListOf<Payment>()\n\n    fun enqueue(id: String, amountCents: Long): Boolean {\n        ____1\n        ____2\n        ____3\n        return true\n    }\n\n    ____4\n\n    fun failed(): List<Payment> = failedPayments.toList()\n\n    fun processNext(): ProcessResult {\n        val payment = queue.firstOrNull() ?: return ProcessResult.EMPTY\n        return when (sender.send(payment, payment.id)) {\n            SendResult.SUCCESS -> { queue.removeFirst(); ProcessResult.SENT }\n            SendResult.RETRYABLE -> ProcessResult.WILL_RETRY\n            SendResult.PERMANENT -> {\n                queue.removeFirst()\n                failedPayments += payment\n                ProcessResult.MOVED_TO_FAILED\n            }\n        }\n    }\n\n    fun sync(): List<ProcessResult> {\n        val results = mutableListOf<ProcessResult>()\n        while (queue.isNotEmpty()) {\n            val result = processNext()\n            results += result\n            if (result == ProcessResult.WILL_RETRY) break\n        }\n        return results\n    }\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - if (amountCents <= 0 || id in knownIds) return false
+                  options:
+                    - if (amountCents < 0 || id in knownIds) return false
+                    - if (amountCents <= 0 && id in knownIds) return false
+                    - if (amountCents <= 0 || id in knownIds) return false
+                    - if (id in knownIds) return false
+                - placeholder: ____2
+                  accepted:
+                    - knownIds += id
+                  options:
+                    - knownIds -= id
+                    - knownIds.clear()
+                    - knownIds += payment.id
+                    - knownIds += id
+                - placeholder: ____3
+                  accepted:
+                    - queue.addLast(Payment(id, amountCents))
+                  options:
+                    - queue.addLast(Payment(id, amountCents))
+                    - queue.addFirst(Payment(id, amountCents))
+                    - queue.addLast(payment)
+                    - queue.clear()
+                - placeholder: ____4
+                  accepted:
+                    - 'fun pending(): List<Payment> = queue.toList()'
+                  options:
+                    - 'fun pending(): List<Payment> = queue'
+                    - 'fun pending(): List<Payment> = queue.toList()'
+                    - 'fun pending(): List<Payment> = emptyList()'
+                    - 'fun pending(): List<Payment> = failedPayments.toList()'
+              explanation: Guard against zero/negative amounts and duplicate IDs, maintaining a FIFO queue and known ID set.
             hints:
               - Check the amount and the set of known ids before adding to the deque.
               - Store `Payment` objects in an `ArrayDeque` and return `queue.toList()`.
@@ -196,6 +232,42 @@ lessons:
                       return results
                   }
               }
+            guided:
+              template: "data class Payment(val id: String, val amountCents: Long)\nenum class SendResult { SUCCESS, RETRYABLE, PERMANENT }\nenum class ProcessResult { SENT, WILL_RETRY, MOVED_TO_FAILED, EMPTY }\nfun interface PaymentSender { fun send(payment: Payment, idempotencyKey: String): SendResult }\n\nclass OfflineQueue(private val sender: PaymentSender) {\n    private val queue = ArrayDeque<Payment>()\n    private val knownIds = mutableSetOf<String>()\n    private val failedPayments = mutableListOf<Payment>()\n    fun enqueue(id: String, amountCents: Long): Boolean {\n        if (amountCents <= 0 || id in knownIds) return false\n        knownIds += id; queue.addLast(Payment(id, amountCents)); return true\n    }\n    fun pending(): List<Payment> = queue.toList()\n    fun failed(): List<Payment> = failedPayments.toList()\n    fun processNext(): ProcessResult {\n        val payment = queue.firstOrNull() ?: return ProcessResult.EMPTY\n        return when (____1) {\n            ____2\n            ____3\n            SendResult.PERMANENT -> {\n                queue.removeFirst(); ____4\n            }\n        }\n    }\n    fun sync(): List<ProcessResult> {\n        val results = mutableListOf<ProcessResult>()\n        while (queue.isNotEmpty()) { val result = processNext(); results += result; if (result == ProcessResult.WILL_RETRY) break }\n        return results\n    }\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - sender.send(payment, payment.id)
+                  options:
+                    - sender.send(payment, UUID.randomUUID().toString())
+                    - sender.send(payment, "")
+                    - sender.send(payment, payment.id)
+                    - sender.send(payment, payment.amountCents.toString())
+                - placeholder: ____2
+                  accepted:
+                    - SendResult.SUCCESS -> { queue.removeFirst(); ProcessResult.SENT }
+                  options:
+                    - SendResult.SUCCESS -> { ProcessResult.SENT }
+                    - SendResult.SUCCESS -> { queue.removeLast(); ProcessResult.SENT }
+                    - SendResult.SUCCESS -> { queue.clear(); ProcessResult.SENT }
+                    - SendResult.SUCCESS -> { queue.removeFirst(); ProcessResult.SENT }
+                - placeholder: ____3
+                  accepted:
+                    - SendResult.RETRYABLE -> ProcessResult.WILL_RETRY
+                  options:
+                    - SendResult.RETRYABLE -> ProcessResult.WILL_RETRY
+                    - SendResult.RETRYABLE -> { queue.removeFirst(); ProcessResult.WILL_RETRY }
+                    - SendResult.RETRYABLE -> ProcessResult.MOVED_TO_FAILED
+                    - SendResult.RETRYABLE -> ProcessResult.SENT
+                - placeholder: ____4
+                  accepted:
+                    - failedPayments += payment; ProcessResult.MOVED_TO_FAILED
+                  options:
+                    - failedPayments += payment; ProcessResult.WILL_RETRY
+                    - failedPayments += payment; ProcessResult.MOVED_TO_FAILED
+                    - failedPayments.clear(); ProcessResult.MOVED_TO_FAILED
+                    - ProcessResult.MOVED_TO_FAILED
+              explanation: Use payment.id as idempotency key; pop on success or permanent failure, but keep head of queue on retryable error.
             hints:
               - Inspect only `queue.firstOrNull()` and do not remove it before sending.
               - Remove successful or permanent payments, but leave retryable payments in place.
@@ -284,6 +356,34 @@ lessons:
                       return results
                   }
               }
+            guided:
+              template: "data class Payment(val id: String, val amountCents: Long)\nenum class SendResult { SUCCESS, RETRYABLE, PERMANENT }\nenum class ProcessResult { SENT, WILL_RETRY, MOVED_TO_FAILED, EMPTY }\nfun interface PaymentSender { fun send(payment: Payment, idempotencyKey: String): SendResult }\n\nclass OfflineQueue(private val sender: PaymentSender) {\n    private val queue = ArrayDeque<Payment>()\n    private val knownIds = mutableSetOf<String>()\n    private val failedPayments = mutableListOf<Payment>()\n    fun enqueue(id: String, amountCents: Long): Boolean {\n        if (amountCents <= 0 || id in knownIds) return false\n        knownIds += id; queue.addLast(Payment(id, amountCents)); return true\n    }\n    fun pending(): List<Payment> = queue.toList()\n    fun failed(): List<Payment> = failedPayments.toList()\n    fun processNext(): ProcessResult {\n        ____1\n        return when (sender.send(payment, payment.id)) {\n            SendResult.SUCCESS -> { queue.removeFirst(); ProcessResult.SENT }\n            SendResult.RETRYABLE -> ProcessResult.WILL_RETRY\n            SendResult.PERMANENT -> { queue.removeFirst(); failedPayments += payment; ProcessResult.MOVED_TO_FAILED }\n        }\n    }\n    fun sync(): List<ProcessResult> {\n        val results = mutableListOf<ProcessResult>()\n        ____2 { val result = processNext(); results += result; ____3 }\n        return results\n    }\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - 'val payment = queue.firstOrNull() ?: return ProcessResult.EMPTY'
+                  options:
+                    - val payment = queue.removeFirst()
+                    - 'val payment = queue.lastOrNull() ?: return ProcessResult.EMPTY'
+                    - 'val payment = queue.firstOrNull() ?: return ProcessResult.EMPTY'
+                    - val payment = queue.first()
+                - placeholder: ____2
+                  accepted:
+                    - while (queue.isNotEmpty())
+                  options:
+                    - while (queue.isEmpty())
+                    - if (queue.isNotEmpty())
+                    - while (results.isEmpty())
+                    - while (queue.isNotEmpty())
+                - placeholder: ____3
+                  accepted:
+                    - if (result == ProcessResult.WILL_RETRY) break
+                  options:
+                    - if (result == ProcessResult.WILL_RETRY) break
+                    - if (result == ProcessResult.SENT) break
+                    - if (result == ProcessResult.MOVED_TO_FAILED) break
+                    - if (result == ProcessResult.WILL_RETRY) continue
+              explanation: Process queue iteratively during sync, halting immediately if an item encounters a retryable failure.
             hints:
               - Reuse `processNext()` in a loop and append each result.
               - Break only after `WILL_RETRY`; permanent failures are safe to skip.
@@ -392,6 +492,34 @@ lessons:
                   fun dropped(): List<StoredEvent> = droppedEvents.toList()
                   fun setOnline(online: Boolean) { this.online = online }
               }
+            guided:
+              template: "data class StoredEvent(val value: String, val addedAt: Long)\nfun interface Clock { fun nowMillis(): Long }\nfun interface TelemetryUploader { fun upload(events: List<StoredEvent>): Boolean }\n\nclass TelemetryBatcher(\n    private val batchSize: Int,\n    private val maxAgeMillis: Long = Long.MAX_VALUE,\n    private val capacity: Int = Int.MAX_VALUE,\n    private val clock: Clock = Clock { 0L }\n) {\n    private val events = ArrayDeque<StoredEvent>()\n    private val droppedEvents = mutableListOf<StoredEvent>()\n    private var online = true\n\n    fun add(value: String): List<StoredEvent> {\n        ____1\n        ____2\n        ____3\n    }\n\n    fun check(): List<StoredEvent> {\n        val first = events.firstOrNull() ?: return emptyList()\n        return if (online && clock.nowMillis() - first.addedAt >= maxAgeMillis) events.take(batchSize) else emptyList()\n    }\n\n    fun upload(uploader: TelemetryUploader): List<StoredEvent> {\n        if (!online || events.isEmpty()) return emptyList()\n        val batch = events.take(batchSize)\n        if (!uploader.upload(batch)) return emptyList()\n        repeat(batch.size) { events.removeFirst() }\n        return batch\n    }\n\n    fun stored(): List<StoredEvent> = events.toList()\n    fun dropped(): List<StoredEvent> = droppedEvents.toList()\n    fun setOnline(online: Boolean) { this.online = online }\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - events.addLast(StoredEvent(value, clock.nowMillis()))
+                  options:
+                    - events.addFirst(StoredEvent(value, clock.nowMillis()))
+                    - events.addLast(StoredEvent(value, clock.nowMillis()))
+                    - events.addLast(StoredEvent(value, 0L))
+                    - events.addLast(value)
+                - placeholder: ____2
+                  accepted:
+                    - while (events.size > capacity) droppedEvents += events.removeFirst()
+                  options:
+                    - while (events.size >= capacity) droppedEvents += events.removeFirst()
+                    - while (events.size > capacity) droppedEvents += events.removeLast()
+                    - while (events.size > capacity) droppedEvents += events.removeFirst()
+                    - if (events.size > capacity) droppedEvents.clear()
+                - placeholder: ____3
+                  accepted:
+                    - return if (online && events.size >= batchSize) events.take(batchSize) else emptyList()
+                  options:
+                    - return if (events.size >= batchSize) events.take(batchSize) else emptyList()
+                    - return if (online && events.size > batchSize) events.take(batchSize) else emptyList()
+                    - return if (online) events.take(batchSize) else emptyList()
+                    - return if (online && events.size >= batchSize) events.take(batchSize) else emptyList()
+              explanation: Enqueue timestamped telemetry events, dropping oldest when capacity exceeded, and trigger batch when online and size met.
             hints:
               - Record each event in order and compare the size after adding it.
               - Keep the returned batch available until a later successful upload acknowledges it.
@@ -474,6 +602,34 @@ lessons:
                   fun dropped(): List<StoredEvent> = droppedEvents.toList()
                   fun setOnline(online: Boolean) { this.online = online }
               }
+            guided:
+              template: "data class StoredEvent(val value: String, val addedAt: Long)\nfun interface Clock { fun nowMillis(): Long }\nfun interface TelemetryUploader { fun upload(events: List<StoredEvent>): Boolean }\n\nclass TelemetryBatcher(\n    private val batchSize: Int,\n    private val maxAgeMillis: Long = Long.MAX_VALUE,\n    private val capacity: Int = Int.MAX_VALUE,\n    private val clock: Clock = Clock { 0L }\n) {\n    private val events = ArrayDeque<StoredEvent>()\n    private val droppedEvents = mutableListOf<StoredEvent>()\n    private var online = true\n    fun add(value: String): List<StoredEvent> {\n        events.addLast(StoredEvent(value, clock.nowMillis()))\n        while (events.size > capacity) droppedEvents += events.removeFirst()\n        return if (online && events.size >= batchSize) events.take(batchSize) else emptyList()\n    }\n    fun check(): List<StoredEvent> {\n        ____1\n        return if (online && ____2) events.take(batchSize) else emptyList()\n    }\n    fun upload(uploader: TelemetryUploader): List<StoredEvent> {\n        if (!online || events.isEmpty()) return emptyList()\n        val batch = events.take(batchSize)\n        if (!uploader.upload(batch)) return emptyList()\n        ____3\n        return batch\n    }\n    fun stored(): List<StoredEvent> = events.toList()\n    fun dropped(): List<StoredEvent> = droppedEvents.toList()\n    fun setOnline(online: Boolean) { this.online = online }\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - 'val first = events.firstOrNull() ?: return emptyList()'
+                  options:
+                    - 'val first = events.firstOrNull() ?: return emptyList()'
+                    - val first = events.first()
+                    - 'val first = events.lastOrNull() ?: return emptyList()'
+                    - 'val first = events.firstOrNull() ?: return events.toList()'
+                - placeholder: ____2
+                  accepted:
+                    - clock.nowMillis() - first.addedAt >= maxAgeMillis
+                  options:
+                    - clock.nowMillis() - first.addedAt > maxAgeMillis
+                    - clock.nowMillis() - first.addedAt >= maxAgeMillis
+                    - clock.nowMillis() - first.addedAt <= maxAgeMillis
+                    - first.addedAt >= maxAgeMillis
+                - placeholder: ____3
+                  accepted:
+                    - repeat(batch.size) { events.removeFirst() }
+                  options:
+                    - repeat(batch.size) { events.removeLast() }
+                    - events.clear()
+                    - repeat(batch.size) { events.removeFirst() }
+                    - repeat(batchSize) { events.removeFirst() }
+              explanation: Flush stale batches when head event age reaches maxAgeMillis, and remove exactly uploaded batch count upon success.
             hints:
               - Save `addedAt` from the injected clock and inspect the oldest stored event.
               - Use `>= maxAgeMillis`, not just `>`.
@@ -570,6 +726,34 @@ lessons:
                   fun dropped(): List<StoredEvent> = droppedEvents.toList()
                   fun setOnline(online: Boolean) { this.online = online }
               }
+            guided:
+              template: "data class StoredEvent(val value: String, val addedAt: Long)\nfun interface Clock { fun nowMillis(): Long }\nfun interface TelemetryUploader { fun upload(events: List<StoredEvent>): Boolean }\n\nclass TelemetryBatcher(\n    private val batchSize: Int,\n    private val maxAgeMillis: Long = Long.MAX_VALUE,\n    private val capacity: Int = Int.MAX_VALUE,\n    private val clock: Clock = Clock { 0L }\n) {\n    private val events = ArrayDeque<StoredEvent>()\n    private val droppedEvents = mutableListOf<StoredEvent>()\n    private var online = true\n    fun add(value: String): List<StoredEvent> {\n        events.addLast(StoredEvent(value, clock.nowMillis()))\n        while (events.size > capacity) droppedEvents += events.removeFirst()\n        return if (online && events.size >= batchSize) events.take(batchSize) else emptyList()\n    }\n    fun check(): List<StoredEvent> {\n        val first = events.firstOrNull() ?: return emptyList()\n        return if (online && clock.nowMillis() - first.addedAt >= maxAgeMillis) events.take(batchSize) else emptyList()\n    }\n    fun upload(uploader: TelemetryUploader): List<StoredEvent> {\n        ____1\n        ____2\n        ____3\n        repeat(batch.size) { events.removeFirst() }\n        return batch\n    }\n    fun stored(): List<StoredEvent> = events.toList()\n    fun dropped(): List<StoredEvent> = droppedEvents.toList()\n    fun setOnline(online: Boolean) { this.online = online }\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - if (!online || events.isEmpty()) return emptyList()
+                  options:
+                    - if (online || events.isEmpty()) return emptyList()
+                    - if (!online) return emptyList()
+                    - if (events.isEmpty()) return emptyList()
+                    - if (!online || events.isEmpty()) return emptyList()
+                - placeholder: ____2
+                  accepted:
+                    - val batch = events.take(batchSize)
+                  options:
+                    - val batch = events.take(batchSize)
+                    - val batch = events.toList()
+                    - val batch = events.take(capacity)
+                    - val batch = events.drop(batchSize)
+                - placeholder: ____3
+                  accepted:
+                    - if (!uploader.upload(batch)) return emptyList()
+                  options:
+                    - if (uploader.upload(batch)) return emptyList()
+                    - if (!uploader.upload(batch)) return emptyList()
+                    - uploader.upload(batch)
+                    - if (!uploader.upload(batch)) return batch
+              explanation: Take batch for upload, verify uploader returns true before draining events, and respect offline flag.
             hints:
               - Keep failed events at the front and make capacity eviction remove from the front.
               - Remove a batch only after `upload` returns true; call upload again for the remainder.
@@ -656,6 +840,34 @@ lessons:
                   val id = "pi_${index + 1}"
                   OrderResult(order.orderId, runCheckout(order.outcomes, id, order.captureSucceeds, true).status, id)
               }.let { results -> MultiOrderResult(results, emptyList(), orders.size) }
+            guided:
+              template: "enum class AttemptOutcome { APPROVED, DECLINED, CONNECTIVITY, TIMEOUT, CANCELED_BY_READER }\nenum class CheckoutStatus { CAPTURED, FAILED_DECLINED, CANCELED, NEEDS_RECONCILIATION, AUTHORIZED_NOT_CAPTURED }\ndata class CheckoutResult(val status: CheckoutStatus, val attempts: Int, val intentId: String, val paymentIntentsCreated: Int = 1)\n\nfun runCheckout(outcomes: List<AttemptOutcome>, intentId: String = \"pi_1\", captureSucceeds: Boolean = true, useLimits: Boolean = true): CheckoutResult {\n    var attempts = 0\n    for (outcome in outcomes) {\n        attempts++\n        when (outcome) {\n            ____1\n            ____2\n            AttemptOutcome.DECLINED, AttemptOutcome.CONNECTIVITY, AttemptOutcome.TIMEOUT -> Unit\n        }\n    }\n    ____3\n}\n\ndata class OrderInput(val orderId: String, val outcomes: List<AttemptOutcome>, val captureSucceeds: Boolean)\ndata class OrderResult(val orderId: String, val status: CheckoutStatus, val intentId: String)\ndata class MultiOrderResult(val orders: List<OrderResult>, val followUps: List<String>, val paymentIntentsCreated: Int)\nfun runOrders(orders: List<OrderInput>): MultiOrderResult = orders.mapIndexed { index, order ->\n    val id = \"pi_${index + 1}\"\n    OrderResult(order.orderId, runCheckout(order.outcomes, id, order.captureSucceeds, true).status, id)\n}.let { results -> MultiOrderResult(results, emptyList(), orders.size) }\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - AttemptOutcome.APPROVED -> return CheckoutResult(if (captureSucceeds) CheckoutStatus.CAPTURED else CheckoutStatus.AUTHORIZED_NOT_CAPTURED, attempts, intentId)
+                  options:
+                    - AttemptOutcome.APPROVED -> return CheckoutResult(CheckoutStatus.CAPTURED, attempts, intentId)
+                    - AttemptOutcome.APPROVED -> return CheckoutResult(CheckoutStatus.AUTHORIZED_NOT_CAPTURED, attempts, intentId)
+                    - AttemptOutcome.APPROVED -> return CheckoutResult(if (captureSucceeds) CheckoutStatus.CAPTURED else CheckoutStatus.AUTHORIZED_NOT_CAPTURED, attempts, intentId)
+                    - AttemptOutcome.APPROVED -> return CheckoutResult(CheckoutStatus.CAPTURED, 1, intentId)
+                - placeholder: ____2
+                  accepted:
+                    - AttemptOutcome.CANCELED_BY_READER -> return CheckoutResult(CheckoutStatus.CANCELED, attempts, intentId)
+                  options:
+                    - AttemptOutcome.CANCELED_BY_READER -> return CheckoutResult(CheckoutStatus.NEEDS_RECONCILIATION, attempts, intentId)
+                    - AttemptOutcome.CANCELED_BY_READER -> return CheckoutResult(CheckoutStatus.FAILED_DECLINED, attempts, intentId)
+                    - AttemptOutcome.CANCELED_BY_READER -> Unit
+                    - AttemptOutcome.CANCELED_BY_READER -> return CheckoutResult(CheckoutStatus.CANCELED, attempts, intentId)
+                - placeholder: ____3
+                  accepted:
+                    - return CheckoutResult(CheckoutStatus.NEEDS_RECONCILIATION, attempts, intentId)
+                  options:
+                    - return CheckoutResult(CheckoutStatus.NEEDS_RECONCILIATION, attempts, intentId)
+                    - return CheckoutResult(CheckoutStatus.CAPTURED, attempts, intentId)
+                    - return CheckoutResult(CheckoutStatus.FAILED_DECLINED, attempts, intentId)
+                    - return CheckoutResult(CheckoutStatus.CANCELED, attempts, intentId)
+              explanation: Map payment outcomes to terminal statuses, tracking attempt counts and single PaymentIntent ID.
             hints:
               - Count attempts as you consume outcomes and return immediately for APPROVED or CANCELED_BY_READER.
               - A timeout with no later result leaves the intent in an unknown state.
@@ -722,6 +934,34 @@ lessons:
                   }
                   return MultiOrderResult(results, followUps, orders.size)
               }
+            guided:
+              template: "enum class AttemptOutcome { APPROVED, DECLINED, CONNECTIVITY, TIMEOUT, CANCELED_BY_READER }\nenum class CheckoutStatus { CAPTURED, FAILED_DECLINED, CANCELED, NEEDS_RECONCILIATION, AUTHORIZED_NOT_CAPTURED }\ndata class CheckoutResult(val status: CheckoutStatus, val attempts: Int, val intentId: String, val paymentIntentsCreated: Int = 1)\nfun runCheckout(outcomes: List<AttemptOutcome>, intentId: String = \"pi_1\", captureSucceeds: Boolean = true, useLimits: Boolean = true): CheckoutResult {\n    var attempts = 0; var declines = 0; var consecutiveUnknown = 0\n    for (outcome in outcomes) {\n        attempts++\n        when (outcome) {\n            AttemptOutcome.APPROVED -> return CheckoutResult(if (captureSucceeds) CheckoutStatus.CAPTURED else CheckoutStatus.AUTHORIZED_NOT_CAPTURED, attempts, intentId)\n            AttemptOutcome.CANCELED_BY_READER -> return CheckoutResult(CheckoutStatus.CANCELED, attempts, intentId)\n            AttemptOutcome.DECLINED -> { ____1 }\n            AttemptOutcome.CONNECTIVITY, AttemptOutcome.TIMEOUT -> { ____2 }\n        }\n    }\n    return CheckoutResult(CheckoutStatus.NEEDS_RECONCILIATION, attempts, intentId)\n}\ndata class OrderInput(val orderId: String, val outcomes: List<AttemptOutcome>, val captureSucceeds: Boolean)\ndata class OrderResult(val orderId: String, val status: CheckoutStatus, val intentId: String)\ndata class MultiOrderResult(val orders: List<OrderResult>, val followUps: List<String>, val paymentIntentsCreated: Int)\nfun runOrders(orders: List<OrderInput>): MultiOrderResult {\n    val results = mutableListOf<OrderResult>()\n    val followUps = mutableListOf<String>()\n    orders.forEachIndexed { index, order ->\n        val intentId = \"pi_${index + 1}\"\n        val status = runCheckout(order.outcomes, intentId, order.captureSucceeds, true).status\n        results += OrderResult(order.orderId, status, intentId)\n        when (status) {\n            ____3\n            CheckoutStatus.NEEDS_RECONCILIATION -> followUps += \"$intentId check its status before doing anything\"\n            else -> Unit\n        }\n    }\n    return MultiOrderResult(results, followUps, orders.size)\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - declines++; consecutiveUnknown = 0; if (useLimits && declines >= 2) return CheckoutResult(CheckoutStatus.FAILED_DECLINED, attempts, intentId)
+                  options:
+                    - declines++; if (useLimits && declines >= 2) return CheckoutResult(CheckoutStatus.FAILED_DECLINED, attempts, intentId)
+                    - declines++; consecutiveUnknown = 0; if (useLimits && declines >= 2) return CheckoutResult(CheckoutStatus.FAILED_DECLINED, attempts, intentId)
+                    - declines++; consecutiveUnknown = 0; if (declines >= 1) return CheckoutResult(CheckoutStatus.FAILED_DECLINED, attempts, intentId)
+                    - consecutiveUnknown = 0; if (useLimits && declines >= 2) return CheckoutResult(CheckoutStatus.FAILED_DECLINED, attempts, intentId)
+                - placeholder: ____2
+                  accepted:
+                    - consecutiveUnknown++; if (useLimits && consecutiveUnknown >= 3) return CheckoutResult(CheckoutStatus.NEEDS_RECONCILIATION, attempts, intentId)
+                  options:
+                    - consecutiveUnknown++; if (useLimits && consecutiveUnknown >= 2) return CheckoutResult(CheckoutStatus.NEEDS_RECONCILIATION, attempts, intentId)
+                    - consecutiveUnknown++; if (consecutiveUnknown >= 3) return CheckoutResult(CheckoutStatus.NEEDS_RECONCILIATION, attempts, intentId)
+                    - consecutiveUnknown++; if (useLimits && consecutiveUnknown >= 3) return CheckoutResult(CheckoutStatus.NEEDS_RECONCILIATION, attempts, intentId)
+                    - consecutiveUnknown++; if (useLimits && consecutiveUnknown > 3) return CheckoutResult(CheckoutStatus.NEEDS_RECONCILIATION, attempts, intentId)
+                - placeholder: ____3
+                  accepted:
+                    - CheckoutStatus.AUTHORIZED_NOT_CAPTURED -> followUps += "$intentId capture or cancel within 2 days"
+                  options:
+                    - CheckoutStatus.CAPTURED -> followUps += "$intentId capture or cancel within 2 days"
+                    - CheckoutStatus.AUTHORIZED_NOT_CAPTURED -> followUps += "$intentId check its status before doing anything"
+                    - CheckoutStatus.AUTHORIZED_NOT_CAPTURED -> Unit
+                    - CheckoutStatus.AUTHORIZED_NOT_CAPTURED -> followUps += "$intentId capture or cancel within 2 days"
+              explanation: Allow recovery after single decline, terminate on 2 declines, and flag reconciliation after 3 consecutive network failures.
             hints:
               - Track `declines` separately from the consecutive unknown count.
               - Reset the unknown count on a decline and stop before consuming the fourth timeout.
@@ -792,6 +1032,34 @@ lessons:
                   }
                   return MultiOrderResult(results, followUps, orders.size)
               }
+            guided:
+              template: "enum class AttemptOutcome { APPROVED, DECLINED, CONNECTIVITY, TIMEOUT, CANCELED_BY_READER }\nenum class CheckoutStatus { CAPTURED, FAILED_DECLINED, CANCELED, NEEDS_RECONCILIATION, AUTHORIZED_NOT_CAPTURED }\ndata class CheckoutResult(val status: CheckoutStatus, val attempts: Int, val intentId: String, val paymentIntentsCreated: Int = 1)\nfun runCheckout(outcomes: List<AttemptOutcome>, intentId: String = \"pi_1\", captureSucceeds: Boolean = true, useLimits: Boolean = true): CheckoutResult {\n    var attempts = 0; var declines = 0; var unknown = 0\n    for (outcome in outcomes) {\n        attempts++\n        when (outcome) {\n            AttemptOutcome.APPROVED -> return CheckoutResult(if (captureSucceeds) CheckoutStatus.CAPTURED else CheckoutStatus.AUTHORIZED_NOT_CAPTURED, attempts, intentId)\n            AttemptOutcome.CANCELED_BY_READER -> return CheckoutResult(CheckoutStatus.CANCELED, attempts, intentId)\n            AttemptOutcome.DECLINED -> { declines++; unknown = 0; if (useLimits && declines >= 2) return CheckoutResult(CheckoutStatus.FAILED_DECLINED, attempts, intentId) }\n            AttemptOutcome.CONNECTIVITY, AttemptOutcome.TIMEOUT -> { unknown++; if (useLimits && unknown >= 3) return CheckoutResult(CheckoutStatus.NEEDS_RECONCILIATION, attempts, intentId) }\n        }\n    }\n    return CheckoutResult(CheckoutStatus.NEEDS_RECONCILIATION, attempts, intentId)\n}\ndata class OrderInput(val orderId: String, val outcomes: List<AttemptOutcome>, val captureSucceeds: Boolean)\ndata class OrderResult(val orderId: String, val status: CheckoutStatus, val intentId: String)\ndata class MultiOrderResult(val orders: List<OrderResult>, val followUps: List<String>, val paymentIntentsCreated: Int)\nfun runOrders(orders: List<OrderInput>): MultiOrderResult {\n    val results = mutableListOf<OrderResult>(); val followUps = mutableListOf<String>()\n    orders.forEachIndexed { index, order ->\n        ____1\n        val status = ____2\n        results += OrderResult(order.orderId, status, intentId)\n        when (status) {\n            CheckoutStatus.AUTHORIZED_NOT_CAPTURED -> followUps += \"$intentId capture or cancel within 2 days\"\n            ____3\n            else -> Unit\n        }\n    }\n    return MultiOrderResult(results, followUps, orders.size)\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - val intentId = "pi_${index + 1}"
+                  options:
+                    - val intentId = "pi_${index + 1}"
+                    - val intentId = "pi_$index"
+                    - val intentId = "pi_1"
+                    - val intentId = order.orderId
+                - placeholder: ____2
+                  accepted:
+                    - runCheckout(order.outcomes, intentId, order.captureSucceeds, true).status
+                  options:
+                    - runCheckout(order.outcomes, intentId, order.captureSucceeds, false).status
+                    - runCheckout(order.outcomes, intentId, order.captureSucceeds, true).status
+                    - runCheckout(order.outcomes, intentId, true, true).status
+                    - runCheckout(order.outcomes, order.orderId, order.captureSucceeds, true).status
+                - placeholder: ____3
+                  accepted:
+                    - CheckoutStatus.NEEDS_RECONCILIATION -> followUps += "$intentId check its status before doing anything"
+                  options:
+                    - CheckoutStatus.NEEDS_RECONCILIATION -> followUps += "$intentId capture or cancel within 2 days"
+                    - CheckoutStatus.FAILED_DECLINED -> followUps += "$intentId check its status before doing anything"
+                    - CheckoutStatus.NEEDS_RECONCILIATION -> followUps += "$intentId check its status before doing anything"
+                    - CheckoutStatus.NEEDS_RECONCILIATION -> Unit
+              explanation: Coordinate multiple orders assigning distinct intent IDs and collecting required follow-up actions.
             hints:
               - Assign intent ids from the order index and call the part-2 flow for each order.
               - Add follow-ups only for authorized-but-uncaptured and reconciliation outcomes.
@@ -877,6 +1145,34 @@ lessons:
                   val bucket = installId.sumOf { it.code } % 100
                   return if (bucket < percentage) FeatureResult.Enabled else FeatureResult.DisabledByRollout
               }
+            guided:
+              template: "data class AppVersion(val major: Int, val minor: Int, val patch: Int)\nsealed interface FeatureResult {\n    data object Enabled : FeatureResult\n    data object TooOld : FeatureResult\n    data object InvalidVersion : FeatureResult\n    data object DisabledByRollout : FeatureResult\n}\nprivate fun parseVersion(text: String): AppVersion? = try {\n    val parts = text.split('.')\n    ____1\n    else AppVersion(parts[0].toInt(), parts[1].toInt(), parts[2].toInt())\n} catch (e: NumberFormatException) { null }\nfun compareVersions(left: String, right: String): Int {\n    val a = requireNotNull(parseVersion(left)); val b = requireNotNull(parseVersion(right))\n    return ____2\n}\nfun gateVersion(version: String, minimum: String): FeatureResult {\n    val actual = parseVersion(version) ?: return FeatureResult.InvalidVersion\n    val required = parseVersion(minimum) ?: return FeatureResult.InvalidVersion\n    return ____3\n}\nfun rolloutVersion(version: String, minimum: String, installId: String, percentage: Int): FeatureResult {\n    if (gateVersion(version, minimum) != FeatureResult.Enabled) return gateVersion(version, minimum)\n    val bucket = installId.sumOf { it.code } % 100\n    return if (bucket < percentage) FeatureResult.Enabled else FeatureResult.DisabledByRollout\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - if (parts.size != 3 || parts.any { it.isEmpty() || it.any { ch -> !ch.isDigit() } }) null
+                  options:
+                    - if (parts.size != 3) null
+                    - if (parts.size != 3 || parts.any { it.isEmpty() }) null
+                    - if (parts.size < 3) null
+                    - if (parts.size != 3 || parts.any { it.isEmpty() || it.any { ch -> !ch.isDigit() } }) null
+                - placeholder: ____2
+                  accepted:
+                    - compareValuesBy(a, b, { it.major }, { it.minor }, { it.patch })
+                  options:
+                    - compareValuesBy(a, b, { it.major }, { it.minor }, { it.patch })
+                    - compareValuesBy(a, b, { it.major }, { it.patch }, { it.minor })
+                    - compareValuesBy(b, a, { it.major }, { it.minor }, { it.patch })
+                    - compareValuesBy(a, b, { it.patch })
+                - placeholder: ____3
+                  accepted:
+                    - if (compareValuesBy(actual, required, { it.major }, { it.minor }, { it.patch }) >= 0) FeatureResult.Enabled else FeatureResult.TooOld
+                  options:
+                    - if (compareValuesBy(actual, required, { it.major }, { it.minor }, { it.patch }) > 0) FeatureResult.Enabled else FeatureResult.TooOld
+                    - if (compareValuesBy(actual, required, { it.major }, { it.minor }, { it.patch }) >= 0) FeatureResult.Enabled else FeatureResult.TooOld
+                    - if (compareValuesBy(actual, required, { it.major }, { it.minor }, { it.patch }) == 0) FeatureResult.Enabled else FeatureResult.TooOld
+                    - if (compareValuesBy(actual, required, { it.major }, { it.minor }, { it.patch }) <= 0) FeatureResult.Enabled else FeatureResult.TooOld
+              explanation: Parse semver triple strings, compare versions lexicographically across components, and gate against minimum required version.
             hints:
               - Split on `.` and require exactly three non-empty digit strings.
               - Compare major, then minor, then patch; do not compare the original strings.
@@ -934,6 +1230,34 @@ lessons:
                   if (gate != FeatureResult.Enabled) return gate
                   return if (installId.sumOf { it.code } % 100 < percentage) FeatureResult.Enabled else FeatureResult.DisabledByRollout
               }
+            guided:
+              template: "data class AppVersion(val major: Int, val minor: Int, val patch: Int)\nsealed interface FeatureResult {\n    data object Enabled : FeatureResult\n    data object TooOld : FeatureResult\n    data object InvalidVersion : FeatureResult\n    data object DisabledByRollout : FeatureResult\n}\nprivate fun parseVersion(text: String): AppVersion? = try {\n    val parts = text.split('.')\n    if (parts.size != 3 || parts.any { it.isEmpty() || it.any { ch -> !ch.isDigit() } }) null else AppVersion(parts[0].toInt(), parts[1].toInt(), parts[2].toInt())\n} catch (e: NumberFormatException) { null }\nfun compareVersions(left: String, right: String): Int {\n    val a = requireNotNull(parseVersion(left)); val b = requireNotNull(parseVersion(right))\n    return compareValuesBy(a, b, { it.major }, { it.minor }, { it.patch })\n}\nfun gateVersion(version: String, minimum: String): FeatureResult {\n    ____1\n    ____2\n    return if (compareValuesBy(actual, required, { it.major }, { it.minor }, { it.patch }) >= 0) FeatureResult.Enabled else FeatureResult.TooOld\n}\nfun rolloutVersion(version: String, minimum: String, installId: String, percentage: Int): FeatureResult {\n    val gate = gateVersion(version, minimum)\n    if (gate != FeatureResult.Enabled) return gate\n    return ____3\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - 'val actual = parseVersion(version) ?: return FeatureResult.InvalidVersion'
+                  options:
+                    - 'val actual = parseVersion(version) ?: return FeatureResult.TooOld'
+                    - 'val actual = parseVersion(version) ?: return FeatureResult.Enabled'
+                    - 'val actual = parseVersion(version) ?: return FeatureResult.InvalidVersion'
+                    - val actual = parseVersion(version)!!
+                - placeholder: ____2
+                  accepted:
+                    - 'val required = parseVersion(minimum) ?: return FeatureResult.InvalidVersion'
+                  options:
+                    - 'val required = parseVersion(minimum) ?: return FeatureResult.TooOld'
+                    - 'val required = parseVersion(minimum) ?: return FeatureResult.Enabled'
+                    - val required = parseVersion(minimum)!!
+                    - 'val required = parseVersion(minimum) ?: return FeatureResult.InvalidVersion'
+                - placeholder: ____3
+                  accepted:
+                    - if (installId.sumOf { it.code } % 100 < percentage) FeatureResult.Enabled else FeatureResult.DisabledByRollout
+                  options:
+                    - if (installId.sumOf { it.code } % 100 < percentage) FeatureResult.Enabled else FeatureResult.DisabledByRollout
+                    - if (installId.sumOf { it.code } % 100 <= percentage) FeatureResult.Enabled else FeatureResult.DisabledByRollout
+                    - if (installId.sumOf { it.code } % 100 > percentage) FeatureResult.Enabled else FeatureResult.DisabledByRollout
+                    - if (installId.length % 100 < percentage) FeatureResult.Enabled else FeatureResult.DisabledByRollout
+              explanation: Check version validity and rollout percentage bucket using stable install ID char code hashing.
             hints:
               - Parse both strings before comparing them so malformed input gets `InvalidVersion`.
               - A valid version below the minimum is `TooOld`; equality is enabled.
@@ -974,6 +1298,34 @@ lessons:
               fun compareVersions(left: String, right: String): Int { val a = requireNotNull(parseVersion(left)); val b = requireNotNull(parseVersion(right)); return compareValuesBy(a, b, { it.major }, { it.minor }, { it.patch }) }
               fun gateVersion(version: String, minimum: String): FeatureResult { val a = parseVersion(version) ?: return FeatureResult.InvalidVersion; val b = parseVersion(minimum) ?: return FeatureResult.InvalidVersion; return if (compareValuesBy(a, b, { it.major }, { it.minor }, { it.patch }) >= 0) FeatureResult.Enabled else FeatureResult.TooOld }
               fun rolloutVersion(version: String, minimum: String, installId: String, percentage: Int): FeatureResult { val gate = gateVersion(version, minimum); if (gate != FeatureResult.Enabled) return gate; return if (installId.sumOf { it.code } % 100 < percentage) FeatureResult.Enabled else FeatureResult.DisabledByRollout }
+            guided:
+              template: "data class AppVersion(val major: Int, val minor: Int, val patch: Int)\nsealed interface FeatureResult { data object Enabled : FeatureResult; data object TooOld : FeatureResult; data object InvalidVersion : FeatureResult; data object DisabledByRollout : FeatureResult }\nprivate fun parseVersion(text: String): AppVersion? = try { val p = text.split('.'); if (____1) null else AppVersion(p[0].toInt(), p[1].toInt(), p[2].toInt()) } catch (e: NumberFormatException) { null }\nfun compareVersions(left: String, right: String): Int { val a = requireNotNull(parseVersion(left)); val b = requireNotNull(parseVersion(right)); return compareValuesBy(a, b, { it.major }, { it.minor }, { it.patch }) }\nfun gateVersion(version: String, minimum: String): FeatureResult { val a = parseVersion(version) ?: return FeatureResult.InvalidVersion; val b = parseVersion(minimum) ?: return FeatureResult.InvalidVersion; return if (compareValuesBy(a, b, { it.major }, { it.minor }, { it.patch }) >= 0) FeatureResult.Enabled else FeatureResult.TooOld }\nfun rolloutVersion(version: String, minimum: String, installId: String, percentage: Int): FeatureResult { ____2; return if (____3) FeatureResult.Enabled else FeatureResult.DisabledByRollout }\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - p.size != 3 || p.any { it.isEmpty() || it.any { c -> !c.isDigit() } }
+                  options:
+                    - p.size != 3
+                    - p.size != 3 || p.any { it.isEmpty() || it.any { c -> !c.isDigit() } }
+                    - p.size != 3 || p.any { it.isEmpty() }
+                    - p.size != 3 || p.any { !it.all { c -> c.isDigit() } }
+                - placeholder: ____2
+                  accepted:
+                    - val gate = gateVersion(version, minimum); if (gate != FeatureResult.Enabled) return gate
+                  options:
+                    - val gate = gateVersion(version, minimum); return gate
+                    - val gate = gateVersion(version, minimum); if (gate == FeatureResult.TooOld) return gate
+                    - val gate = gateVersion(version, minimum); if (gate != FeatureResult.Enabled) return gate
+                    - if (gateVersion(version, minimum) == FeatureResult.InvalidVersion) return FeatureResult.InvalidVersion
+                - placeholder: ____3
+                  accepted:
+                    - installId.sumOf { it.code } % 100 < percentage
+                  options:
+                    - installId.sumOf { it.code } % 100 <= percentage
+                    - installId.sumOf { it.code } % 100 > percentage
+                    - installId.hashCode() % 100 < percentage
+                    - installId.sumOf { it.code } % 100 < percentage
+              explanation: Combine parsing validation, version gating, and rollout percentage assignment in single rollout pipeline.
             hints:
               - Gate the version before calculating the bucket.
               - "`abc` has bucket 94, and the comparison is strictly less than the percentage."
@@ -1038,6 +1390,34 @@ lessons:
                   val prefix = "terminal://payments/"
                   return if (link.startsWith(prefix) && link.removePrefix(prefix).isNotEmpty() && !link.removePrefix(prefix).contains('?')) Route.PaymentDetails(link.removePrefix(prefix)) else Route.Unknown
               }
+            guided:
+              template: "sealed interface Route {\n    data class PaymentDetails(val paymentId: String) : Route\n    data class Refund(val paymentId: String, val amountCents: Long) : Route\n    data class Invalid(val reason: String) : Route\n    data object Unknown : Route\n}\nfun parseRoute(link: String): Route {\n    ____1\n    return if (____2) ____3\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - val prefix = "terminal://payments/"
+                  options:
+                    - val prefix = "terminal://payments/"
+                    - val prefix = "terminal://payments"
+                    - val prefix = "terminal://refund?"
+                    - val prefix = "https://terminal/"
+                - placeholder: ____2
+                  accepted:
+                    - link.startsWith(prefix) && link.removePrefix(prefix).isNotEmpty() && !link.removePrefix(prefix).contains('?')
+                  options:
+                    - link.startsWith(prefix) && link.removePrefix(prefix).isNotEmpty()
+                    - link.startsWith(prefix) && link.removePrefix(prefix).isNotEmpty() && !link.removePrefix(prefix).contains('?')
+                    - link.startsWith(prefix)
+                    - link.startsWith(prefix) && !link.contains('?')
+                - placeholder: ____3
+                  accepted:
+                    - Route.PaymentDetails(link.removePrefix(prefix)) else Route.Unknown
+                  options:
+                    - Route.PaymentDetails(link) else Route.Unknown
+                    - Route.PaymentDetails(link.removePrefix(prefix)) else Route.Invalid("unknown")
+                    - Route.PaymentDetails(link.removePrefix(prefix)) else Route.Unknown
+                    - Route.Unknown else Route.PaymentDetails(link.removePrefix(prefix))
+              explanation: Route payments URI prefix extracting payment ID while rejecting malformed paths containing query characters.
             hints:
               - Match the exact scheme and path prefix.
               - Require a non-empty id and reject extra query text for this route.
@@ -1077,6 +1457,42 @@ lessons:
                   val amount = values["amount"]?.toLongOrNull() ?: return Route.Invalid("amount is not a number")
                   return if (amount > 0) Route.Refund(id, amount) else Route.Invalid("amount must be positive")
               }
+            guided:
+              template: "sealed interface Route { data class PaymentDetails(val paymentId: String) : Route; data class Refund(val paymentId: String, val amountCents: Long) : Route; data class Invalid(val reason: String) : Route; data object Unknown : Route }\nfun parseRoute(link: String): Route {\n    if (link.startsWith(\"terminal://payments/\")) { val id = link.removePrefix(\"terminal://payments/\"); return if (id.isNotEmpty() && !id.contains('?')) Route.PaymentDetails(id) else Route.Unknown }\n    ____1\n    val values = link.substringAfter('?').split('&').mapNotNull { pair -> pair.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] } }.toMap()\n    ____2\n    ____3\n    return ____4\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - if (!link.startsWith("terminal://refund?")) return Route.Unknown
+                  options:
+                    - if (!link.startsWith("terminal://refund")) return Route.Unknown
+                    - if (link.startsWith("terminal://refund?")) return Route.Unknown
+                    - if (!link.contains("refund")) return Route.Unknown
+                    - if (!link.startsWith("terminal://refund?")) return Route.Unknown
+                - placeholder: ____2
+                  accepted:
+                    - 'val id = values["paymentId"] ?: return Route.Invalid("missing paymentId")'
+                  options:
+                    - 'val id = values["paymentId"] ?: return Route.Invalid("missing paymentId")'
+                    - 'val id = values["paymentId"] ?: return Route.Unknown'
+                    - 'val id = values["id"] ?: return Route.Invalid("missing paymentId")'
+                    - val id = values["paymentId"]!!
+                - placeholder: ____3
+                  accepted:
+                    - 'val amount = values["amount"]?.toLongOrNull() ?: return Route.Invalid("amount is not a number")'
+                  options:
+                    - 'val amount = values["amount"]?.toLong() ?: return Route.Invalid("amount is not a number")'
+                    - 'val amount = values["amount"]?.toLongOrNull() ?: return Route.Invalid("amount is not a number")'
+                    - 'val amount = values["amount"]?.toLongOrNull() ?: return Route.Unknown'
+                    - 'val amount = values["amount"]?.toLongOrNull() ?: 0L'
+                - placeholder: ____4
+                  accepted:
+                    - if (amount > 0) Route.Refund(id, amount) else Route.Invalid("amount must be positive")
+                  options:
+                    - if (amount >= 0) Route.Refund(id, amount) else Route.Invalid("amount must be positive")
+                    - Route.Refund(id, amount)
+                    - if (amount > 0) Route.Refund(id, amount) else Route.Invalid("amount must be positive")
+                    - if (amount > 0) Route.Refund(id, amount) else Route.Unknown
+              explanation: Parse query parameters for refund route, verifying positive integer amount and required payment ID.
             hints:
               - Split off the query and read both known keys by name.
               - Convert the amount with `toLongOrNull()` and require it to be greater than zero.
@@ -1120,6 +1536,34 @@ lessons:
                   val amount = rawAmount.toLongOrNull() ?: return Route.Invalid("amount is not a number")
                   return if (amount > 0) Route.Refund(id, amount) else Route.Invalid("amount must be positive")
               }
+            guided:
+              template: "sealed interface Route { data class PaymentDetails(val paymentId: String) : Route; data class Refund(val paymentId: String, val amountCents: Long) : Route; data class Invalid(val reason: String) : Route; data object Unknown : Route }\nfun parseRoute(link: String): Route {\n    if (link.startsWith(\"terminal://payments/\")) { val id = link.removePrefix(\"terminal://payments/\"); return if (id.isNotEmpty() && !id.contains('?')) Route.PaymentDetails(id) else Route.Unknown }\n    if (!link.startsWith(\"terminal://refund?\")) return Route.Unknown\n    val pairs = link.substringAfter('?').split('&').mapNotNull { part -> part.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] } }\n    ____1\n    ____2\n    ____3\n    val amount = rawAmount.toLongOrNull() ?: return Route.Invalid(\"amount is not a number\")\n    return if (amount > 0) Route.Refund(id, amount) else Route.Invalid(\"amount must be positive\")\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - for (key in listOf("paymentId", "amount")) if (pairs.count { it.first == key } > 1) return Route.Invalid("duplicate $key")
+                  options:
+                    - for (key in listOf("paymentId", "amount")) if (pairs.count { it.first == key } >= 1) return Route.Invalid("duplicate $key")
+                    - if (pairs.size > 2) return Route.Invalid("duplicate parameters")
+                    - for (key in listOf("paymentId", "amount")) if (pairs.none { it.first == key }) return Route.Invalid("duplicate $key")
+                    - for (key in listOf("paymentId", "amount")) if (pairs.count { it.first == key } > 1) return Route.Invalid("duplicate $key")
+                - placeholder: ____2
+                  accepted:
+                    - 'val id = pairs.firstOrNull { it.first == "paymentId" }?.second ?: return Route.Invalid("missing paymentId")'
+                  options:
+                    - 'val id = pairs.firstOrNull { it.first == "paymentId" }?.second ?: return Route.Invalid("missing paymentId")'
+                    - 'val id = pairs.firstOrNull { it.first == "paymentId" }?.second ?: return Route.Unknown'
+                    - 'val id = pairs.find { it.first == "id" }?.second ?: return Route.Invalid("missing paymentId")'
+                    - val id = pairs.first().second
+                - placeholder: ____3
+                  accepted:
+                    - 'val rawAmount = pairs.firstOrNull { it.first == "amount" }?.second ?: return Route.Invalid("missing amount")'
+                  options:
+                    - 'val rawAmount = pairs.firstOrNull { it.first == "amount" }?.second ?: return Route.Unknown'
+                    - 'val rawAmount = pairs.firstOrNull { it.first == "amount" }?.second ?: return Route.Invalid("missing amount")'
+                    - 'val rawAmount = pairs.firstOrNull { it.first == "amount" }?.second ?: "0"'
+                    - val rawAmount = pairs.last().second
+              explanation: Enforce single occurrence of query keys to prevent parameter injection, reporting exact duplicate key name.
             hints:
               - Count known keys before converting the query pairs to a map.
               - Validate duplicates, required fields, numeric parsing, then positivity in that order.
@@ -1214,6 +1658,42 @@ lessons:
                   }
                   return states.mapValues { (id, state) -> ReaderSummary(state, successes[id] ?: 0, reconciliations[id] ?: 0) }
               }
+            guided:
+              template: "enum class ReaderState { DISCONNECTED, CONNECTED, COLLECTING, PROCESSING }\ndata class InvalidReaderEvent(val index: Int, val event: String, val state: ReaderState)\ndata class ReaderRun(val finalState: ReaderState, val invalidEvents: List<InvalidReaderEvent>, val successfulPayments: Int, val reconciliationCount: Int)\ndata class ReaderSummary(val state: ReaderState, val successfulPayments: Int, val reconciliationCount: Int = 0)\nfun nextState(state: ReaderState, event: String): ReaderState? = when {\n    ____1\n    ____2\n    ____3\n    state == ReaderState.COLLECTING && event == \"cancel\" -> ReaderState.CONNECTED\n    state == ReaderState.PROCESSING && event == \"succeeded\" -> ReaderState.CONNECTED\n    state == ReaderState.PROCESSING && event == \"failed\" -> ReaderState.COLLECTING\n    ____4\n    else -> null\n}\nfun runReader(events: List<String>): ReaderRun {\n    var state = ReaderState.DISCONNECTED; val invalid = mutableListOf<InvalidReaderEvent>(); var successes = 0; var reconciliations = 0\n    events.forEachIndexed { index, event -> val old = state; val next = nextState(old, event); if (next == null) invalid += InvalidReaderEvent(index, event, old) else { if (old == ReaderState.PROCESSING && event == \"succeeded\") successes++; if (old == ReaderState.PROCESSING && event == \"disconnect\") reconciliations++; state = next } }\n    return ReaderRun(state, invalid, successes, reconciliations)\n}\nfun runManyReaders(input: String): Map<String, ReaderSummary> {\n    val states = linkedMapOf<String, ReaderState>(); val successes = mutableMapOf<String, Int>(); val reconciliations = mutableMapOf<String, Int>()\n    for (line in input.lines()) {\n        if (line.isBlank()) continue\n        val parts = line.trim().split(Regex(\"\\\\s+\")); if (parts.size != 2) continue\n        val id = parts[0]; val event = parts[1]; val old = states[id] ?: ReaderState.DISCONNECTED; val next = nextState(old, event) ?: continue\n        if (old == ReaderState.PROCESSING && event == \"succeeded\") successes[id] = (successes[id] ?: 0) + 1\n        if (old == ReaderState.PROCESSING && event == \"disconnect\") reconciliations[id] = (reconciliations[id] ?: 0) + 1\n        states[id] = next\n    }\n    return states.mapValues { (id, state) -> ReaderSummary(state, successes[id] ?: 0, reconciliations[id] ?: 0) }\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - state == ReaderState.DISCONNECTED && event == "connect" -> ReaderState.CONNECTED
+                  options:
+                    - state == ReaderState.DISCONNECTED && event == "connect" -> ReaderState.COLLECTING
+                    - event == "connect" -> ReaderState.CONNECTED
+                    - state == ReaderState.DISCONNECTED && event == "connect" -> ReaderState.CONNECTED
+                    - state == ReaderState.CONNECTED && event == "connect" -> ReaderState.CONNECTED
+                - placeholder: ____2
+                  accepted:
+                    - state == ReaderState.CONNECTED && event == "collect" -> ReaderState.COLLECTING
+                  options:
+                    - state == ReaderState.CONNECTED && event == "collect" -> ReaderState.PROCESSING
+                    - state == ReaderState.DISCONNECTED && event == "collect" -> ReaderState.COLLECTING
+                    - event == "collect" -> ReaderState.COLLECTING
+                    - state == ReaderState.CONNECTED && event == "collect" -> ReaderState.COLLECTING
+                - placeholder: ____3
+                  accepted:
+                    - state == ReaderState.COLLECTING && event == "card_presented" -> ReaderState.PROCESSING
+                  options:
+                    - state == ReaderState.COLLECTING && event == "card_presented" -> ReaderState.PROCESSING
+                    - state == ReaderState.COLLECTING && event == "card_presented" -> ReaderState.CONNECTED
+                    - state == ReaderState.CONNECTED && event == "card_presented" -> ReaderState.PROCESSING
+                    - event == "card_presented" -> ReaderState.PROCESSING
+                - placeholder: ____4
+                  accepted:
+                    - state != ReaderState.DISCONNECTED && event == "disconnect" -> ReaderState.DISCONNECTED
+                  options:
+                    - state == ReaderState.CONNECTED && event == "disconnect" -> ReaderState.DISCONNECTED
+                    - state != ReaderState.DISCONNECTED && event == "disconnect" -> ReaderState.DISCONNECTED
+                    - event == "disconnect" -> ReaderState.DISCONNECTED
+                    - state != ReaderState.DISCONNECTED -> ReaderState.DISCONNECTED
+              explanation: Terminal card reader state machine transition rules between disconnected, connected, collecting, and processing.
             hints:
               - Encode the transition table as a `when` expression and return null for invalid events.
               - Fold the event list from `DISCONNECTED`, changing state only when `nextState` is non-null.
@@ -1274,6 +1754,34 @@ lessons:
                   }
                   return states.mapValues { (id, state) -> ReaderSummary(state, successes[id] ?: 0, reconciliations[id] ?: 0) }
               }
+            guided:
+              template: "enum class ReaderState { DISCONNECTED, CONNECTED, COLLECTING, PROCESSING }\ndata class InvalidReaderEvent(val index: Int, val event: String, val state: ReaderState)\ndata class ReaderRun(val finalState: ReaderState, val invalidEvents: List<InvalidReaderEvent>, val successfulPayments: Int, val reconciliationCount: Int)\ndata class ReaderSummary(val state: ReaderState, val successfulPayments: Int, val reconciliationCount: Int = 0)\nfun nextState(state: ReaderState, event: String): ReaderState? = when {\n    state == ReaderState.DISCONNECTED && event == \"connect\" -> ReaderState.CONNECTED\n    state == ReaderState.CONNECTED && event == \"collect\" -> ReaderState.COLLECTING\n    state == ReaderState.COLLECTING && event == \"card_presented\" -> ReaderState.PROCESSING\n    ____1\n    ____2\n    ____3\n    state != ReaderState.DISCONNECTED && event == \"disconnect\" -> ReaderState.DISCONNECTED\n    else -> null\n}\nfun runReader(events: List<String>): ReaderRun {\n    var state = ReaderState.DISCONNECTED; val invalid = mutableListOf<InvalidReaderEvent>(); var successes = 0; var reconciliations = 0\n    events.forEachIndexed { index, event -> val old = state; val next = nextState(old, event); if (next == null) invalid += InvalidReaderEvent(index, event, old) else { if (old == ReaderState.PROCESSING && event == \"succeeded\") successes++; if (old == ReaderState.PROCESSING && event == \"disconnect\") reconciliations++; state = next } }\n    return ReaderRun(state, invalid, successes, reconciliations)\n}\nfun runManyReaders(input: String): Map<String, ReaderSummary> {\n    val states = linkedMapOf<String, ReaderState>(); val successes = mutableMapOf<String, Int>(); val reconciliations = mutableMapOf<String, Int>()\n    for (line in input.lines()) {\n        if (line.isBlank()) continue\n        val parts = line.trim().split(Regex(\"\\\\s+\")); if (parts.size != 2) continue\n        val id = parts[0]; val event = parts[1]; val old = states[id] ?: ReaderState.DISCONNECTED; val next = nextState(old, event) ?: continue\n        if (old == ReaderState.PROCESSING && event == \"succeeded\") successes[id] = (successes[id] ?: 0) + 1\n        if (old == ReaderState.PROCESSING && event == \"disconnect\") reconciliations[id] = (reconciliations[id] ?: 0) + 1\n        states[id] = next\n    }\n    return states.mapValues { (id, state) -> ReaderSummary(state, successes[id] ?: 0, reconciliations[id] ?: 0) }\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - state == ReaderState.COLLECTING && event == "cancel" -> ReaderState.CONNECTED
+                  options:
+                    - state == ReaderState.COLLECTING && event == "cancel" -> ReaderState.DISCONNECTED
+                    - state == ReaderState.PROCESSING && event == "cancel" -> ReaderState.CONNECTED
+                    - state == ReaderState.COLLECTING && event == "cancel" -> ReaderState.CONNECTED
+                    - event == "cancel" -> ReaderState.CONNECTED
+                - placeholder: ____2
+                  accepted:
+                    - state == ReaderState.PROCESSING && event == "succeeded" -> ReaderState.CONNECTED
+                  options:
+                    - state == ReaderState.PROCESSING && event == "succeeded" -> ReaderState.PROCESSING
+                    - state == ReaderState.COLLECTING && event == "succeeded" -> ReaderState.CONNECTED
+                    - event == "succeeded" -> ReaderState.CONNECTED
+                    - state == ReaderState.PROCESSING && event == "succeeded" -> ReaderState.CONNECTED
+                - placeholder: ____3
+                  accepted:
+                    - state == ReaderState.PROCESSING && event == "failed" -> ReaderState.COLLECTING
+                  options:
+                    - state == ReaderState.PROCESSING && event == "failed" -> ReaderState.COLLECTING
+                    - state == ReaderState.PROCESSING && event == "failed" -> ReaderState.DISCONNECTED
+                    - state == ReaderState.PROCESSING && event == "failed" -> ReaderState.CONNECTED
+                    - event == "failed" -> ReaderState.COLLECTING
+              explanation: Handle payment cancellation, success transition to connected, and failed payment returning to collecting state.
             hints:
               - Capture the state before trying each event.
               - When `nextState` is null, append an `InvalidReaderEvent` and leave the state unchanged.
@@ -1352,6 +1860,34 @@ lessons:
                   }
                   return states.mapValues { (id, state) -> ReaderSummary(state, successes[id] ?: 0, reconciliations[id] ?: 0) }
               }
+            guided:
+              template: "enum class ReaderState { DISCONNECTED, CONNECTED, COLLECTING, PROCESSING }\ndata class InvalidReaderEvent(val index: Int, val event: String, val state: ReaderState)\ndata class ReaderRun(val finalState: ReaderState, val invalidEvents: List<InvalidReaderEvent>, val successfulPayments: Int, val reconciliationCount: Int)\ndata class ReaderSummary(val state: ReaderState, val successfulPayments: Int, val reconciliationCount: Int = 0)\nfun nextState(state: ReaderState, event: String): ReaderState? = when {\n    state == ReaderState.DISCONNECTED && event == \"connect\" -> ReaderState.CONNECTED\n    state == ReaderState.CONNECTED && event == \"collect\" -> ReaderState.COLLECTING\n    state == ReaderState.COLLECTING && event == \"card_presented\" -> ReaderState.PROCESSING\n    state == ReaderState.COLLECTING && event == \"cancel\" -> ReaderState.CONNECTED\n    state == ReaderState.PROCESSING && event == \"succeeded\" -> ReaderState.CONNECTED\n    state == ReaderState.PROCESSING && event == \"failed\" -> ReaderState.COLLECTING\n    state != ReaderState.DISCONNECTED && event == \"disconnect\" -> ReaderState.DISCONNECTED\n    else -> null\n}\nfun runReader(events: List<String>): ReaderRun {\n    var state = ReaderState.DISCONNECTED; val invalid = mutableListOf<InvalidReaderEvent>(); var successes = 0; var reconciliations = 0\n    events.forEachIndexed { index, event -> val old = state; val next = nextState(old, event); if (next == null) invalid += InvalidReaderEvent(index, event, old) else { if (old == ReaderState.PROCESSING && event == \"succeeded\") successes++; if (old == ReaderState.PROCESSING && event == \"disconnect\") reconciliations++; state = next } }\n    return ReaderRun(state, invalid, successes, reconciliations)\n}\nfun runManyReaders(input: String): Map<String, ReaderSummary> {\n    val states = linkedMapOf<String, ReaderState>()\n    val successes = mutableMapOf<String, Int>()\n    val reconciliations = mutableMapOf<String, Int>()\n    for (line in input.lines()) {\n        if (line.isBlank()) continue\n        val parts = line.trim().split(Regex(\"\\\\s+\"))\n        if (parts.size != 2) continue\n        val id = parts[0]\n        ____1\n        val event = parts[1]\n        val next = nextState(old, event) ?: continue\n        ____2\n        if (old == ReaderState.PROCESSING && event == \"disconnect\") reconciliations[id] = (reconciliations[id] ?: 0) + 1\n        states[id] = next\n    }\n    return ____3\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - 'val old = states[id] ?: ReaderState.DISCONNECTED'
+                  options:
+                    - 'val old = states[id] ?: ReaderState.CONNECTED'
+                    - 'val old = states[id] ?: ReaderState.DISCONNECTED'
+                    - val old = ReaderState.DISCONNECTED
+                    - val old = states.getValue(id)
+                - placeholder: ____2
+                  accepted:
+                    - 'if (old == ReaderState.PROCESSING && event == "succeeded") successes[id] = (successes[id] ?: 0) + 1'
+                  options:
+                    - 'if (event == "succeeded") successes[id] = (successes[id] ?: 0) + 1'
+                    - 'if (old == ReaderState.PROCESSING) successes[id] = (successes[id] ?: 0) + 1'
+                    - 'if (old == ReaderState.PROCESSING && event == "succeeded") successes[id] = (successes[id] ?: 0) + 1'
+                    - 'if (old == ReaderState.COLLECTING && event == "succeeded") successes[id] = (successes[id] ?: 0) + 1'
+                - placeholder: ____3
+                  accepted:
+                    - 'states.mapValues { (id, state) -> ReaderSummary(state, successes[id] ?: 0, reconciliations[id] ?: 0) }'
+                  options:
+                    - 'states.mapValues { (id, state) -> ReaderSummary(state, successes[id] ?: 0) }'
+                    - 'states.map { (id, state) -> ReaderSummary(state, successes[id] ?: 0, reconciliations[id] ?: 0) }'
+                    - states.mapValues { (_, state) -> ReaderSummary(state, 0, 0) }
+                    - 'states.mapValues { (id, state) -> ReaderSummary(state, successes[id] ?: 0, reconciliations[id] ?: 0) }'
+              explanation: Aggregate state and success metrics across multiple readers identified in log stream.
             hints:
               - Use a `LinkedHashMap` of reader ids to independent state and counters.
               - Apply one event at a time to the reader's existing state; do not restart it for every line.
@@ -1414,6 +1950,34 @@ lessons:
                   }
                   return states.mapValues { (id, state) -> ReaderSummary(state, successes[id] ?: 0, reconciliations[id] ?: 0) }
               }
+            guided:
+              template: "enum class ReaderState { DISCONNECTED, CONNECTED, COLLECTING, PROCESSING }\ndata class InvalidReaderEvent(val index: Int, val event: String, val state: ReaderState)\ndata class ReaderRun(val finalState: ReaderState, val invalidEvents: List<InvalidReaderEvent>, val successfulPayments: Int, val reconciliationCount: Int)\ndata class ReaderSummary(val state: ReaderState, val successfulPayments: Int, val reconciliationCount: Int = 0)\nfun nextState(state: ReaderState, event: String): ReaderState? = when {\n    state == ReaderState.DISCONNECTED && event == \"connect\" -> ReaderState.CONNECTED\n    state == ReaderState.CONNECTED && event == \"collect\" -> ReaderState.COLLECTING\n    state == ReaderState.COLLECTING && event == \"card_presented\" -> ReaderState.PROCESSING\n    state == ReaderState.COLLECTING && event == \"cancel\" -> ReaderState.CONNECTED\n    state == ReaderState.PROCESSING && event == \"succeeded\" -> ReaderState.CONNECTED\n    state == ReaderState.PROCESSING && event == \"failed\" -> ReaderState.COLLECTING\n    state != ReaderState.DISCONNECTED && event == \"disconnect\" -> ReaderState.DISCONNECTED\n    else -> null\n}\nfun runReader(events: List<String>): ReaderRun {\n    var state = ReaderState.DISCONNECTED; val invalid = mutableListOf<InvalidReaderEvent>(); var successes = 0; var reconciliations = 0\n    events.forEachIndexed { index, event -> val old = state; val next = nextState(old, event); if (next == null) invalid += InvalidReaderEvent(index, event, old) else { if (old == ReaderState.PROCESSING && event == \"succeeded\") successes++; ____1; state = next } }\n    return ReaderRun(state, invalid, successes, reconciliations)\n}\nfun runManyReaders(input: String): Map<String, ReaderSummary> {\n    val states = linkedMapOf<String, ReaderState>(); val successes = mutableMapOf<String, Int>(); val reconciliations = mutableMapOf<String, Int>()\n    for (line in input.lines()) {\n        if (line.isBlank()) continue\n        ____3\n        val id = parts[0]; val event = parts[1]; val old = states[id] ?: ReaderState.DISCONNECTED; val next = nextState(old, event) ?: continue\n        if (old == ReaderState.PROCESSING && event == \"succeeded\") successes[id] = (successes[id] ?: 0) + 1\n        ____2\n        states[id] = next\n    }\n    return states.mapValues { (id, state) -> ReaderSummary(state, successes[id] ?: 0, reconciliations[id] ?: 0) }\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - if (old == ReaderState.PROCESSING && event == "disconnect") reconciliations++
+                  options:
+                    - if (old == ReaderState.PROCESSING && event == "disconnect") reconciliations++
+                    - if (event == "disconnect") reconciliations++
+                    - if (old == ReaderState.PROCESSING) reconciliations++
+                    - if (old == ReaderState.CONNECTED && event == "disconnect") reconciliations++
+                - placeholder: ____2
+                  accepted:
+                    - 'if (old == ReaderState.PROCESSING && event == "disconnect") reconciliations[id] = (reconciliations[id] ?: 0) + 1'
+                  options:
+                    - 'if (event == "disconnect") reconciliations[id] = (reconciliations[id] ?: 0) + 1'
+                    - 'if (old == ReaderState.PROCESSING && event == "disconnect") reconciliations[id] = (reconciliations[id] ?: 0) + 1'
+                    - 'if (old == ReaderState.CONNECTED && event == "disconnect") reconciliations[id] = (reconciliations[id] ?: 0) + 1'
+                    - 'reconciliations[id] = (reconciliations[id] ?: 0) + 1'
+                - placeholder: ____3
+                  accepted:
+                    - val parts = line.trim().split(Regex("\\s+")); if (parts.size != 2) continue
+                  options:
+                    - val parts = line.trim().split(" "); if (parts.size != 2) continue
+                    - val parts = line.trim().split(Regex("\\s+"))
+                    - val parts = line.trim().split(Regex("\\s+")); if (parts.size != 2) continue
+                    - val parts = line.split(","); if (parts.size != 2) continue
+              explanation: Flag reconciliation whenever reader disconnects during payment processing.
             hints:
               - Count reconciliation when the old state is `PROCESSING` and the event is `disconnect`.
               - Persist the PaymentIntent id before reader processing and reconcile that same intent after reconnect.

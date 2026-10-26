@@ -1,6 +1,7 @@
 package dev.agam.learn.fake
 
 import dev.agam.learn.data.ProgressRecorder
+import dev.agam.learn.data.ProgressRepository
 import dev.agam.learn.data.SettingsRepository
 import dev.agam.learn.domain.DefaultXpPolicy
 import dev.agam.learn.domain.LeitnerScheduler
@@ -20,7 +21,7 @@ class FixedClock(var instant: Instant) : Clock {
 
 /** The real progress path, over in-memory fakes, with the real XP and review rules. */
 fun progressRecorderFor(
-    progress: FakeProgressRepository,
+    progress: ProgressRepository,
     courses: List<Course>,
     settings: SettingsRepository = FakeSettingsRepository(),
     clock: Clock = Clock.System,

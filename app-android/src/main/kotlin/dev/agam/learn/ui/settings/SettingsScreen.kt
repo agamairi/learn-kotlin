@@ -173,7 +173,6 @@ fun SettingsScreen(
 ) {
     val scrollState = rememberScrollState()
     var isApiKeyVisible by remember { mutableStateOf(false) }
-    var isTokenVisible by remember { mutableStateOf(false) }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -460,47 +459,6 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-
-            SettingsGroup(title = "Kotlin compiler server") {
-                Text(
-                    text = "Choose the server used to run compiler and code exercises.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedTextField(
-                    value = state.compilerServerUrl,
-                    onValueChange = onCompilerUrlChange,
-                    label = { Text("Server URL") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = state.compilerToken,
-                    onValueChange = onCompilerTokenChange,
-                    label = { Text("Bearer token (optional)") },
-                    placeholder = { Text("Optional bearer token") },
-                    singleLine = true,
-                    visualTransformation = if (isTokenVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    trailingIcon = {
-                        TextButton(
-                            onClick = { isTokenVisible = !isTokenVisible },
-                            modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                        ) {
-                            Text(if (isTokenVisible) "Hide" else "Show")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Button(
-                    onClick = onSaveCompilerSettings,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().height(48.dp)
-                ) {
-                    Text("Save compiler settings")
-                }
             }
 
             SettingsGroup(title = "Practice preferences") {

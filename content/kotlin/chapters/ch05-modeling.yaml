@@ -39,6 +39,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ['?: return']
+            options:
+              - '?: return'
+              - '?: throw'
+              - '?: break'
+              - ?.let
             case_sensitive: true
         explanation: '`toIntOrNull()` returns null for bad input; the Elvis operator can return from the function immediately. The blank is the guarded return expression.'
       - type: predict_output
@@ -94,6 +99,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["filterIsInstance"]
+            options:
+              - filterIsInstance
+              - filter
+              - filterByType
+              - mapNotNull
             case_sensitive: true
         explanation: '`filterIsInstance<RowResult.Ok>()` selects only the successful subtype and narrows its type for the following `map`.'
       - type: write_function
@@ -136,6 +146,34 @@ lessons:
               is RefundRequest.Partial -> "partial refund: ${request.cents} cents"
               is RefundRequest.Rejected -> "rejected: ${request.reason}"
           }
+        guided:
+          template: "sealed interface RefundRequest {\n    data object Full : RefundRequest\n    data class Partial(val cents: Long) : RefundRequest\n    data class Rejected(val reason: String) : RefundRequest\n}\n\nfun describeRefund(request: RefundRequest): String = when (request) {\n    ____1\n    ____2\n    ____3\n}\n"
+          blanks:
+            - placeholder: ____1
+              accepted:
+                - RefundRequest.Full -> "full refund"
+              options:
+                - RefundRequest.Full -> "full refund"
+                - is RefundRequest.Full -> "full refund"
+                - RefundRequest.Full -> "full"
+                - RefundRequest.Full -> "refund full"
+            - placeholder: ____2
+              accepted:
+                - 'is RefundRequest.Partial -> "partial refund: ${request.cents} cents"'
+              options:
+                - 'RefundRequest.Partial -> "partial refund: ${request.cents} cents"'
+                - 'is RefundRequest.Partial -> "partial refund: ${request.cents} cents"'
+                - 'is RefundRequest.Partial -> "partial: ${request.cents}"'
+                - is RefundRequest.Partial -> "partial refund"
+            - placeholder: ____3
+              accepted:
+                - 'is RefundRequest.Rejected -> "rejected: ${request.reason}"'
+              options:
+                - 'RefundRequest.Rejected -> "rejected: ${request.reason}"'
+                - 'is RefundRequest.Rejected -> "failed: ${request.reason}"'
+                - 'is RefundRequest.Rejected -> "rejected: ${request.reason}"'
+                - is RefundRequest.Rejected -> "rejected"
+          explanation: Use exhaustive pattern matching on sealed interface subtypes to format refund outcomes.
         hints:
           - 'Start with an exhaustive `when (request)`.'
           - 'Match the object with `RefundRequest.Full` and the data cases with `is`.'
@@ -171,6 +209,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["<"]
+            options:
+              - <
+              - '>'
+              - <=
+              - ==
             case_sensitive: true
         explanation: Values below 20 are low; 20 itself is not low and continues to the next branch.
       - type: predict_output
@@ -223,6 +266,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["mutableSetOf"]
+            options:
+              - mutableSetOf
+              - setOf
+              - hashSetOf
+              - linkedSetOf
             case_sensitive: true
         explanation: A mutable set is the right model for membership without duplicates.
       - type: write_function
@@ -262,6 +310,42 @@ lessons:
               val fraction = (amountMinor % 100).toString().padStart(2, '0')
               return "${currency.name} $whole.$fraction"
           }
+        guided:
+          template: "enum class Currency(val minorUnits: Int) {\n    USD(2), CAD(2), JPY(0)\n}\n\nfun format(currency: Currency, amountMinor: Long): String {\n    ____1\n    val whole = ____2\n    val fraction = ____3\n    ____4\n}\n"
+          blanks:
+            - placeholder: ____1
+              accepted:
+                - if (currency.minorUnits == 0) return "${currency.name} $amountMinor"
+              options:
+                - if (currency.minorUnits == 2) return "${currency.name} $amountMinor"
+                - if (currency.minorUnits == 0) return "$amountMinor"
+                - if (currency.minorUnits > 0) return "${currency.name} $amountMinor"
+                - if (currency.minorUnits == 0) return "${currency.name} $amountMinor"
+            - placeholder: ____2
+              accepted:
+                - amountMinor / 100
+              options:
+                - amountMinor / 100
+                - amountMinor % 100
+                - amountMinor / 10
+                - amountMinor / 1000
+            - placeholder: ____3
+              accepted:
+                - (amountMinor % 100).toString().padStart(2, '0')
+              options:
+                - (amountMinor % 100).toString()
+                - (amountMinor % 100).toString().padStart(2, '0')
+                - (amountMinor / 100).toString().padStart(2, '0')
+                - (amountMinor % 100).toString().padEnd(2, '0')
+            - placeholder: ____4
+              accepted:
+                - return "${currency.name} $whole.$fraction"
+              options:
+                - return "$whole.$fraction"
+                - return "${currency.name} $whole$fraction"
+                - return "${currency.name} $whole.$fraction"
+                - return "${currency.name} $fraction.$whole"
+          explanation: Check zero-decimal currencies before splitting two-decimal currencies into whole and padded fractional parts.
         hints:
           - 'Use `currency.minorUnits` to choose the JPY branch.'
           - For two-decimal currencies, divide by 100 and use the remainder as a two-character fraction.

@@ -7,24 +7,65 @@ import dev.agam.learn.ai.AiResult
 import dev.agam.learn.ai.AiTutor
 import dev.agam.learn.data.ExerciseAttempt
 import dev.agam.learn.data.ProgressRecorder
+import dev.agam.learn.data.RecordOutcome
 import dev.agam.learn.data.newAttemptId
+import dev.agam.learn.domain.AnswerGrader
+import dev.agam.learn.domain.CodePuzzleBlankFeedback
+import dev.agam.learn.domain.DefaultAnswerGrader
+import dev.agam.learn.model.CodePuzzle
 import dev.agam.learn.model.Exercise
 import dev.agam.learn.runner.CodeRunner
 import dev.agam.learn.runner.RunOutcome
 import dev.agam.learn.runner.SourceFile
+import dev.agam.learn.ui.lesson.components.renderPuzzleCode
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel managing code editing, compiler test executions, progressive hints,
- * and AI tutor interactions for a coding exercise.
+ * UI State for the Code Exercise Screen.
+ */
+data class CodeExerciseUiState(
+    val exerciseId: String = "",
+    val prompt: String = "",
+    val code: TextFieldValue = TextFieldValue(""),
+    val starterCode: String = "",
+    val hints: List<String> = emptyList(),
+    val revealedHintsCount: Int = 0,
+    val isRunning: Boolean = false,
+    val isChecking: Boolean = false,
+    val outcome: RunOutcome? = null,
+    val isAiAvailable: Boolean = false,
+    val isInterviewMode: Boolean = false,
+    val hasApiKey: Boolean = false,
+    val aiDialogState: AiDialogState? = null,
+    /** The source that last passed a check. Null after any edit. */
+    val passedSource: String? = null,
+    val aiHintsUsed: Set<Int> = emptySet(),
+    val guided: CodePuzzle? = null,
+    val puzzleAnswers: Map<String, String> = emptyMap(),
+    val isAnswerChecked: Boolean = false,
+    val isPassed: Boolean = false,
+    val recordError: String? = null,
+    val feedback: List<CodePuzzleBlankFeedback> = emptyList(),
+    val onSelectOption: (placeholder: String, option: String) -> Unit = { _, _ -> },
+    val onRetry: () -> Unit = {}
+) {
+    /** "Complete" is offered only when the puzzle has passed or matching source passed. */
+    val canComplete: Boolean
+        get() = isPassed || (passedSource != null && passedSource == code.text)
+}
+
+/**
+ * ViewModel managing offline multi-blank code puzzles, progressive hints,
+ * and backwards-compatible compiler execution for an exercise.
  */
 class CodeExerciseViewModel(
     private val exercise: Exercise.WriteFunction,
@@ -34,32 +75,78 @@ class CodeExerciseViewModel(
     val isInterviewMode: Boolean = false,
     /** False when no API key is saved; the AI controls then show the add-key hint and do nothing. */
     val hasApiKey: Boolean = false,
-    /** Present when this studio was opened from a lesson; its attempts then wait for lesson settlement. */
+    /** Present when this exercise was opened from a lesson; its attempts then wait for lesson settlement. */
     private val lessonRunId: String? = null,
-    coroutineScope: CoroutineScope? = null
+    coroutineScope: CoroutineScope? = null,
+    private val answerGrader: AnswerGrader = DefaultAnswerGrader()
 ) : ViewModel() {
 
     private val scope = coroutineScope ?: viewModelScope
+    private val guidedPuzzle = exercise.guided
+    private var pendingGuidedAttemptId: String? = null
 
     private val _uiState = MutableStateFlow(
         CodeExerciseUiState(
             exerciseId = exercise.id,
             prompt = exercise.prompt,
-            code = TextFieldValue(exercise.starterCode),
+            code = TextFieldValue(
+                if (guidedPuzzle != null) {
+                    renderPuzzleCode(
+                        guidedPuzzle.template,
+                        guidedPuzzle.blanks.map { it.placeholder },
+                        emptyMap()
+                    )
+                } else {
+                    exercise.starterCode
+                }
+            ),
             starterCode = exercise.starterCode,
             hints = exercise.hints,
             revealedHintsCount = 0,
             isAiAvailable = aiTutor != null,
             isInterviewMode = isInterviewMode,
-            hasApiKey = hasApiKey
+            hasApiKey = hasApiKey,
+            guided = guidedPuzzle,
+            onSelectOption = { placeholder, option -> selectOption(placeholder, option) },
+            onRetry = { retryPuzzle() }
         )
     )
     val uiState: StateFlow<CodeExerciseUiState> = _uiState.asStateFlow()
     private val _feedbackEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
-    /** One-shot events for hidden-test checks, with no replay after edits or screen restoration. */
+    /** One-shot events for checks, with no replay after edits or screen restoration. */
     val feedbackEvents: SharedFlow<Boolean> = _feedbackEvents.asSharedFlow()
 
     private val aiHintsUsed = mutableSetOf<Int>()
+
+    fun selectOption(placeholder: String, option: String) {
+        val state = _uiState.value
+        if (state.isChecking || state.isAnswerChecked || state.recordError != null) return
+        val puzzle = guidedPuzzle ?: return
+        val blank = puzzle.blanks.firstOrNull { it.placeholder == placeholder } ?: return
+        val offeredOption = blank.options.firstOrNull { it == option } ?: return
+        _uiState.update { current ->
+            if (current.isChecking || current.isAnswerChecked || current.recordError != null) return@update current
+            val updatedAnswers = current.puzzleAnswers + (placeholder to offeredOption)
+            val rendered = renderPuzzleCode(puzzle.template, puzzle.blanks.map { it.placeholder }, updatedAnswers)
+            current.copy(
+                puzzleAnswers = updatedAnswers,
+                code = TextFieldValue(rendered),
+                recordError = null
+            )
+        }
+    }
+
+    fun retryPuzzle() {
+        _uiState.update { current ->
+            if (current.isChecking || current.recordError != null) return@update current
+            current.copy(
+                isAnswerChecked = false,
+                isPassed = false,
+                feedback = emptyList(),
+                recordError = null
+            )
+        }
+    }
 
     fun onCodeChange(newCode: TextFieldValue) {
         updateCode { newCode }
@@ -73,10 +160,6 @@ class CodeExerciseViewModel(
         updateCode { insertTextAtCursor(it, "    ") }
     }
 
-    /**
-     * Applies an edit to the code. Any change to the text clears a pass, so "Complete" only ever
-     * follows a check of the exact source on screen. Cursor-only moves keep it.
-     */
     private fun updateCode(edit: (TextFieldValue) -> TextFieldValue) {
         _uiState.update { current ->
             val newCode = edit(current.code)
@@ -102,6 +185,9 @@ class CodeExerciseViewModel(
         }
     }
 
+    /**
+     * Compiler run action retained for developer/backwards testing. Unreachable in normal UI.
+     */
     fun runCode() {
         val currentCode = _uiState.value.code.text
         _uiState.update { it.copy(isRunning = true, outcome = null) }
@@ -122,14 +208,75 @@ class CodeExerciseViewModel(
     }
 
     /**
-     * Runs the hidden tests on the current source. Every graded check (a pass, a test failure or a
-     * compile error) is recorded once; a check that could not run (timeout or unavailable runner) is not.
+     * Checks the exercise. For guided puzzles, performs offline deterministic local grading.
+     * When puzzle data is absent, falls back to codeRunner for backwards-compatible test calls.
      */
     fun checkCode() {
         val state = _uiState.value
+        val guided = guidedPuzzle
+
+        if (guided != null) {
+            if (state.isChecking || state.isAnswerChecked) return
+            // Require all blanks to be answered
+            val allAnswered = guided.blanks.isNotEmpty() && guided.blanks.all {
+                val answer = state.puzzleAnswers[it.placeholder]
+                !answer.isNullOrBlank() && it.options.isNotEmpty() && answer in it.options
+            }
+            if (!allAnswered) return
+
+            val attemptId = pendingGuidedAttemptId ?: newAttemptId().also { pendingGuidedAttemptId = it }
+            _uiState.update { it.copy(isChecking = true, recordError = null) }
+
+            val gradeResult = answerGrader.gradeCodePuzzleWithFeedback(guided, state.puzzleAnswers)
+            val passed = gradeResult.isCorrect
+
+            scope.launch {
+                val recordOutcome = try {
+                    progressRecorder.record(
+                        ExerciseAttempt(
+                            attemptId = attemptId,
+                            exerciseId = exercise.id,
+                            correct = passed,
+                            aiHintsUsed = aiHintsUsed.toList(),
+                            lessonRunId = lessonRunId
+                        )
+                    )
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    null
+                }
+
+                if (recordOutcome == null || recordOutcome == RecordOutcome.Rejected) {
+                    _uiState.update {
+                        it.copy(
+                            isChecking = false,
+                            recordError = "Could not save progress. Check again to retry."
+                        )
+                    }
+                    return@launch
+                }
+
+                pendingGuidedAttemptId = null
+                _feedbackEvents.tryEmit(passed)
+                val renderedSource = state.code.text
+                _uiState.update {
+                    it.copy(
+                        isChecking = false,
+                        isAnswerChecked = true,
+                        isPassed = passed,
+                        feedback = gradeResult.feedback,
+                        passedSource = if (passed) renderedSource else null,
+                        recordError = null
+                    )
+                }
+            }
+            return
+        }
+
+        // Backwards compatibility branch for legacy exercises without guided puzzle data
         if (state.isChecking || state.isRunning) return
         val checkedSource = state.code.text
-        // Set before launching, so a second tap while this check runs is ignored.
         _uiState.update { it.copy(isChecking = true, outcome = null, passedSource = null) }
 
         scope.launch {
@@ -164,7 +311,6 @@ class CodeExerciseViewModel(
                 it.copy(
                     isChecking = false,
                     outcome = outcome,
-                    // A pass counts only for the source that was checked; an edit since then clears it.
                     passedSource = if (passed && it.code.text == checkedSource) checkedSource else null
                 )
             }

@@ -51,6 +51,11 @@ lessons:
           - placeholder: ____1
             accepted:
               - groupingBy
+            options:
+              - groupingBy
+              - groupBy
+              - partition
+              - associateBy
             case_sensitive: true
         explanation: "`groupingBy` creates a counting view without first building lists for every key."
       - type: multiple_choice
@@ -110,6 +115,42 @@ lessons:
               txs.groupBy({ it.merchant }, { it.cents })
                   .map { (merchant, amounts) -> merchant to amounts.sum() }
                   .sortedWith(compareByDescending<Pair<String, Long>> { it.second }.thenBy { it.first })
+        guided:
+          template: "data class Tx(val id: String, val merchant: String, val cents: Long, val card: String)\n\nfun totalsByMerchant(txs: List<Tx>): List<Pair<String, Long>> =\n    ____1\n        .map { (merchant, amounts) -> ____2 }\n        .sortedWith(____3.____4)\n"
+          blanks:
+            - placeholder: ____1
+              accepted:
+                - txs.groupBy({ it.merchant }, { it.cents })
+              options:
+                - txs.groupBy({ it.merchant }, { it.cents })
+                - txs.groupBy({ it.merchant }, { it.card })
+                - txs.associateBy({ it.merchant }, { it.cents })
+                - txs.groupBy { it.merchant }
+            - placeholder: ____2
+              accepted:
+                - merchant to amounts.sum()
+              options:
+                - merchant to amounts.size.toLong()
+                - merchant to amounts.sum()
+                - merchant to amounts.maxOrNull()!!
+                - merchant to amounts.average().toLong()
+            - placeholder: ____3
+              accepted:
+                - compareByDescending<Pair<String, Long>> { it.second }
+              options:
+                - compareBy<Pair<String, Long>> { it.second }
+                - compareByDescending<Pair<String, Long>> { it.first }
+                - compareByDescending<Pair<String, Long>> { it.second }
+                - compareBy<Pair<String, Long>> { it.first }
+            - placeholder: ____4
+              accepted:
+                - thenBy { it.first }
+              options:
+                - thenByDescending { it.first }
+                - thenBy { it.second }
+                - thenByDescending { it.second }
+                - thenBy { it.first }
+          explanation: Group transactions by merchant extracting cents, aggregate totals, and sort descending by total with ascending merchant tie-breaker.
         hints:
           - Group by merchant and project each transaction to its cents.
           - Convert the map entries to pairs, then sort with a descending total and ascending name.
@@ -140,6 +181,11 @@ lessons:
           - placeholder: ____1
             accepted:
               - add
+            options:
+              - add
+              - contains
+              - put
+              - insert
             case_sensitive: true
         explanation: "`MutableSet.add` returns false for a repeat, which makes duplicate detection concise."
       - type: predict_output
@@ -172,6 +218,11 @@ lessons:
           - placeholder: ____1
             accepted:
               - getOrPut
+            options:
+              - getOrPut
+              - getOrDefault
+              - computeIfAbsent
+              - getOrElse
             case_sensitive: true
         explanation: "`getOrPut` returns the existing bucket or stores and returns a new one."
       - type: predict_output

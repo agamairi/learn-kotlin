@@ -1,4 +1,4 @@
-# Content format spec (v1)
+# Content format spec (v2: guided code puzzles)
 
 This is the contract between content authors and the app. The content compiler validates every file against it, and the app's `@Serializable` models mirror it field for field. Field names are snake_case in YAML and JSON; Kotlin properties use camelCase with `@SerialName`.
 
@@ -26,7 +26,7 @@ Every exercise has `type`, `id` and `prompt` (Markdown). Other fields by type:
 
 ### `cloze`
 - `template`: code containing one or more blanks, each written as `____` followed by a number, for example `____1`, `____2`
-- `blanks`: a list, in order, each with `placeholder` (for example `____1`), `accepted` (a list of accepted answers), and `case_sensitive` (boolean, default true)
+- `blanks`: a list, in order, each with `placeholder` (for example `____1`), `accepted` (a list of accepted answers), `case_sensitive` (boolean, default true), and `options` (exactly four distinct, nonempty code strings). Exactly one option must match an accepted answer under the blank's trim/case rules. Authored course cards require choices; legacy AI-generated cloze cards may omit options and use text input.
 - `explanation`
 
 ### `predict_output`
@@ -35,26 +35,37 @@ Every exercise has `type`, `id` and `prompt` (Markdown). Other fields by type:
 - `explanation`
 
 ### `write_function`
-- `starter_code`: what the learner starts from (can contain `TODO()`)
+- `guided`: a code-puzzle object described below; this is the learner-facing exercise.
+- `starter_code`: original function signatures retained for author tests and optional AI context (can contain `TODO()`)
 - `hidden_tests`: a Kotlin JUnit 4 test class (`import org.junit.Test`, `import org.junit.Assert.assertEquals` and friends; no `kotlin.test`), run with the learner's file. Tests may only call functions and types declared in `starter_code`, so `starter_code` must declare every signature the tests use (bodies can be `TODO()`)
-- `reference_solution`: a complete solution that must pass `hidden_tests` (the content compiler checks this against the compiler server in CI)
+- `reference_solution`: a complete solution that must pass `hidden_tests` (checked by the optional live content verifier)
 - `hints`: 0 to 3 strings, in increasing order of help
 - `explanation` (optional)
 
 ### `multi_part_problem`
 - `story`: Markdown context for the whole problem
-- `parts`: an ordered list. Each part has `id`, `prompt`, `starter_code` (optional; later parts start from the learner's previous code, so new parts add new functions instead of changing earlier signatures), `hidden_tests` (testing this part), `reference_solution` (the complete file through this part, so it passes this part's tests and every earlier part's tests), `expected` (Markdown describing the expected result shown to the learner after passing), `hints` (optional, 0 to 3 strings). Every part is a coding part with tests; a discussion-only final part goes in the problem-level `discussion` field, never in `parts`
+- `parts`: an ordered list. Each part has `guided` (the learner-facing code puzzle), `id`, `prompt`, `starter_code` (optional; later parts start from the learner's previous code, so new parts add new functions instead of changing earlier signatures), `hidden_tests` (testing this part), `reference_solution` (the complete file through this part, so it passes this part's tests and every earlier part's tests), `expected` (Markdown describing the expected result shown to the learner after passing), `hints` (optional, 0 to 3 strings). Every part is a coding part with tests; a discussion-only final part goes in the problem-level `discussion` field, never in `parts`
 - `faq`: a list of `question` / `answer` pairs (the clarifying answers)
 - `discussion` (optional): Markdown for a discussion-only final part
 - `source_note` (optional): where the problem comes from, for example "Stripe's published sample, paraphrased"
+
+### Guided code-puzzle object
+
+`write_function.guided` and every `multi_part_problem.parts[].guided` contain:
+
+- `template`: the complete original `reference_solution` scaffold with three to five meaningful code spans replaced by numbered blanks.
+- `blanks`: the same placeholder/accepted/case/options structure as choice-based cloze. Each placeholder occurs once and has four authored choices with exactly one accepted equivalent.
+- `explanation` (optional): concise feedback about the chosen code decisions.
+
+Substituting each blank's canonical accepted value must reconstruct the owning reference solution exactly, allowing only line-ending normalization. The content validator checks that relationship. Keep the original prompt, story, expected result, IDs, reference solution and tests; do not replace the original algorithm with a smaller unrelated example. Long cumulative scaffolds can be shown through focused blank context in the app.
 
 ## Rules the content compiler enforces
 
 1. Every id is unique across the course.
 2. `correct_index` is within `options`.
-3. Every cloze placeholder in `blanks` appears exactly once in `template`, and every `____N` in `template` has a blank.
-4. `predict_output` programs compile and print exactly `expected_output` (checked in CI against the compiler server).
-5. Every `reference_solution` passes its `hidden_tests` (checked in CI).
+3. Every cloze or guided-code placeholder appears exactly once, every `____N` has a declaration, and each authored blank has four distinct nonempty options with exactly one accepted equivalent. All function/part exercises require guided data that reconstructs their original reference solution.
+4. `predict_output` programs compile and print exactly `expected_output` (checked by the optional live content verifier).
+5. Every `reference_solution` passes its `hidden_tests` (checked by the optional live content verifier).
 6. Markdown fields are non-empty.
 
 ## Source material for the Kotlin course

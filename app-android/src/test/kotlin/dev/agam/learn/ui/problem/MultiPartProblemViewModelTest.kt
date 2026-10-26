@@ -8,6 +8,8 @@ import dev.agam.learn.ai.DynamicAiTutor
 import dev.agam.learn.data.AppSettings
 import dev.agam.learn.data.SecretStore
 import dev.agam.learn.fake.FakeSettingsRepository
+import dev.agam.learn.model.Blank
+import dev.agam.learn.model.CodePuzzle
 import dev.agam.learn.model.FaqItem
 import dev.agam.learn.model.ProblemPart
 import dev.agam.learn.model.Exercise
@@ -24,6 +26,7 @@ import dev.agam.learn.ai.createAiHttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
@@ -33,9 +36,11 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Test
 import dev.agam.learn.data.ProgressRecorder
 import dev.agam.learn.fake.FakeProgressRepository
+import dev.agam.learn.fake.ControlledProgressRepository
 import dev.agam.learn.fake.courseOf
 import dev.agam.learn.fake.progressRecorderFor
 
@@ -50,6 +55,12 @@ class MultiPartProblemViewModelTest {
 
     private fun storedActivities() = runBlocking { progress.getDailyActivities() }
     private val testScope = CoroutineScope(Dispatchers.Unconfined)
+
+    private suspend fun awaitCheckFinished(viewModel: MultiPartProblemViewModel) {
+        withTimeout(5_000) {
+            while (viewModel.uiState.value.isChecking) delay(1)
+        }
+    }
 
     @Before
     fun setup() {
@@ -81,6 +92,26 @@ class MultiPartProblemViewModelTest {
         progress = FakeProgressRepository()
         recorder = progressRecorderFor(progress, listOf(courseOf(problem)))
     }
+
+    private fun guidedSinglePartProblem(problemId: String, partId: String) = Exercise.MultiPartProblem(
+        id = problemId,
+        prompt = "Return the payment total",
+        story = "Build the payment total calculation.",
+        parts = listOf(
+            ProblemPart(
+                id = partId,
+                prompt = "Return 42",
+                starterCode = "fun total(): Int = TODO()",
+                hiddenTests = "class Test",
+                referenceSolution = "fun total(): Int = 42",
+                expected = "42",
+                guided = CodePuzzle(
+                    template = "fun total(): Int = ____1",
+                    blanks = listOf(Blank("____1", listOf("42"), options = listOf("42", "0", "1", "2")))
+                )
+            )
+        )
+    )
 
     @Test
     fun testInitialState() {
@@ -129,7 +160,7 @@ class MultiPartProblemViewModelTest {
     @Test
     fun multipartPartsAndCompletionWaitForTheLessonSettlement() = runBlocking {
         val runId = "multipart-lesson-run"
-        recorder.beginLessonRun("lesson-test", runId)
+        assertTrue(recorder.beginLessonRun("lesson-test", runId))
         fakeRunner.testOutcome = RunOutcome.Passed(testsRun = 2, stdout = "")
         val viewModel = MultiPartProblemViewModel(
             problem = problem,
@@ -449,6 +480,290 @@ class MultiPartProblemViewModelTest {
         viewModel.toggleTimer()
         viewModel.toggleInterviewMode(true)
         assertTrue(viewModel.uiState.value.isInterviewMode)
+    }
+
+    @Test
+    fun testOfflineGuidedMultipartProgressionAndParentCompletionMarker() = runBlocking {
+        val runId = "multipart-guided-run"
+        val guidedProblem = Exercise.MultiPartProblem(
+            id = "guided-problem-1",
+            prompt = "Payment Pipeline",
+            story = "Process payment events offline.",
+            parts = listOf(
+                ProblemPart(
+                    id = "p-part1",
+                    prompt = "Parse payment event",
+                    starterCode = "fun parse(): String = TODO()",
+                    hiddenTests = "class Part1Test",
+                    referenceSolution = "fun parse() = \"payment\"",
+                    expected = "payment",
+                    guided = CodePuzzle(
+                        template = "fun parse(): String = ____1",
+                        blanks = listOf(
+                            Blank(
+                                placeholder = "____1",
+                                accepted = listOf("\"payment\""),
+                                options = listOf("\"payment\"", "\"charge\"", "\"refund\"", "\"payout\"")
+                            )
+                        )
+                    )
+                ),
+                ProblemPart(
+                    id = "p-part2",
+                    prompt = "Calculate fee",
+                    starterCode = "fun fee(): Long = TODO()",
+                    hiddenTests = "class Part2Test",
+                    referenceSolution = "fun fee() = 30L",
+                    expected = "30",
+                    guided = CodePuzzle(
+                        template = "fun fee(): Long = ____1",
+                        blanks = listOf(
+                            Blank(
+                                placeholder = "____1",
+                                accepted = listOf("30L"),
+                                options = listOf("30L", "15L", "50L", "0L")
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        val rec = progressRecorderFor(progress, listOf(courseOf(guidedProblem)))
+        assertTrue(rec.beginLessonRun("lesson-test", runId))
+
+        val viewModel = MultiPartProblemViewModel(
+            problem = guidedProblem,
+            codeRunner = fakeRunner,
+            progressRecorder = rec,
+            lessonRunId = runId,
+            coroutineScope = testScope
+        )
+
+        // Part 1 initial state: reflected code contains placeholder
+        assertTrue(viewModel.uiState.value.currentCode.text.contains("« Blank 1 »"))
+
+        // Select Part 1 option
+        viewModel.selectOption("____1", "\"payment\"")
+        assertEquals("fun parse(): String = \"payment\"", viewModel.uiState.value.currentCode.text)
+
+        // Check Part 1: passes offline and awards 50 XP
+        viewModel.checkPart()
+        awaitCheckFinished(viewModel)
+        assertTrue(viewModel.uiState.value.isCurrentPartPassed)
+        assertFalse(viewModel.uiState.value.allPartsPassed)
+        assertEquals(50, rec.lessonRunXp(runId))
+
+        // Reveal Part 2
+        viewModel.revealNextPart()
+        assertEquals(1, viewModel.uiState.value.currentPartIndex)
+        assertEquals(2, viewModel.uiState.value.unlockedPartCount)
+
+        // Select Part 2 option
+        viewModel.selectOption("____1", "30L")
+        assertEquals("fun fee(): Long = 30L", viewModel.uiState.value.currentCode.text)
+
+        // Check Part 2: passes offline, awards 50 XP (total 100), and records parent completion marker
+        viewModel.checkPart()
+        awaitCheckFinished(viewModel)
+        assertTrue(viewModel.uiState.value.isCurrentPartPassed)
+        assertTrue(viewModel.uiState.value.allPartsPassed)
+        assertEquals(100, rec.lessonRunXp(runId))
+
+        // Confirm parent completion marker was recorded into the lesson run
+        assertTrue(rec.lessonRunHasPassed(runId, "guided-problem-1"))
+
+        // Settlement commits both parts and the parent completion marker
+        val settlement = rec.settleLessonRun("lesson-test", runId)
+        assertEquals(dev.agam.learn.data.LessonRunSettlementOutcome.Settled(100), settlement)
+        val results = progress.getExerciseResults()
+        assertEquals(setOf("p-part1", "p-part2", "guided-problem-1"), results.map { it.exerciseId }.toSet())
+    }
+
+    @Test
+    fun testOfflineGuidedMultipartWrongRetryAndLocking() = runBlocking {
+        val guidedProblem = Exercise.MultiPartProblem(
+            id = "guided-wrong-retry",
+            prompt = "Payment Pipeline",
+            story = "Process payment events.",
+            parts = listOf(
+                ProblemPart(
+                    id = "part-retry",
+                    prompt = "Parse payment event",
+                    starterCode = "fun parse(): String = TODO()",
+                    hiddenTests = "class Part1Test",
+                    referenceSolution = "fun parse() = \"payment\"",
+                    expected = "payment",
+                    guided = CodePuzzle(
+                        template = "fun parse(): String = ____1",
+                        blanks = listOf(
+                            Blank(
+                                placeholder = "____1",
+                                accepted = listOf("\"payment\""),
+                                options = listOf("\"payment\"", "\"charge\"", "\"refund\"", "\"payout\"")
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val guidedRecorder = progressRecorderFor(progress, listOf(courseOf(guidedProblem)))
+        val viewModel = MultiPartProblemViewModel(
+            problem = guidedProblem,
+            codeRunner = fakeRunner,
+            progressRecorder = guidedRecorder,
+            coroutineScope = testScope
+        )
+
+        // Select WRONG option
+        viewModel.selectOption("____1", "\"charge\"")
+        viewModel.checkPart()
+        awaitCheckFinished(viewModel)
+
+        assertFalse(viewModel.uiState.value.isCurrentPartPassed)
+        assertEquals(true, viewModel.uiState.value.partChecked[0])
+
+        // Locked: another select while checked does not change choice
+        viewModel.selectOption("____1", "\"refund\"")
+        assertEquals("\"charge\"", viewModel.uiState.value.partPuzzleAnswers[0]?.get("____1"))
+
+        // Retry unlocks selections
+        viewModel.retryCurrentPart()
+        assertFalse(viewModel.uiState.value.partChecked[0] == true)
+
+        // Now select correct option
+        viewModel.selectOption("____1", "\"payment\"")
+        viewModel.checkPart()
+        awaitCheckFinished(viewModel)
+
+        assertTrue(viewModel.uiState.value.isCurrentPartPassed)
+        assertTrue(viewModel.uiState.value.allPartsPassed)
+    }
+
+    @Test
+    fun guidedPartCheckWaitsForItsRecordAndRejectsDuplicateChecksWhilePending() = runBlocking {
+        val guidedProblem = guidedSinglePartProblem("guided-pending-part", "part-pending")
+        val storage = FakeProgressRepository()
+        val repository = ControlledProgressRepository(storage).apply {
+            gatedExerciseId = "part-pending"
+        }
+        val progressRecorder = progressRecorderFor(repository, listOf(courseOf(guidedProblem)))
+        val runId = "guided-pending-part-run"
+        assertTrue(progressRecorder.beginLessonRun("lesson-test", runId))
+        val viewModel = MultiPartProblemViewModel(
+            problem = guidedProblem,
+            codeRunner = fakeRunner,
+            progressRecorder = progressRecorder,
+            lessonRunId = runId,
+            coroutineScope = testScope
+        )
+        viewModel.selectOption("____1", "42")
+
+        viewModel.checkPart()
+        withTimeout(5_000) { repository.historyReadEntered.await() }
+
+        assertTrue(viewModel.uiState.value.isChecking)
+        assertFalse(viewModel.uiState.value.isCurrentPartPassed)
+        assertFalse(viewModel.uiState.value.allPartsPassed)
+        viewModel.checkPart()
+        viewModel.selectOption("____1", "0")
+        assertEquals(1, repository.gatedHistoryReadCount)
+        assertEquals("42", viewModel.uiState.value.partPuzzleAnswers[0]?.get("____1"))
+        assertTrue(storage.getExerciseResults().isEmpty())
+
+        repository.releaseHistoryRead.complete(Unit)
+        awaitCheckFinished(viewModel)
+
+        assertFalse(viewModel.uiState.value.isChecking)
+        assertTrue(viewModel.uiState.value.isCurrentPartPassed)
+        assertTrue(viewModel.uiState.value.allPartsPassed)
+        assertEquals(50, progressRecorder.lessonRunXp(runId))
+    }
+
+    @Test
+    fun finalPartCannotFinishUntilTheParentCompletionMarkerIsRecorded() = runBlocking {
+        val guidedProblem = guidedSinglePartProblem("guided-pending-parent", "part-parent")
+        val storage = FakeProgressRepository()
+        val repository = ControlledProgressRepository(storage).apply {
+            gatedExerciseId = guidedProblem.id
+        }
+        val progressRecorder = progressRecorderFor(repository, listOf(courseOf(guidedProblem)))
+        val runId = "guided-pending-parent-run"
+        assertTrue(progressRecorder.beginLessonRun("lesson-test", runId))
+        val viewModel = MultiPartProblemViewModel(
+            problem = guidedProblem,
+            codeRunner = fakeRunner,
+            progressRecorder = progressRecorder,
+            lessonRunId = runId,
+            coroutineScope = testScope
+        )
+        viewModel.selectOption("____1", "42")
+
+        viewModel.checkPart()
+        withTimeout(5_000) { repository.historyReadEntered.await() }
+
+        assertTrue(viewModel.uiState.value.isChecking)
+        assertFalse(viewModel.uiState.value.isCurrentPartPassed)
+        assertFalse(viewModel.uiState.value.allPartsPassed)
+        // The part is staged in memory, but the parent marker is still pending and nothing is durable.
+        assertTrue(storage.getExerciseResults().isEmpty())
+        viewModel.checkPart()
+        viewModel.revealNextPart()
+        assertEquals(1, repository.gatedHistoryReadCount)
+        assertEquals(0, viewModel.uiState.value.currentPartIndex)
+
+        repository.releaseHistoryRead.complete(Unit)
+        awaitCheckFinished(viewModel)
+
+        assertFalse(viewModel.uiState.value.isChecking)
+        assertTrue(viewModel.uiState.value.isCurrentPartPassed)
+        assertTrue(viewModel.uiState.value.allPartsPassed)
+        assertTrue(progressRecorder.lessonRunHasPassed(runId, guidedProblem.id))
+    }
+
+    @Test
+    fun testStaleRunDoesNotAdvanceOrSettle() = runBlocking {
+        val activeRunId = "active-run"
+        val staleRunId = "stale-run"
+
+        val guidedProblem = Exercise.MultiPartProblem(
+            id = "guided-stale-test",
+            prompt = "Pipeline",
+            story = "Story",
+            parts = listOf(
+                ProblemPart(
+                    id = "stale-part-1",
+                    prompt = "Prompt",
+                    starterCode = "fun p() = 1",
+                    hiddenTests = "class Test",
+                    referenceSolution = "fun p() = 1",
+                    expected = "1",
+                    guided = CodePuzzle(
+                        template = "fun p() = ____1",
+                        blanks = listOf(Blank("____1", listOf("1"), options = listOf("1", "2", "3", "4")))
+                    )
+                )
+            )
+        )
+        val rec = progressRecorderFor(progress, listOf(courseOf(guidedProblem)))
+        assertTrue(rec.beginLessonRun("lesson-test", activeRunId))
+
+        // ViewModel initialized with a stale/unregistered runId
+        val viewModel = MultiPartProblemViewModel(
+            problem = guidedProblem,
+            codeRunner = fakeRunner,
+            progressRecorder = rec,
+            lessonRunId = staleRunId,
+            coroutineScope = testScope
+        )
+
+        viewModel.selectOption("____1", "1")
+        viewModel.checkPart()
+        awaitCheckFinished(viewModel)
+
+        // Active run was untouched
+        assertEquals(0, rec.lessonRunXp(activeRunId))
+        assertFalse(rec.lessonRunHasPassed(activeRunId, "guided-stale-test"))
     }
 
     private class FakeAiTutor : AiTutor {

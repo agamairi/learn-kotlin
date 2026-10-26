@@ -60,6 +60,34 @@ lessons:
 
               fun directCost(lanes: List<Lane>, from: String, to: String): Int? =
                   lanes.filter { it.from == from && it.to == to }.minOfOrNull { it.cost }
+            guided:
+              template: "data class Lane(val from: String, val to: String, val carrier: String, val cost: Int)\n\nfun parseLanes(text: String): List<Lane> = ____1.map { raw ->\n    val fields = raw.trim().split(\":\")\n    ____2\n    Lane(fields[0], fields[1], fields[2], ____3)\n}\n\nfun directCost(lanes: List<Lane>, from: String, to: String): Int? =\n    lanes.filter { it.from == from && it.to == to }.minOfOrNull { it.cost }\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - text.split(",").filter { it.isNotBlank() }
+                  options:
+                    - text.split(":").filter { it.isNotBlank() }
+                    - text.split(",").filter { it.isBlank() }
+                    - text.split(",")
+                    - text.split(",").filter { it.isNotBlank() }
+                - placeholder: ____2
+                  accepted:
+                    - require(fields.size == 4)
+                  options:
+                    - require(fields.size == 4)
+                    - require(fields.size == 3)
+                    - require(fields.size <= 4)
+                    - require(fields.size >= 4)
+                - placeholder: ____3
+                  accepted:
+                    - fields[3].toInt()
+                  options:
+                    - fields[2].toInt()
+                    - fields[3].toInt()
+                    - fields[3].toLong()
+                    - 'fields[3].toIntOrNull() ?: 0'
+              explanation: Parse each four-field lane and retain its integer cost; direct queries choose the cheapest matching lane.
             expected: |
               `cost(US, UK) = 5` and `cost(UK, US) = none`.
           - id: ch11-more-practice-shipping-routes-part-2
@@ -109,6 +137,34 @@ lessons:
                   }
                   return candidates.minByOrNull { it.cost }
               }
+            guided:
+              template: "data class Lane(val from: String, val to: String, val carrier: String, val cost: Int)\n\nfun parseLanes(text: String): List<Lane> = text.split(\",\").filter { it.isNotBlank() }.map { raw ->\n    val fields = raw.trim().split(\":\")\n    require(fields.size == 4)\n    Lane(fields[0], fields[1], fields[2], fields[3].toInt())\n}\n\nfun directCost(lanes: List<Lane>, from: String, to: String): Int? =\n    lanes.filter { it.from == from && it.to == to }.minOfOrNull { it.cost }\n\ndata class Route(val places: List<String>, val carriers: List<String>, val cost: Int)\n\nfun oneStopRoute(lanes: List<Lane>, from: String, to: String): Route? {\n    val candidates = ____1.flatMap { first ->\n        lanes.filter { ____2 }.map { second ->\n            Route(listOf(from, first.to, to), listOf(first.carrier, second.carrier), ____3)\n        }\n    }\n    return candidates.minByOrNull { it.cost }\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - lanes.filter { it.from == from }
+                  options:
+                    - lanes.filter { it.to == from }
+                    - lanes.filter { it.from == to }
+                    - lanes.filter { it.from == from }
+                    - lanes
+                - placeholder: ____2
+                  accepted:
+                    - it.from == first.to && it.to == to
+                  options:
+                    - it.from == first.to || it.to == to
+                    - it.from == from && it.to == to
+                    - it.from == first.to && it.to == from
+                    - it.from == first.to && it.to == to
+                - placeholder: ____3
+                  accepted:
+                    - first.cost + second.cost
+                  options:
+                    - first.cost + second.cost
+                    - first.cost - second.cost
+                    - first.cost * second.cost
+                    - first.cost + first.cost
+              explanation: Enumerate valid two-lane routes through one intermediate place and add both lane costs.
             expected: |
               `US → FR: US→UK→FR, [UPS, DHL], 7`.
           - id: ch11-more-practice-shipping-routes-part-3
@@ -181,6 +237,34 @@ lessons:
                   }
                   return null
               }
+            guided:
+              template: "import java.util.PriorityQueue\n\ndata class Lane(val from: String, val to: String, val carrier: String, val cost: Int)\n\nfun parseLanes(text: String): List<Lane> = text.split(\",\").filter { it.isNotBlank() }.map { raw ->\n    val fields = raw.trim().split(\":\")\n    require(fields.size == 4)\n    Lane(fields[0], fields[1], fields[2], fields[3].toInt())\n}\n\nfun directCost(lanes: List<Lane>, from: String, to: String): Int? =\n    lanes.filter { it.from == from && it.to == to }.minOfOrNull { it.cost }\n\ndata class Route(val places: List<String>, val carriers: List<String>, val cost: Int)\n\nfun oneStopRoute(lanes: List<Lane>, from: String, to: String): Route? {\n    val candidates = lanes.filter { it.from == from }.flatMap { first ->\n        lanes.filter { it.from == first.to && it.to == to }.map { second ->\n            Route(listOf(from, first.to, to), listOf(first.carrier, second.carrier), first.cost + second.cost)\n        }\n    }\n    return candidates.minByOrNull { it.cost }\n}\n\nprivate data class QueueItem(val cost: Int, val route: Route)\n\nfun cheapestRoute(lanes: List<Lane>, from: String, to: String): Route? {\n    if (from == to) return Route(listOf(from), emptyList(), 0)\n    val graph = lanes.groupBy { it.from }\n    val queue = PriorityQueue<QueueItem>(____1)\n    queue += QueueItem(0, Route(listOf(from), emptyList(), 0))\n    val best = mutableMapOf(from to 0)\n    while (queue.isNotEmpty()) {\n        val current = queue.remove()\n        if (current.cost != best[current.route.places.last()]) continue\n        if (current.route.places.last() == to) return current.route\n        for (lane in graph[current.route.places.last()].orEmpty()) {\n            ____2\n            val nextCost = current.cost + lane.cost\n            ____3 {\n                best[lane.to] = nextCost\n                queue += QueueItem(nextCost, Route(current.route.places + lane.to, current.route.carriers + lane.carrier, nextCost))\n            }\n        }\n    }\n    return null\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - compareBy { it.cost }
+                  options:
+                    - compareByDescending<QueueItem> { it.cost }
+                    - compareBy { it.cost }
+                    - compareBy<QueueItem> { it.route.places.size }
+                    - compareBy<QueueItem> { it.route.cost * -1 }
+                - placeholder: ____2
+                  accepted:
+                    - if (lane.to in current.route.places) continue
+                  options:
+                    - if (lane.from in current.route.places) continue
+                    - if (lane.to !in current.route.places) continue
+                    - if (lane.to in current.route.places) continue
+                    - if (lane.to == from) continue
+                - placeholder: ____3
+                  accepted:
+                    - if (nextCost < best.getOrDefault(lane.to, Int.MAX_VALUE))
+                  options:
+                    - if (nextCost > best.getOrDefault(lane.to, Int.MAX_VALUE))
+                    - if (nextCost < best.getOrDefault(lane.to, 0))
+                    - if (nextCost == best.getOrDefault(lane.to, Int.MAX_VALUE))
+                    - if (nextCost < best.getOrDefault(lane.to, Int.MAX_VALUE))
+              explanation: Use a min-priority queue, avoid cycles in the route, and enqueue a place only when its best known cost improves.
             expected: |
               `US → FR: US→CA→UK→FR, [FedEx, DHL, DHL], 6`. `US → UK` is now 4 via CA, cheaper than the direct lane.
           - id: ch11-more-practice-shipping-routes-part-4
@@ -261,6 +345,34 @@ lessons:
               fun cheapestRouteAvoiding(lanes: List<Lane>, from: String, to: String, refusedCarrier: String): Route? {
                   return cheapestRouteUsing(lanes, from, to, refusedCarrier)
               }
+            guided:
+              template: "import java.util.PriorityQueue\n\ndata class Lane(val from: String, val to: String, val carrier: String, val cost: Int)\n\nfun parseLanes(text: String): List<Lane> = text.split(\",\").filter { it.isNotBlank() }.map { raw ->\n    val fields = raw.trim().split(\":\")\n    require(fields.size == 4)\n    Lane(fields[0], fields[1], fields[2], fields[3].toInt())\n}\n\nfun directCost(lanes: List<Lane>, from: String, to: String): Int? =\n    lanes.filter { it.from == from && it.to == to }.minOfOrNull { it.cost }\n\ndata class Route(val places: List<String>, val carriers: List<String>, val cost: Int)\n\nfun oneStopRoute(lanes: List<Lane>, from: String, to: String): Route? {\n    val candidates = lanes.filter { it.from == from }.flatMap { first ->\n        lanes.filter { it.from == first.to && it.to == to }.map { second ->\n            Route(listOf(from, first.to, to), listOf(first.carrier, second.carrier), first.cost + second.cost)\n        }\n    }\n    return candidates.minByOrNull { it.cost }\n}\n\nprivate data class QueueItem(val cost: Int, val route: Route)\n\nfun cheapestRoute(lanes: List<Lane>, from: String, to: String): Route? =\n    cheapestRouteUsing(lanes, from, to, refusedCarrier = null)\n\nprivate fun cheapestRouteUsing(lanes: List<Lane>, from: String, to: String, refusedCarrier: String?): Route? {\n    if (from == to) return Route(listOf(from), emptyList(), 0)\n    val graph = lanes.groupBy { it.from }\n    val queue = PriorityQueue<QueueItem>(compareBy { it.cost })\n    queue += QueueItem(0, Route(listOf(from), emptyList(), 0))\n    val best = mutableMapOf(from to 0)\n    while (queue.isNotEmpty()) {\n        val current = queue.remove()\n        if (current.cost != best[current.route.places.last()]) continue\n        if (current.route.places.last() == to) return current.route\n        for (lane in graph[current.route.places.last()].orEmpty()) {\n            ____2\n            val nextCost = current.cost + lane.cost\n            ____3 {\n                best[lane.to] = nextCost\n                queue += QueueItem(nextCost, Route(current.route.places + lane.to, current.route.carriers + lane.carrier, nextCost))\n            }\n        }\n    }\n    return null\n}\n\nfun cheapestRouteAvoiding(lanes: List<Lane>, from: String, to: String, refusedCarrier: String): Route? {\n    ____1\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - return cheapestRouteUsing(lanes, from, to, refusedCarrier)
+                  options:
+                    - return cheapestRouteUsing(lanes, from, to, refusedCarrier)
+                    - return cheapestRouteUsing(lanes, to, from, refusedCarrier)
+                    - return cheapestRouteUsing(lanes, from, to, null)
+                    - return null
+                - placeholder: ____2
+                  accepted:
+                    - if (lane.carrier == refusedCarrier || lane.to in current.route.places) continue
+                  options:
+                    - if (lane.carrier != refusedCarrier || lane.to in current.route.places) continue
+                    - if (lane.carrier == refusedCarrier || lane.to in current.route.places) continue
+                    - if (lane.carrier == refusedCarrier && lane.to in current.route.places) continue
+                    - if (lane.to in current.route.places) continue
+                - placeholder: ____3
+                  accepted:
+                    - if (nextCost < best.getOrDefault(lane.to, Int.MAX_VALUE))
+                  options:
+                    - if (nextCost > best.getOrDefault(lane.to, Int.MAX_VALUE))
+                    - if (nextCost < best.getOrDefault(lane.to, 0))
+                    - if (nextCost < best.getOrDefault(lane.to, Int.MAX_VALUE))
+                    - if (nextCost == best.getOrDefault(lane.to, Int.MAX_VALUE))
+              explanation: Reuse Dijkstra while excluding every lane from the refused carrier and preserving shortest-cost updates.
             expected: |
               Without DHL: `US→CA→FR, [FedEx, FedEx], 12`.
         faq:
@@ -320,6 +432,34 @@ lessons:
                       (index < j && tokens[index] == "N") || (index >= j && tokens[index] == "Y")
                   }
               }
+            guided:
+              template: "private fun logTokens(log: String): List<String> = log.trim().takeIf { it.isNotEmpty() }?.split(Regex(\"\\\\s+\")) ?: emptyList()\n\nfun penalty(log: String, j: Int): Int {\n    ____1\n    ____2\n    return ____3\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - val tokens = logTokens(log)
+                  options:
+                    - val tokens = emptyList<String>()
+                    - val tokens = logTokens(log.drop(1))
+                    - val tokens = logTokens(j.toString())
+                    - val tokens = logTokens(log)
+                - placeholder: ____2
+                  accepted:
+                    - require(j in 0..tokens.size)
+                  options:
+                    - require(j in 0..tokens.size)
+                    - require(j in 0 until tokens.size)
+                    - require(j in 1..tokens.size)
+                    - check(j in 0..tokens.size)
+                - placeholder: ____3
+                  accepted:
+                    - "tokens.indices.count { index ->\n        (index < j && tokens[index] == \"N\") || (index >= j && tokens[index] == \"Y\")\n    }"
+                  options:
+                    - tokens.indices.count { index -> tokens[index] == "Y" }
+                    - "tokens.indices.count { index ->\n        (index < j && tokens[index] == \"N\") || (index >= j && tokens[index] == \"Y\")\n    }"
+                    - tokens.indices.count { index -> (index <= j && tokens[index] == "N") || (index > j && tokens[index] == "Y") }
+                    - tokens.indices.count { index -> (index < j && tokens[index] == "Y") || (index >= j && tokens[index] == "N") }
+              explanation: Count customers missed before closing plus hours kept open with no customers, allowing closing at either endpoint.
             expected: |
               For `"Y Y N Y"`: `j=0 → 3`, `j=2 → 1`, and `j=4 → 1`.
           - id: ch11-more-practice-shop-closing-time-part-2
@@ -354,6 +494,34 @@ lessons:
                   val tokens = logTokens(log)
                   return (0..tokens.size).minWith(compareBy<Int> { penalty(log, it) }.thenBy { it })
               }
+            guided:
+              template: "private fun logTokens(log: String): List<String> = log.trim().takeIf { it.isNotEmpty() }?.split(Regex(\"\\\\s+\")) ?: emptyList()\n\nfun penalty(log: String, j: Int): Int {\n    val tokens = logTokens(log)\n    require(j in 0..tokens.size)\n    return tokens.indices.count { index ->\n        (index < j && tokens[index] == \"N\") || (index >= j && tokens[index] == \"Y\")\n    }\n}\n\nfun bestClosingHour(log: String): Int {\n    val tokens = logTokens(log)\n    return ____1.minWith(____2.____3)\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - (0..tokens.size)
+                  options:
+                    - (0 until tokens.size)
+                    - (1..tokens.size)
+                    - (0..tokens.size)
+                    - (0..tokens.lastIndex)
+                - placeholder: ____2
+                  accepted:
+                    - compareBy<Int> { penalty(log, it) }
+                  options:
+                    - compareByDescending<Int> { penalty(log, it) }
+                    - compareBy<Int> { it }
+                    - compareBy<Int> { penalty(log, it) * -1 }
+                    - compareBy<Int> { penalty(log, it) }
+                - placeholder: ____3
+                  accepted:
+                    - thenBy { it }
+                  options:
+                    - thenBy { it }
+                    - thenByDescending { it }
+                    - thenBy { -it }
+                    - thenBy { penalty(log, it) }
+              explanation: Evaluate every possible closing hour, minimize the penalty, and break ties toward the earliest hour.
             expected: |
               `"Y Y N Y" → 2`, `"" → 0`, `"N N" → 0`, and `"Y Y" → 2`.
           - id: ch11-more-practice-shop-closing-time-part-3
@@ -409,6 +577,34 @@ lessons:
                   }
                   return answers
               }
+            guided:
+              template: "private fun logTokens(log: String): List<String> = log.trim().takeIf { it.isNotEmpty() }?.split(Regex(\"\\\\s+\")) ?: emptyList()\n\nfun penalty(log: String, j: Int): Int {\n    val tokens = logTokens(log)\n    require(j in 0..tokens.size)\n    return tokens.indices.count { index ->\n        (index < j && tokens[index] == \"N\") || (index >= j && tokens[index] == \"Y\")\n    }\n}\n\nfun bestClosingHour(log: String): Int {\n    val tokens = logTokens(log)\n    return (0..tokens.size).minWith(compareBy<Int> { penalty(log, it) }.thenBy { it })\n}\n\nfun bestClosingHours(stream: String): List<Int> {\n    val answers = mutableListOf<Int>()\n    var current = mutableListOf<String>()\n    var open = false\n    var invalid = false\n    ____1 {\n        when (token) {\n            ____2\n            \"END\" -> if (open) {\n                ____3\n                current = mutableListOf(); open = false; invalid = false\n            }\n            else -> if (open) {\n                if (token != \"Y\" && token != \"N\") invalid = true\n                current += token\n            }\n        }\n    }\n    return answers\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - for (token in stream.split(Regex("\\s+")).filter { it.isNotEmpty() })
+                  options:
+                    - for (token in stream.split(" ").filter { it.isNotEmpty() })
+                    - for (token in stream.split(Regex("\\s+")).filter { it.isNotEmpty() })
+                    - for (token in stream.split(Regex("\\s+")).filter { it.isEmpty() })
+                    - for (token in stream.split(","))
+                - placeholder: ____2
+                  accepted:
+                    - '"BEGIN" -> { current = mutableListOf(); open = true; invalid = false }'
+                  options:
+                    - '"BEGIN" -> { current = mutableListOf(); open = false; invalid = false }'
+                    - '"BEGIN" -> { current += token; open = true; invalid = false }'
+                    - '"BEGIN" -> { current = mutableListOf(); open = true; invalid = false }'
+                    - '"BEGIN" -> { open = true }'
+                - placeholder: ____3
+                  accepted:
+                    - if (!invalid) answers += bestClosingHour(current.joinToString(" "))
+                  options:
+                    - if (invalid) answers += bestClosingHour(current.joinToString(" "))
+                    - answers += bestClosingHour(current.joinToString(" "))
+                    - if (!invalid) answers += penalty(current.joinToString(" "), current.size)
+                    - if (!invalid) answers += bestClosingHour(current.joinToString(" "))
+              explanation: Frame each BEGIN/END log, ignore invalid hours, and emit one best closing hour for every valid completed log.
             expected: |
               `"BEGIN Y Y END N BEGIN BEGIN N Y END BEGIN Y" → [2, 0]`.
           - id: ch11-more-practice-shop-closing-time-part-4
@@ -484,6 +680,34 @@ lessons:
                   }
                   return bestHour
               }
+            guided:
+              template: "private fun logTokens(log: String): List<String> = log.trim().takeIf { it.isNotEmpty() }?.split(Regex(\"\\\\s+\")) ?: emptyList()\n\nfun penalty(log: String, j: Int): Int {\n    val tokens = logTokens(log)\n    require(j in 0..tokens.size)\n    return tokens.indices.count { index ->\n        (index < j && tokens[index] == \"N\") || (index >= j && tokens[index] == \"Y\")\n    }\n}\n\nfun bestClosingHour(log: String): Int {\n    val tokens = logTokens(log)\n    return (0..tokens.size).minWith(compareBy<Int> { penalty(log, it) }.thenBy { it })\n}\n\nfun bestClosingHours(stream: String): List<Int> {\n    val answers = mutableListOf<Int>()\n    var current = mutableListOf<String>()\n    var open = false\n    var invalid = false\n    for (token in stream.split(Regex(\"\\\\s+\")).filter { it.isNotEmpty() }) {\n        when (token) {\n            \"BEGIN\" -> { current = mutableListOf(); open = true; invalid = false }\n            \"END\" -> if (open) {\n                if (!invalid) answers += bestClosingHour(current.joinToString(\" \"))\n                current = mutableListOf(); open = false; invalid = false\n            }\n            else -> if (open) {\n                if (token != \"Y\" && token != \"N\") invalid = true\n                current += token\n            }\n        }\n    }\n    return answers\n}\n\nfun bestClosingHourLinear(log: String): Int {\n    // Stream the tokens rather than building a list: one token is alive at a time,\n    // so memory stays flat for a million-hour log. Only the running change is kept.\n    var delta = 0\n    var bestDelta = 0\n    var bestHour = 0\n    var hour = 0\n    for (token in Regex(\"\\\\s+\").splitToSequence(log).filter { it.isNotEmpty() }) {\n        hour++\n        ____1\n        ____2 {\n            bestDelta = delta\n            ____3\n        }\n    }\n    return bestHour\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - delta += if (token == "Y") -1 else 1
+                  options:
+                    - delta += if (token == "Y") -1 else 1
+                    - delta += if (token == "Y") 1 else -1
+                    - delta += if (token == "N") -1 else 1
+                    - delta += 1
+                - placeholder: ____2
+                  accepted:
+                    - if (delta < bestDelta)
+                  options:
+                    - if (delta > bestDelta)
+                    - if (delta < bestDelta)
+                    - if (delta <= bestDelta)
+                    - if (hour < bestDelta)
+                - placeholder: ____3
+                  accepted:
+                    - bestHour = hour
+                  options:
+                    - bestHour = hour - 1
+                    - bestHour = bestDelta
+                    - bestHour = hour
+                    - bestHour = tokens.size
+              explanation: Track the prefix penalty change in one pass and update only on a strict improvement so ties keep the earliest hour.
             expected: |
               Scan the log once: moving the boundary past `Y` lowers the penalty by 1,
               while moving it past `N` raises it by 1. The first version recomputed
@@ -537,6 +761,34 @@ lessons:
                   }
                   return times
               }
+            guided:
+              template: "fun retryTimes(t0: Int): List<Int> {\n    val times = mutableListOf(t0)\n    var wait = 1\n    ____1 {\n        times += times.last() + ____2\n        ____3\n    }\n    return times\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - repeat(7)
+                  options:
+                    - repeat(6)
+                    - repeat(8)
+                    - repeat(60)
+                    - repeat(7)
+                - placeholder: ____2
+                  accepted:
+                    - wait.coerceAtMost(60)
+                  options:
+                    - wait.coerceAtMost(60)
+                    - wait.coerceAtLeast(60)
+                    - wait.coerceAtMost(30)
+                    - wait
+                - placeholder: ____3
+                  accepted:
+                    - wait = (wait * 2).coerceAtMost(60)
+                  options:
+                    - wait = (wait + 2).coerceAtMost(60)
+                    - wait = (wait * 2).coerceAtMost(60)
+                    - wait = (wait * 2).coerceAtLeast(60)
+                    - wait = wait + 1
+              explanation: Schedule the initial attempt and seven retries, doubling delay while capping each wait at 60 minutes.
             expected: |
               `t0 = 0 → [0, 1, 3, 7, 15, 31, 63, 123]`.
           - id: ch11-more-practice-webhook-retries-part-2
@@ -587,6 +839,34 @@ lessons:
                   if (success >= 0) DeliveryResult(id, "delivered", times[success], success + 1)
                   else DeliveryResult(id, "gave up", times[minOf(results.length, 8) - 1], minOf(results.length, 8))
               }
+            guided:
+              template: "data class DeliveryResult(val eventId: String, val status: String, val minute: Int, val attempt: Int)\n\nfun retryTimes(t0: Int): List<Int> {\n    val times = mutableListOf(t0)\n    var wait = 1\n    repeat(7) {\n        times += times.last() + wait.coerceAtMost(60)\n        wait = (wait * 2).coerceAtMost(60)\n    }\n    return times\n}\n\nfun deliverEvents(input: String): List<DeliveryResult> = input.lines().filter { it.isNotBlank() }.map { line ->\n    val fields = line.split(\",\")\n    ____1\n    val id = fields[0].trim()\n    val times = retryTimes(fields[1].trim().toInt())\n    val results = fields[2].trim()\n    val success = ____2\n    if (success >= 0) DeliveryResult(id, \"delivered\", times[success], success + 1)\n    else DeliveryResult(id, \"gave up\", ____3, minOf(results.length, 8))\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - require(fields.size == 3)
+                  options:
+                    - require(fields.size == 2)
+                    - require(fields.size >= 3)
+                    - require(fields.size == 3)
+                    - require(fields.size <= 3)
+                - placeholder: ____2
+                  accepted:
+                    - results.take(8).indexOfFirst { it == 'S' }
+                  options:
+                    - results.take(8).indexOfLast { it == 'S' }
+                    - results.take(7).indexOfFirst { it == 'S' }
+                    - results.take(8).indexOfFirst { it == 'F' }
+                    - results.take(8).indexOfFirst { it == 'S' }
+                - placeholder: ____3
+                  accepted:
+                    - times[minOf(results.length, 8) - 1]
+                  options:
+                    - times[minOf(results.length, 8) - 1]
+                    - times[minOf(results.length, 8)]
+                    - times[maxOf(results.length, 8) - 1]
+                    - times[0]
+              explanation: Use the first success among at most eight attempts; otherwise report the final attempted minute and attempt number.
             expected: |
               `evt_1 delivered at minute 3 (attempt 3)` · `evt_2 gave up at minute 133` · `evt_3 delivered at minute 5`.
           - id: ch11-more-practice-webhook-retries-part-3
@@ -654,6 +934,34 @@ lessons:
                   }
                   return EndpointReport(null, delivered.distinct())
               }
+            guided:
+              template: "data class DeliveryResult(val eventId: String, val status: String, val minute: Int, val attempt: Int)\ndata class EndpointReport(val disabledAt: Int?, val deliveredEventIds: List<String>)\n\nfun retryTimes(t0: Int): List<Int> {\n    val times = mutableListOf(t0)\n    var wait = 1\n    repeat(7) {\n        times += times.last() + wait.coerceAtMost(60)\n        wait = (wait * 2).coerceAtMost(60)\n    }\n    return times\n}\n\nfun deliverEvents(input: String): List<DeliveryResult> = input.lines().filter { it.isNotBlank() }.map { line ->\n    val fields = line.split(\",\")\n    require(fields.size == 3)\n    val times = retryTimes(fields[1].trim().toInt())\n    val results = fields[2].trim().take(8)\n    val success = results.indexOfFirst { it == 'S' }\n    if (success >= 0) DeliveryResult(fields[0].trim(), \"delivered\", times[success], success + 1)\n    else DeliveryResult(fields[0].trim(), \"gave up\", times[results.length - 1], results.length)\n}\n\nprivate data class Attempt(val eventId: String, val minute: Int, val success: Boolean)\n\nfun mergeWebhookAttempts(input: String): EndpointReport {\n    val attempts = input.lines().filter { it.isNotBlank() }.flatMap { line ->\n        val fields = line.split(\",\")\n        val times = retryTimes(fields[1].trim().toInt())\n        fields[2].trim().take(8).mapIndexed { index, result ->\n            Attempt(fields[0].trim(), times[index], result == 'S')\n        }\n    ____1\n    var failures = 0\n    val delivered = mutableListOf<String>()\n    for (attempt in attempts) {\n        ____2\n            failures++\n            ____3 return EndpointReport(attempt.minute, delivered.distinct())\n        }\n    }\n    return EndpointReport(null, delivered.distinct())\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - '}.sortedWith(compareBy<Attempt> { it.minute }.thenBy { it.eventId })'
+                  options:
+                    - '}.sortedWith(compareByDescending<Attempt> { it.minute }.thenBy { it.eventId })'
+                    - '}.sortedWith(compareBy<Attempt> { it.minute }.thenBy { it.eventId })'
+                    - '}.sortedWith(compareBy<Attempt> { it.eventId }.thenBy { it.minute })'
+                    - '}.sortedWith(compareBy<Attempt> { it.minute })'
+                - placeholder: ____2
+                  accepted:
+                    - "if (attempt.success) {\n            failures = 0\n            delivered += attempt.eventId\n        } else {"
+                  options:
+                    - "if (attempt.success) {\n            failures++\n            delivered += attempt.eventId\n        } else {"
+                    - "if (attempt.success) {\n            failures = 0\n        } else {"
+                    - "if (attempt.success) {\n            failures = 0\n            delivered += attempt.eventId\n        } else {"
+                    - "if (attempt.success) {\n            failures = 0\n            delivered += attempt.minute.toString()\n        } else {"
+                - placeholder: ____3
+                  accepted:
+                    - if (failures == 5)
+                  options:
+                    - if (failures > 5)
+                    - if (failures >= 4)
+                    - if (failures == 0)
+                    - if (failures == 5)
+              explanation: Merge attempts by time, reset the consecutive-failure count on success, and disable the endpoint on its fifth failure.
             expected: |
               `evt_1,0,FFFFFFS` and `evt_2,20,S` disable the endpoint at minute 15;
               neither event is delivered.
@@ -734,6 +1042,34 @@ lessons:
                   val edge = graph[from].orEmpty().firstOrNull { it.to == to } ?: throw IllegalArgumentException("unknown or non-direct currency")
                   return money(BigDecimal(amount).multiply(edge.rate))
               }
+            guided:
+              template: "import java.math.BigDecimal\nimport java.math.RoundingMode\n\nprivate data class FxEdge(val to: String, val rate: BigDecimal)\n\nprivate fun graph(ratesText: String): Map<String, List<FxEdge>> {\n    val result = mutableMapOf<String, MutableList<FxEdge>>()\n    for (raw in ratesText.split(\",\").filter { it.isNotBlank() }) {\n        val fields = raw.trim().split(\":\")\n        require(fields.size == 3)\n        val from = fields[0].trim(); val to = fields[1].trim(); val rate = BigDecimal(fields[2].trim())\n        result.getOrPut(from) { mutableListOf() } += FxEdge(to, rate)\n        result.getOrPut(to) { mutableListOf() } += FxEdge(from, ____1)\n    }\n    return result\n}\n\nprivate fun money(value: BigDecimal): String = ____2\n\nfun convertDirect(ratesText: String, amount: String, from: String, to: String): String {\n    val graph = graph(ratesText)\n    if (from == to) {\n        require(graph.containsKey(from))\n        return money(BigDecimal(amount))\n    }\n    val edge = graph[from].orEmpty().firstOrNull { it.to == to } ?: throw IllegalArgumentException(\"unknown or non-direct currency\")\n    return money(____3)\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - BigDecimal.ONE.divide(rate, 24, RoundingMode.HALF_UP)
+                  options:
+                    - BigDecimal.ONE.divide(rate, 24, RoundingMode.HALF_UP)
+                    - BigDecimal.ONE.divide(rate)
+                    - BigDecimal.ONE.multiply(rate)
+                    - BigDecimal.ONE.divide(rate, 2, RoundingMode.DOWN)
+                - placeholder: ____2
+                  accepted:
+                    - value.setScale(2, RoundingMode.HALF_UP).toPlainString()
+                  options:
+                    - value.setScale(2, RoundingMode.DOWN).toPlainString()
+                    - value.setScale(2, RoundingMode.HALF_UP).toPlainString()
+                    - value.setScale(0, RoundingMode.HALF_UP).toPlainString()
+                    - value.toString()
+                - placeholder: ____3
+                  accepted:
+                    - BigDecimal(amount).multiply(edge.rate)
+                  options:
+                    - BigDecimal(amount).add(edge.rate)
+                    - BigDecimal(amount).divide(edge.rate, 2, RoundingMode.HALF_UP)
+                    - BigDecimal(amount).multiply(edge.rate)
+                    - BigDecimal(amount).multiply(BigDecimal.valueOf(edge.rate.toDouble()))
+              explanation: Build reciprocal rates with bounded decimal precision and round the converted amount to two places using half-up rounding.
             expected: |
               `100 USD → CAD = 137.00` · `137 CAD → USD = 100.00` · `10 EUR → USD = 10.87`.
           - id: ch11-more-practice-currency-conversion-part-2
@@ -805,6 +1141,34 @@ lessons:
                   val path = findPath(graph(ratesText), from, to, 2) ?: throw IllegalArgumentException("no path")
                   return convertPath(amount, path)
               }
+            guided:
+              template: "import java.math.BigDecimal\nimport java.math.RoundingMode\n\nprivate data class FxEdge(val to: String, val rate: BigDecimal)\n\nprivate fun graph(ratesText: String): Map<String, List<FxEdge>> {\n    val result = mutableMapOf<String, MutableList<FxEdge>>()\n    for (raw in ratesText.split(\",\").filter { it.isNotBlank() }) {\n        val fields = raw.trim().split(\":\")\n        require(fields.size == 3)\n        val from = fields[0].trim(); val to = fields[1].trim(); val rate = BigDecimal(fields[2].trim())\n        result.getOrPut(from) { mutableListOf() } += FxEdge(to, rate)\n        result.getOrPut(to) { mutableListOf() } += FxEdge(from, BigDecimal.ONE.divide(rate, 24, RoundingMode.HALF_UP))\n    }\n    return result\n}\n\nprivate fun money(value: BigDecimal): String = value.setScale(2, RoundingMode.HALF_UP).toPlainString()\n\nfun convertDirect(ratesText: String, amount: String, from: String, to: String): String {\n    val graph = graph(ratesText)\n    if (from == to) {\n        require(graph.containsKey(from))\n        return money(BigDecimal(amount))\n    }\n    val edge = graph[from].orEmpty().firstOrNull { it.to == to } ?: throw IllegalArgumentException(\"unknown or non-direct currency\")\n    return money(BigDecimal(amount).multiply(edge.rate))\n}\n\nprivate fun findPath(graph: Map<String, List<FxEdge>>, from: String, to: String, maxEdges: Int): List<FxEdge>? {\n    if (from == to) return emptyList()\n    fun visit(current: String, path: List<FxEdge>, seen: Set<String>): List<FxEdge>? {\n        if (current == to) return path\n        ____1\n        return graph[current].orEmpty().firstNotNullOfOrNull { edge ->\n            ____2\n        }\n    }\n    require(graph.containsKey(from) && graph.containsKey(to))\n    return visit(from, emptyList(), setOf(from))\n}\n\nprivate fun convertPath(amount: String, path: List<FxEdge>): String {\n    var value = BigDecimal(amount)\n    ____3\n    return money(value)\n}\n\nfun convertWithOneIntermediate(ratesText: String, amount: String, from: String, to: String): String {\n    val path = findPath(graph(ratesText), from, to, 2) ?: throw IllegalArgumentException(\"no path\")\n    return convertPath(amount, path)\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - if (path.size == maxEdges) return null
+                  options:
+                    - if (path.size > maxEdges) return null
+                    - if (path.isEmpty()) return null
+                    - if (path.size == 0) return null
+                    - if (path.size == maxEdges) return null
+                - placeholder: ____2
+                  accepted:
+                    - if (edge.to in seen) null else visit(edge.to, path + edge, seen + edge.to)
+                  options:
+                    - if (edge.to in seen) null else visit(edge.to, path + edge, seen + edge.to)
+                    - if (edge.to !in seen) null else visit(edge.to, path + edge, seen)
+                    - visit(edge.to, path + edge, seen)
+                    - if (edge.to in seen) visit(edge.to, path + edge, seen + edge.to) else null
+                - placeholder: ____3
+                  accepted:
+                    - path.forEach { value = value.multiply(it.rate) }
+                  options:
+                    - path.forEach { value = value.add(it.rate) }
+                    - path.forEach { value = value.multiply(it.rate) }
+                    - path.forEach { value = value.divide(it.rate, 2, RoundingMode.HALF_UP) }
+                    - path.forEach { value = value.multiply(BigDecimal.ONE) }
+              explanation: Search only simple paths up to the edge limit, then multiply each edge rate before final money rounding.
             expected: |
               `100 USD → GBP = 79.12 (via EUR)` · `1 USD → JPY = 150.70 (via CAD)`.
           - id: ch11-more-practice-currency-conversion-part-3
@@ -889,6 +1253,34 @@ lessons:
                   }
                   return visit(from, BigDecimal(amount), listOf(from), setOf(from)) ?: throw IllegalArgumentException("no path")
               }
+            guided:
+              template: "import java.math.BigDecimal\nimport java.math.RoundingMode\n\ndata class FxQuote(val amount: String, val path: List<String>)\nprivate data class FxEdge(val to: String, val rate: BigDecimal)\n\nprivate fun graph(ratesText: String): Map<String, List<FxEdge>> {\n    val result = mutableMapOf<String, MutableList<FxEdge>>()\n    for (raw in ratesText.split(\",\").filter { it.isNotBlank() }) {\n        val fields = raw.trim().split(\":\")\n        require(fields.size == 3)\n        val from = fields[0].trim(); val to = fields[1].trim(); val rate = BigDecimal(fields[2].trim())\n        result.getOrPut(from) { mutableListOf() } += FxEdge(to, rate)\n        result.getOrPut(to) { mutableListOf() } += FxEdge(from, BigDecimal.ONE.divide(rate, 24, RoundingMode.HALF_UP))\n    }\n    return result\n}\n\nprivate fun money(value: BigDecimal): String = value.setScale(2, RoundingMode.HALF_UP).toPlainString()\n\nfun convertDirect(ratesText: String, amount: String, from: String, to: String): String {\n    val graph = graph(ratesText)\n    if (from == to) {\n        require(graph.containsKey(from))\n        return money(BigDecimal(amount))\n    }\n    val edge = graph[from].orEmpty().firstOrNull { it.to == to } ?: throw IllegalArgumentException(\"unknown or non-direct currency\")\n    return money(BigDecimal(amount).multiply(edge.rate))\n}\n\nprivate fun findPath(graph: Map<String, List<FxEdge>>, from: String, to: String, maxEdges: Int): List<FxEdge>? {\n    if (from == to) return emptyList()\n    fun visit(current: String, path: List<FxEdge>, seen: Set<String>): List<FxEdge>? {\n        if (current == to) return path\n        if (path.size == maxEdges) return null\n        return graph[current].orEmpty().firstNotNullOfOrNull { edge ->\n            if (edge.to in seen) null else visit(edge.to, path + edge, seen + edge.to)\n        }\n    }\n    require(graph.containsKey(from) && graph.containsKey(to))\n    return visit(from, emptyList(), setOf(from))\n}\n\nprivate fun convertPath(amount: String, path: List<FxEdge>): String {\n    var value = BigDecimal(amount)\n    path.forEach { value = value.multiply(it.rate) }\n    return money(value)\n}\n\nfun convertWithOneIntermediate(ratesText: String, amount: String, from: String, to: String): String {\n    val path = findPath(graph(ratesText), from, to, 2) ?: throw IllegalArgumentException(\"no path\")\n    return convertPath(amount, path)\n}\n\nfun convertAnyPath(ratesText: String, amount: String, from: String, to: String): FxQuote {\n    val graph = graph(ratesText)\n    require(graph.containsKey(from) && graph.containsKey(to))\n    fun visit(current: String, value: BigDecimal, path: List<String>, seen: Set<String>): FxQuote? {\n        if (current == to) return ____3\n        return graph[current].orEmpty().firstNotNullOfOrNull { edge ->\n            ____2\n        }\n    }\n    ____1\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - 'return visit(from, BigDecimal(amount), listOf(from), setOf(from)) ?: throw IllegalArgumentException("no path")'
+                  options:
+                    - 'return visit(from, BigDecimal(amount), emptyList(), emptySet()) ?: throw IllegalArgumentException("no path")'
+                    - 'return visit(to, BigDecimal(amount), listOf(to), setOf(to)) ?: throw IllegalArgumentException("no path")'
+                    - 'return visit(from, BigDecimal(amount), listOf(from), setOf(from)) ?: throw IllegalArgumentException("no path")'
+                    - 'return visit(from, BigDecimal(amount), listOf(from), setOf(from)) ?: FxQuote("0.00", emptyList())'
+                - placeholder: ____2
+                  accepted:
+                    - if (edge.to in seen) null else visit(edge.to, value.multiply(edge.rate), path + edge.to, seen + edge.to)
+                  options:
+                    - if (edge.to !in seen) null else visit(edge.to, value.multiply(edge.rate), path + edge.to, seen)
+                    - visit(edge.to, value.add(edge.rate), path + edge.to, seen + edge.to)
+                    - if (edge.to in seen) visit(edge.to, value.multiply(edge.rate), path + edge.to, seen + edge.to) else null
+                    - if (edge.to in seen) null else visit(edge.to, value.multiply(edge.rate), path + edge.to, seen + edge.to)
+                - placeholder: ____3
+                  accepted:
+                    - FxQuote(money(value), path)
+                  options:
+                    - FxQuote(money(value), path)
+                    - FxQuote(value.toString(), path)
+                    - FxQuote(money(value), emptyList())
+                    - FxQuote(money(value), path.drop(1))
+              explanation: Traverse each simple route, multiply its rates, and return the converted amount together with the full currency path.
             expected: |
               `100 GBP → JPY = 19047.02 (GBP → EUR → USD → CAD → JPY)`.
           - id: ch11-more-practice-currency-conversion-part-4
@@ -992,6 +1384,34 @@ lessons:
                   require(options.isNotEmpty())
                   return FxComparison(options.first(), options)
               }
+            guided:
+              template: "import java.math.BigDecimal\nimport java.math.RoundingMode\n\ndata class FxQuote(val amount: String, val path: List<String>)\ndata class FxComparison(val best: FxQuote, val options: List<FxQuote>)\nprivate data class FxEdge(val to: String, val rate: BigDecimal)\n\nprivate fun graph(ratesText: String): Map<String, List<FxEdge>> {\n    val result = mutableMapOf<String, MutableList<FxEdge>>()\n    for (raw in ratesText.split(\",\").filter { it.isNotBlank() }) {\n        val fields = raw.trim().split(\":\")\n        require(fields.size == 3)\n        val from = fields[0].trim(); val to = fields[1].trim(); val rate = BigDecimal(fields[2].trim())\n        result.getOrPut(from) { mutableListOf() } += FxEdge(to, rate)\n        result.getOrPut(to) { mutableListOf() } += FxEdge(from, BigDecimal.ONE.divide(rate, 24, RoundingMode.HALF_UP))\n    }\n    return result\n}\n\nprivate fun money(value: BigDecimal): String = value.setScale(2, RoundingMode.HALF_UP).toPlainString()\n\nfun convertDirect(ratesText: String, amount: String, from: String, to: String): String {\n    val graph = graph(ratesText)\n    if (from == to) {\n        require(graph.containsKey(from))\n        return money(BigDecimal(amount))\n    }\n    val edge = graph[from].orEmpty().firstOrNull { it.to == to } ?: throw IllegalArgumentException(\"unknown or non-direct currency\")\n    return money(BigDecimal(amount).multiply(edge.rate))\n}\n\nprivate fun findPath(graph: Map<String, List<FxEdge>>, from: String, to: String, maxEdges: Int): List<FxEdge>? {\n    if (from == to) return emptyList()\n    fun visit(current: String, path: List<FxEdge>, seen: Set<String>): List<FxEdge>? {\n        if (current == to) return path\n        if (path.size == maxEdges) return null\n        return graph[current].orEmpty().firstNotNullOfOrNull { edge ->\n            if (edge.to in seen) null else visit(edge.to, path + edge, seen + edge.to)\n        }\n    }\n    require(graph.containsKey(from) && graph.containsKey(to))\n    return visit(from, emptyList(), setOf(from))\n}\n\nprivate fun convertPath(amount: String, path: List<FxEdge>): String {\n    var value = BigDecimal(amount)\n    path.forEach { value = value.multiply(it.rate) }\n    return money(value)\n}\n\nfun convertWithOneIntermediate(ratesText: String, amount: String, from: String, to: String): String {\n    val path = findPath(graph(ratesText), from, to, 2) ?: throw IllegalArgumentException(\"no path\")\n    return convertPath(amount, path)\n}\n\nfun convertAnyPath(ratesText: String, amount: String, from: String, to: String): FxQuote {\n    val graph = graph(ratesText)\n    require(graph.containsKey(from) && graph.containsKey(to))\n    fun visit(current: String, value: BigDecimal, path: List<String>, seen: Set<String>): FxQuote? {\n        if (current == to) return FxQuote(money(value), path)\n        return graph[current].orEmpty().firstNotNullOfOrNull { edge ->\n            if (edge.to in seen) null else visit(edge.to, value.multiply(edge.rate), path + edge.to, seen + edge.to)\n        }\n    }\n    return visit(from, BigDecimal(amount), listOf(from), setOf(from)) ?: throw IllegalArgumentException(\"no path\")\n}\n\nfun compareConversions(ratesText: String, amount: String, from: String, to: String): FxComparison {\n    val graph = graph(ratesText)\n    require(graph.containsKey(from) && graph.containsKey(to))\n    fun visit(current: String, value: BigDecimal, path: List<String>, seen: Set<String>): List<FxQuote> {\n        if (current == to) return listOf(FxQuote(money(value), path))\n        return graph[current].orEmpty().flatMap { edge ->\n            if (edge.to in seen) emptyList() else visit(edge.to, value.multiply(edge.rate), path + edge.to, seen + edge.to)\n        }\n    }\n    val options = visit(from, BigDecimal(amount), listOf(from), setOf(from))\n        ____1\n    ____2\n    ____3\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - ".distinctBy { it.path }\n        .sortedByDescending { BigDecimal(it.amount) }"
+                  options:
+                    - ".distinctBy { it.amount }\n        .sortedByDescending { BigDecimal(it.amount) }"
+                    - ".distinctBy { it.path }\n        .sortedByDescending { BigDecimal(it.amount) }"
+                    - ".distinctBy { it.path }\n        .sortedBy { BigDecimal(it.amount) }"
+                    - ".distinctBy { it.path }\n        .sortedByDescending { it.path.size.toBigDecimal() }"
+                - placeholder: ____2
+                  accepted:
+                    - require(options.isNotEmpty())
+                  options:
+                    - require(options.isEmpty())
+                    - check(options.size > 1)
+                    - require(options.isNotEmpty())
+                    - require(options.size == 1)
+                - placeholder: ____3
+                  accepted:
+                    - return FxComparison(options.first(), options)
+                  options:
+                    - return FxComparison(options.last(), options)
+                    - return FxComparison(options.first(), emptyList())
+                    - return FxComparison(options.first(), options.drop(1))
+                    - return FxComparison(options.first(), options)
+              explanation: Enumerate distinct simple conversion paths, sort by resulting amount descending, and use the first as the best quote.
             expected: |
               `100 USD → GBP = 80.00 direct, vs 79.12 via EUR`; choose the direct path.
               Store rates as decimal strings because binary floating point cannot represent
@@ -1070,6 +1490,34 @@ lessons:
                   BigDecimal.valueOf(base).multiply(BigDecimal(percent)).setScale(0, RoundingMode.HALF_UP).toLong()
 
               fun save10(lines: List<CartLine>): Long = subtotal(lines) - percentDiscount(subtotal(lines), "0.10")
+            guided:
+              template: "import java.math.BigDecimal\nimport java.math.RoundingMode\n\ndata class CartLine(val sku: String, val unitPriceCents: Long, val quantity: Int)\n\nfun parseCart(text: String): List<CartLine> = ____1.map { raw ->\n    val fields = raw.trim().split(\",\").map(String::trim)\n    require(fields.size == 3)\n    CartLine(fields[0], ____2)\n}\n\nfun subtotal(lines: List<CartLine>): Long = lines.sumOf { it.unitPriceCents * it.quantity }\n\nprivate fun percentDiscount(base: Long, percent: String): Long =\n    ____3\n\nfun save10(lines: List<CartLine>): Long = subtotal(lines) - percentDiscount(subtotal(lines), \"0.10\")\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - text.split(";").filter { it.isNotBlank() }
+                  options:
+                    - text.split(";").filter { it.isNotBlank() }
+                    - text.split(",").filter { it.isNotBlank() }
+                    - text.split(";").filter { it.isBlank() }
+                    - text.split(";")
+                - placeholder: ____2
+                  accepted:
+                    - fields[1].toLong(), fields[2].toInt()
+                  options:
+                    - fields[2].toLong(), fields[1].toInt()
+                    - fields[1].toLong(), fields[2].toInt()
+                    - fields[1].toInt(), fields[2].toLong()
+                    - 'fields[1].toLongOrNull() ?: 0L, fields[2].toInt()'
+                - placeholder: ____3
+                  accepted:
+                    - BigDecimal.valueOf(base).multiply(BigDecimal(percent)).setScale(0, RoundingMode.HALF_UP).toLong()
+                  options:
+                    - BigDecimal.valueOf(base).multiply(BigDecimal(percent)).setScale(2, RoundingMode.HALF_UP).toLong()
+                    - BigDecimal.valueOf(base).divide(BigDecimal(percent), 0, RoundingMode.HALF_UP).toLong()
+                    - BigDecimal.valueOf(base).multiply(BigDecimal(percent)).setScale(0, RoundingMode.HALF_UP).toLong()
+                    - BigDecimal.valueOf(base).multiply(BigDecimal(percent)).setScale(0, RoundingMode.DOWN).toLong()
+              explanation: Parse cart lines, total unit-price cents times quantity, and round percentage discounts to whole cents using half-up.
             expected: |
               `subtotal 6450 · discount 645 · total 5805`.
           - id: ch11-more-practice-checkout-discounts-part-2
@@ -1120,6 +1568,34 @@ lessons:
                   }
                   else -> throw IllegalArgumentException("unknown coupon")
               }
+            guided:
+              template: "import java.math.BigDecimal\nimport java.math.RoundingMode\n\ndata class CartLine(val sku: String, val unitPriceCents: Long, val quantity: Int)\n\nfun parseCart(text: String): List<CartLine> = text.split(\";\").filter { it.isNotBlank() }.map { raw ->\n    val fields = raw.trim().split(\",\").map(String::trim)\n    require(fields.size == 3)\n    CartLine(fields[0], fields[1].toLong(), fields[2].toInt())\n}\n\nfun subtotal(lines: List<CartLine>): Long = lines.sumOf { it.unitPriceCents * it.quantity }\n\nprivate fun percentDiscount(base: Long, percent: String): Long =\n    BigDecimal.valueOf(base).multiply(BigDecimal(percent)).setScale(0, RoundingMode.HALF_UP).toLong()\n\nfun save10(lines: List<CartLine>): Long = subtotal(lines) - percentDiscount(subtotal(lines), \"0.10\")\n\nfun applyCoupon(lines: List<CartLine>, code: String): Long = when (code.trim()) {\n    ____1\n    \"FIVEOFF\" -> (subtotal(lines) - 500L).coerceAtLeast(0)\n    \"TEES20\" -> {\n        val teeTotal = ____2\n        (subtotal(lines) - ____3).coerceAtLeast(0)\n    }\n    else -> throw IllegalArgumentException(\"unknown coupon\")\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - '"SAVE10" -> (subtotal(lines) - percentDiscount(subtotal(lines), "0.10")).coerceAtLeast(0)'
+                  options:
+                    - '"SAVE10" -> (subtotal(lines) - percentDiscount(subtotal(lines), "0.10"))'
+                    - '"SAVE10" -> (subtotal(lines) + percentDiscount(subtotal(lines), "0.10")).coerceAtLeast(0)'
+                    - '"SAVE10" -> (subtotal(lines) - percentDiscount(subtotal(lines), "0.20")).coerceAtLeast(0)'
+                    - '"SAVE10" -> (subtotal(lines) - percentDiscount(subtotal(lines), "0.10")).coerceAtLeast(0)'
+                - placeholder: ____2
+                  accepted:
+                    - lines.filter { it.sku == "tee" }.sumOf { it.unitPriceCents * it.quantity }
+                  options:
+                    - lines.filter { it.sku == "tee" }.sumOf { it.unitPriceCents * it.quantity }
+                    - lines.filter { it.sku != "tee" }.sumOf { it.unitPriceCents * it.quantity }
+                    - lines.filter { it.sku == "tee" }.sumOf { it.unitPriceCents }
+                    - lines.sumOf { it.unitPriceCents * it.quantity }
+                - placeholder: ____3
+                  accepted:
+                    - percentDiscount(teeTotal, "0.20")
+                  options:
+                    - percentDiscount(teeTotal, "0.10")
+                    - percentDiscount(teeTotal, "0.20")
+                    - percentDiscount(subtotal(lines), "0.20")
+                    - percentDiscount(teeTotal, "20")
+              explanation: 'Apply each coupon to its intended base: whole-cart percentage, fixed cents, or tee-only percentage, never allowing a negative total.'
             expected: |
               `TEES20 → 5650` · `FIVEOFF → 5950`.
           - id: ch11-more-practice-checkout-discounts-part-3
@@ -1181,6 +1657,34 @@ lessons:
                   normalized.filter { it == "FIVEOFF" }.forEach { total = (total - 500L).coerceAtLeast(0) }
                   return total
               }
+            guided:
+              template: "import java.math.BigDecimal\nimport java.math.RoundingMode\n\ndata class CartLine(val sku: String, val unitPriceCents: Long, val quantity: Int)\n\nfun parseCart(text: String): List<CartLine> = text.split(\";\").filter { it.isNotBlank() }.map { raw ->\n    val fields = raw.trim().split(\",\").map(String::trim)\n    require(fields.size == 3)\n    CartLine(fields[0], fields[1].toLong(), fields[2].toInt())\n}\n\nfun subtotal(lines: List<CartLine>): Long = lines.sumOf { it.unitPriceCents * it.quantity }\n\nprivate fun percentDiscount(base: Long, percent: String): Long =\n    BigDecimal.valueOf(base).multiply(BigDecimal(percent)).setScale(0, RoundingMode.HALF_UP).toLong()\n\nfun save10(lines: List<CartLine>): Long = subtotal(lines) - percentDiscount(subtotal(lines), \"0.10\")\n\nfun applyCoupon(lines: List<CartLine>, code: String): Long = when (code.trim()) {\n    \"SAVE10\" -> (subtotal(lines) - percentDiscount(subtotal(lines), \"0.10\")).coerceAtLeast(0)\n    \"FIVEOFF\" -> (subtotal(lines) - 500L).coerceAtLeast(0)\n    \"TEES20\" -> {\n        val teeTotal = lines.filter { it.sku == \"tee\" }.sumOf { it.unitPriceCents * it.quantity }\n        (subtotal(lines) - percentDiscount(teeTotal, \"0.20\")).coerceAtLeast(0)\n    }\n    else -> throw IllegalArgumentException(\"unknown coupon\")\n}\n\nfun checkoutTotal(lines: List<CartLine>, codes: List<String>): Long {\n    val normalized = codes.map(String::trim)\n    val kinds = normalized.map { code -> when (code) {\n        \"TEES20\" -> \"item\"\n        \"SAVE10\" -> \"percentage\"\n        \"FIVEOFF\" -> \"fixed\"\n        else -> throw IllegalArgumentException(\"unknown coupon\")\n    } }\n    ____1\n    var total = subtotal(lines)\n    ____2\n    ____3\n    normalized.filter { it == \"FIVEOFF\" }.forEach { total = (total - 500L).coerceAtLeast(0) }\n    return total\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - require(kinds.groupingBy { it }.eachCount().values.all { it == 1 })
+                  options:
+                    - require(kinds.groupingBy { it }.eachCount().values.all { it <= 1 })
+                    - require(kinds.groupingBy { it }.eachCount().values.all { it == 2 })
+                    - require(kinds.groupingBy { it }.eachCount().values.all { it == 1 })
+                    - require(kinds.isNotEmpty())
+                - placeholder: ____2
+                  accepted:
+                    - normalized.filter { it == "TEES20" }.forEach { total = applyCoupon(lines, it) }
+                  options:
+                    - normalized.filter { it == "SAVE10" }.forEach { total = applyCoupon(lines, it) }
+                    - normalized.filter { it == "TEES20" }.forEach { total += applyCoupon(lines, it) }
+                    - normalized.filter { it == "TEES20" }.forEach { total = subtotal(lines) }
+                    - normalized.filter { it == "TEES20" }.forEach { total = applyCoupon(lines, it) }
+                - placeholder: ____3
+                  accepted:
+                    - normalized.filter { it == "SAVE10" }.forEach { total = (total - percentDiscount(total, "0.10")).coerceAtLeast(0) }
+                  options:
+                    - normalized.filter { it == "SAVE10" }.forEach { total = (total - percentDiscount(total, "0.10")).coerceAtLeast(0) }
+                    - normalized.filter { it == "SAVE10" }.forEach { total = (total + percentDiscount(total, "0.10")).coerceAtLeast(0) }
+                    - normalized.filter { it == "SAVE10" }.forEach { total = (total - percentDiscount(total, "0.20")).coerceAtLeast(0) }
+                    - normalized.filter { it == "FIVEOFF" }.forEach { total = (total - percentDiscount(total, "0.10")).coerceAtLeast(0) }
+              explanation: Reject duplicate coupon categories, then apply item, percentage, and fixed discounts once in the documented sequence.
             expected: |
               `[FIVEOFF, SAVE10, TEES20] → 4585`.
           - id: ch11-more-practice-checkout-discounts-part-4
@@ -1250,6 +1754,34 @@ lessons:
                   val tax = BigDecimal.valueOf(discounted).multiply(BigDecimal("0.13")).setScale(0, RoundingMode.HALF_UP).toLong()
                   return CheckoutTotal(discounted, tax, discounted + tax)
               }
+            guided:
+              template: "import java.math.BigDecimal\nimport java.math.RoundingMode\n\ndata class CartLine(val sku: String, val unitPriceCents: Long, val quantity: Int)\ndata class CheckoutTotal(val discountedTotal: Long, val tax: Long, val grandTotal: Long)\n\nfun parseCart(text: String): List<CartLine> = text.split(\";\").filter { it.isNotBlank() }.map { raw ->\n    val fields = raw.trim().split(\",\").map(String::trim)\n    require(fields.size == 3)\n    CartLine(fields[0], fields[1].toLong(), fields[2].toInt())\n}\n\nfun subtotal(lines: List<CartLine>): Long = lines.sumOf { it.unitPriceCents * it.quantity }\n\nprivate fun percentDiscount(base: Long, percent: String): Long =\n    BigDecimal.valueOf(base).multiply(BigDecimal(percent)).setScale(0, RoundingMode.HALF_UP).toLong()\n\nfun save10(lines: List<CartLine>): Long = subtotal(lines) - percentDiscount(subtotal(lines), \"0.10\")\n\nfun applyCoupon(lines: List<CartLine>, code: String): Long = when (code.trim()) {\n    \"SAVE10\" -> (subtotal(lines) - percentDiscount(subtotal(lines), \"0.10\")).coerceAtLeast(0)\n    \"FIVEOFF\" -> (subtotal(lines) - 500L).coerceAtLeast(0)\n    \"TEES20\" -> {\n        val teeTotal = lines.filter { it.sku == \"tee\" }.sumOf { it.unitPriceCents * it.quantity }\n        (subtotal(lines) - percentDiscount(teeTotal, \"0.20\")).coerceAtLeast(0)\n    }\n    else -> throw IllegalArgumentException(\"unknown coupon\")\n}\n\nfun checkoutTotal(lines: List<CartLine>, codes: List<String>): Long {\n    val normalized = codes.map(String::trim)\n    val kinds = normalized.map { code -> when (code) {\n        \"TEES20\" -> \"item\"\n        \"SAVE10\" -> \"percentage\"\n        \"FIVEOFF\" -> \"fixed\"\n        else -> throw IllegalArgumentException(\"unknown coupon\")\n    } }\n    require(kinds.groupingBy { it }.eachCount().values.all { it == 1 })\n    var total = subtotal(lines)\n    if (\"TEES20\" in normalized) total = applyCoupon(lines, \"TEES20\")\n    if (\"SAVE10\" in normalized) total = (total - percentDiscount(total, \"0.10\")).coerceAtLeast(0)\n    if (\"FIVEOFF\" in normalized) total = (total - 500L).coerceAtLeast(0)\n    return total\n}\n\nfun checkoutWithTax(lines: List<CartLine>, codes: List<String>): CheckoutTotal {\n    ____3\n    ____1\n    return ____2\n}\n"
+              blanks:
+                - placeholder: ____1
+                  accepted:
+                    - val tax = BigDecimal.valueOf(discounted).multiply(BigDecimal("0.13")).setScale(0, RoundingMode.HALF_UP).toLong()
+                  options:
+                    - val tax = BigDecimal.valueOf(discounted).multiply(BigDecimal("0.13")).setScale(0, RoundingMode.DOWN).toLong()
+                    - val tax = BigDecimal.valueOf(discounted).multiply(BigDecimal("0.13")).setScale(0, RoundingMode.HALF_UP).toLong()
+                    - val tax = BigDecimal.valueOf(discounted).multiply(BigDecimal("0.13")).setScale(2, RoundingMode.HALF_UP).toLong()
+                    - val tax = BigDecimal.valueOf(discounted).add(BigDecimal("0.13")).toLong()
+                - placeholder: ____2
+                  accepted:
+                    - CheckoutTotal(discounted, tax, discounted + tax)
+                  options:
+                    - CheckoutTotal(discounted, tax, discounted - tax)
+                    - CheckoutTotal(discounted, tax, discounted)
+                    - CheckoutTotal(discounted, tax, discounted + tax)
+                    - CheckoutTotal(tax, discounted, discounted + tax)
+                - placeholder: ____3
+                  accepted:
+                    - val discounted = checkoutTotal(lines, codes)
+                  options:
+                    - val discounted = subtotal(lines)
+                    - val discounted = checkoutTotal(lines, emptyList())
+                    - val discounted = checkoutTotal(emptyList(), codes)
+                    - val discounted = checkoutTotal(lines, codes)
+              explanation: Compute tax on the discounted amount, round it to cents using half-up, and return both the discounted and grand totals.
             expected: |
               `tax 596 · grand total 5181`. If every line needs its own tax line,
               calculate and round each line's tax separately, then sum those rounded taxes;

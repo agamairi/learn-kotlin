@@ -1,6 +1,7 @@
 package dev.agam.learn.ui.lesson.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -79,7 +81,7 @@ fun LessonSummary(
                 )
                 BrandArtwork(
                     asset = BrandAsset.LessonTrophy,
-                    modifier = Modifier.size(28.dp),
+                    modifier = Modifier.size(32.dp),
                     contentDescription = null
                 )
             }
@@ -108,19 +110,49 @@ fun LessonSummary(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            BrandArtwork(
-                                asset = BrandAsset.XpSpark,
-                                modifier = Modifier.size(24.dp),
-                                contentDescription = null
-                            )
-                            Spacer(modifier = Modifier.size(4.dp))
-                            Text(
-                                text = "+$totalXp XP",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                            val stackXpMetric = maxWidth < 128.dp || LocalDensity.current.fontScale >= 1.3f
+                            if (stackXpMetric) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    BrandArtwork(
+                                        asset = BrandAsset.XpSpark,
+                                        modifier = Modifier.size(28.dp),
+                                        contentDescription = null
+                                    )
+                                    Text(
+                                        text = "+$totalXp XP",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        textAlign = TextAlign.Center,
+                                        softWrap = true
+                                    )
+                                }
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    BrandArtwork(
+                                        asset = BrandAsset.XpSpark,
+                                        modifier = Modifier.size(28.dp),
+                                        contentDescription = null
+                                    )
+                                    Spacer(modifier = Modifier.size(4.dp))
+                                    Text(
+                                        text = "+$totalXp XP",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        textAlign = TextAlign.Center,
+                                        softWrap = true
+                                    )
+                                }
+                            }
                         }
                         Text(
                             text = "Total Earned",

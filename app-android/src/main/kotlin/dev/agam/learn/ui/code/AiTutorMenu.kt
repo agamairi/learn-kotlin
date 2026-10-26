@@ -108,7 +108,7 @@ fun AiTutorMenuButton(
                 )
             } else {
                 DropdownMenuItem(
-                    text = { Text("Hint (-2/5/10 XP)") },
+                    text = { Text("Hint: Nudge") },
                     onClick = {
                         expanded = false
                         onAskHint()

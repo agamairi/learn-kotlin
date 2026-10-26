@@ -26,6 +26,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["toSortedMap()"]
+            options:
+              - toSortedMap()
+              - toList()
+              - toMap()
+              - sortedBy()
             case_sensitive: true
         explanation: '`toSortedMap()` orders the merchant keys before formatting.'
       - type: predict_output
@@ -61,6 +66,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["data class"]
+            options:
+              - data class
+              - class
+              - struct
+              - value class
             case_sensitive: true
         explanation: A data class supplies value semantics and makes the row's fields explicit.
       - type: write_function
@@ -106,6 +116,42 @@ lessons:
 
           fun formatTotals(totals: Map<String, Long>): String =
               totals.toSortedMap().entries.joinToString("\n") { (merchant, cents) -> "$merchant: $cents" }
+        guided:
+          template: "data class Payment(val merchant: String, val cents: Long)\n\nfun parsePayments(csv: String): List<Payment> =\n    ____1.filter { it.isNotBlank() }.map { line ->\n        val (_, merchant, cents) = line.split(\",\").map { it.trim() }\n        Payment(merchant, ____2)\n    }\n\nfun totalsByMerchant(payments: List<Payment>): Map<String, Long> =\n    ____3.mapValues { (_, cents) -> cents.sum() }\n\nfun formatTotals(totals: Map<String, Long>): String =\n    ____4.entries.joinToString(\"\\n\") { (merchant, cents) -> \"$merchant: $cents\" }\n"
+          blanks:
+            - placeholder: ____1
+              accepted:
+                - csv.lines().drop(1)
+              options:
+                - csv.lines().take(1)
+                - csv.lines()
+                - csv.lines().drop(1)
+                - csv.lines().dropLast(1)
+            - placeholder: ____2
+              accepted:
+                - cents.toLong()
+              options:
+                - cents.toInt()
+                - 'cents.toLongOrNull() ?: 0L'
+                - cents
+                - cents.toLong()
+            - placeholder: ____3
+              accepted:
+                - payments.groupBy({ it.merchant }, { it.cents })
+              options:
+                - payments.groupBy({ it.merchant }, { it.cents })
+                - payments.associateBy({ it.merchant }, { it.cents })
+                - payments.groupBy { it.merchant }
+                - payments.partition { it.merchant.isNotEmpty() }
+            - placeholder: ____4
+              accepted:
+                - totals.toSortedMap()
+              options:
+                - totals.toMap()
+                - totals.toSortedMap()
+                - totals.toList()
+                - totals.toMutableMap()
+          explanation: Parse CSV skipping headers, aggregate amounts per merchant using groupBy and sum, and sort merchants alphabetically.
         hints:
           - Parse after dropping the header, then trim each comma-separated field.
           - Group the payments by merchant and sum their cents.
@@ -137,6 +183,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["HALF_UP"]
+            options:
+              - HALF_UP
+              - HALF_EVEN
+              - FLOOR
+              - CEILING
             case_sensitive: true
         explanation: '`HALF_UP` rounds a half away from zero for positive amounts, matching the stated money drill.'
       - type: predict_output
@@ -176,6 +227,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["valueOf"]
+            options:
+              - valueOf
+              - fromLong
+              - of
+              - new
             case_sensitive: true
         explanation: '`BigDecimal.valueOf(cents)` creates the decimal from the integral minor-unit amount.'
       - type: write_function
@@ -209,6 +265,42 @@ lessons:
                   .multiply(BigDecimal(rate))
                   .setScale(0, RoundingMode.HALF_UP)
                   .toLong()
+        guided:
+          template: "import java.math.BigDecimal\nimport java.math.RoundingMode\n\nfun convert(cents: Long, rate: String): Long =\n    ____1\n        .____2\n        .setScale(0, ____3)\n        ____4\n"
+          blanks:
+            - placeholder: ____1
+              accepted:
+                - BigDecimal.valueOf(cents)
+              options:
+                - BigDecimal(cents.toString()).divide(BigDecimal("100"))
+                - BigDecimal(cents + 1L)
+                - BigDecimal.valueOf(cents)
+                - BigDecimal.ZERO
+            - placeholder: ____2
+              accepted:
+                - multiply(BigDecimal(rate))
+              options:
+                - divide(BigDecimal(rate))
+                - add(BigDecimal(rate))
+                - multiply(BigDecimal.valueOf(rate.toDouble()))
+                - multiply(BigDecimal(rate))
+            - placeholder: ____3
+              accepted:
+                - RoundingMode.HALF_UP
+              options:
+                - RoundingMode.HALF_UP
+                - RoundingMode.HALF_EVEN
+                - RoundingMode.FLOOR
+                - RoundingMode.CEILING
+            - placeholder: ____4
+              accepted:
+                - .toLong()
+              options:
+                - .toInt()
+                - .toLong()
+                - .toLong() + 1L
+                - .toDouble().toLong()
+          explanation: Scale cents by conversion rate using exact BigDecimal arithmetic and half-up rounding.
         hints:
           - 'Use `BigDecimal.valueOf(cents)` and `BigDecimal(rate)`.'
           - 'Apply `setScale(0, RoundingMode.HALF_UP)` after multiplication.'

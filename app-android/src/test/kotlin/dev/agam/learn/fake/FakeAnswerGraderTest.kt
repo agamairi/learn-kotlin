@@ -1,6 +1,7 @@
 package dev.agam.learn.fake
 
 import dev.agam.learn.model.Blank
+import dev.agam.learn.model.CodePuzzle
 import dev.agam.learn.model.Exercise
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -81,5 +82,34 @@ class FakeAnswerGraderTest {
         assertTrue("Trailing whitespace on line trimmed", grader.gradePredictOutput(exercise, "Hello  \nWorld\t"))
         assertTrue("Trailing newline trimmed", grader.gradePredictOutput(exercise, "Hello\nWorld\n\n"))
         assertFalse("Content mismatch", grader.gradePredictOutput(exercise, "Hello\nKotlin"))
+    }
+
+    @Test
+    fun testGradeCodePuzzle() {
+        val puzzle = CodePuzzle(
+            template = "fun solution(): Int = ____1",
+            blanks = listOf(
+                Blank(
+                    placeholder = "____1",
+                    accepted = listOf("42"),
+                    caseSensitive = true,
+                    options = listOf("42", "41", "43", "0")
+                )
+            )
+        )
+
+        assertTrue(grader.gradeCodePuzzle(puzzle, mapOf("____1" to "42")))
+        assertFalse(grader.gradeCodePuzzle(puzzle, mapOf("____1" to "41")))
+        assertFalse("Missing blank fails", grader.gradeCodePuzzle(puzzle, emptyMap()))
+        assertFalse("Unaccepted option fails", grader.gradeCodePuzzle(puzzle, mapOf("____1" to "100")))
+
+        val noChoices = CodePuzzle(
+            template = "fun solution(): Int = ____1",
+            blanks = listOf(Blank(placeholder = "____1", accepted = listOf("42")))
+        )
+        assertFalse("A puzzle without offered choices cannot be passed", grader.gradeCodePuzzle(noChoices, mapOf("____1" to "42")))
+
+        val emptyPuzzle = CodePuzzle(template = "fun empty() = 1", blanks = emptyList())
+        assertFalse("Empty puzzle fails", grader.gradeCodePuzzle(emptyPuzzle, emptyMap()))
     }
 }

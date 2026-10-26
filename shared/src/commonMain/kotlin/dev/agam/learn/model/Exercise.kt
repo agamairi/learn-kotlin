@@ -65,7 +65,8 @@ sealed interface Exercise {
         @SerialName("reference_solution")
         val referenceSolution: String,
         val hints: List<String> = emptyList(),
-        val explanation: String? = null
+        val explanation: String? = null,
+        val guided: CodePuzzle? = null
     ) : Exercise
 
     @Serializable
@@ -87,7 +88,15 @@ data class Blank(
     val placeholder: String,
     val accepted: List<String>,
     @SerialName("case_sensitive")
-    val caseSensitive: Boolean = true
+    val caseSensitive: Boolean = true,
+    val options: List<String> = emptyList()
+)
+
+@Serializable
+data class CodePuzzle(
+    val template: String,
+    val blanks: List<Blank>,
+    val explanation: String? = null
 )
 
 @Serializable
@@ -101,7 +110,8 @@ data class ProblemPart(
     @SerialName("reference_solution")
     val referenceSolution: String,
     val expected: String,
-    val hints: List<String> = emptyList()
+    val hints: List<String> = emptyList(),
+    val guided: CodePuzzle? = null
 )
 
 @Serializable

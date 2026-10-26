@@ -1,10 +1,13 @@
 package dev.agam.learn.fake
 
 import dev.agam.learn.domain.AnswerGrader
+import dev.agam.learn.domain.CodePuzzleBlankFeedback
+import dev.agam.learn.domain.CodePuzzleGradeResult
+import dev.agam.learn.model.CodePuzzle
 import dev.agam.learn.model.Exercise
 
 /**
- * Deterministic local grader for multiple choice, cloze, and predict output exercises.
+ * Deterministic local grader for multiple choice, cloze, predict output, and code puzzle exercises.
  */
 class FakeAnswerGrader : AnswerGrader {
 
@@ -45,5 +48,36 @@ class FakeAnswerGrader : AnswerGrader {
                 .trimEnd()
         }
         return normalize(userOutput) == normalize(exercise.expectedOutput)
+    }
+
+    override fun gradeCodePuzzle(
+        puzzle: CodePuzzle,
+        answers: Map<String, String>
+    ): Boolean = gradeCodePuzzleWithFeedback(puzzle, answers).isCorrect
+
+    override fun gradeCodePuzzleWithFeedback(
+        puzzle: CodePuzzle,
+        answers: Map<String, String>
+    ): CodePuzzleGradeResult {
+        if (puzzle.blanks.isEmpty()) return CodePuzzleGradeResult(isCorrect = false, feedback = emptyList())
+        val feedback = puzzle.blanks.map { blank ->
+            val rawAnswer = answers[blank.placeholder]
+            val trimmedAnswer = rawAnswer?.trim()
+            val isOffered = trimmedAnswer != null && blank.options.any { it.trim() == trimmedAnswer }
+            val isCorrect = isOffered && trimmedAnswer != null && blank.accepted.any { accepted ->
+                if (blank.caseSensitive) trimmedAnswer == accepted.trim()
+                else trimmedAnswer.equals(accepted.trim(), ignoreCase = true)
+            }
+            CodePuzzleBlankFeedback(
+                placeholder = blank.placeholder,
+                answer = rawAnswer,
+                isCorrect = isCorrect,
+                message = if (isCorrect) "Correct" else "Expected one of: ${blank.accepted.joinToString()}"
+            )
+        }
+        return CodePuzzleGradeResult(
+            isCorrect = feedback.isNotEmpty() && feedback.all { it.isCorrect },
+            feedback = feedback
+        )
     }
 }

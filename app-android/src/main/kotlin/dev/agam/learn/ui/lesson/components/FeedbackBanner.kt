@@ -23,8 +23,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.agam.learn.ai.AI_API_KEY_MISSING_MESSAGE
 import dev.agam.learn.ui.theme.extendedColors
 
@@ -68,7 +72,7 @@ fun FeedbackBanner(
                     imageVector = if (isCorrect) Icons.Default.CheckCircle else Icons.Default.Info,
                     contentDescription = if (isCorrect) "Correct" else "Needs Improvement",
                     tint = contentColor,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(28.dp)
                 )
                 Text(
                     text = if (isCorrect) "Excellent!" else "Not quite",
@@ -96,7 +100,14 @@ fun FeedbackBanner(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "✨ More like this",
+                            text = buildAnnotatedString {
+                                withStyle(
+                                    SpanStyle(fontSize = (MaterialTheme.typography.labelLarge.fontSize.value + 4).sp)
+                                ) {
+                                    append("✨")
+                                }
+                                append(" More like this")
+                            },
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold
                         )

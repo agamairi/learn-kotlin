@@ -26,6 +26,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["fun interface"]
+            options:
+              - fun interface
+              - interface
+              - abstract class
+              - typealias
             case_sensitive: true
         explanation: 'A `fun interface` has one abstract method and can be implemented with a lambda when useful.'
       - type: predict_output
@@ -86,6 +91,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["mutableListOf"]
+            options:
+              - mutableListOf
+              - listOf
+              - emptyList
+              - arrayListOf
             case_sensitive: true
         explanation: A mutable list preserves the order of received batches for exact assertions.
       - type: write_function
@@ -147,6 +157,42 @@ lessons:
               }
               return uploader.upload(batch)
           }
+        guided:
+          template: "enum class SendResult { SUCCESS, RETRYABLE, PERMANENT }\n\nfun interface Uploader {\n    fun upload(batch: List<String>): SendResult\n}\n\nfun retryUpload(uploader: Uploader, batch: List<String>, maxAttempts: Int): SendResult {\n    ____1\n    ____2 {\n        when (val result = uploader.upload(batch)) {\n            ____3\n            SendResult.RETRYABLE -> Unit\n        }\n    }\n    ____4\n}\n"
+          blanks:
+            - placeholder: ____1
+              accepted:
+                - require(maxAttempts > 0)
+              options:
+                - require(maxAttempts >= 0)
+                - check(maxAttempts > 0)
+                - require(maxAttempts > 0)
+                - require(batch.isNotEmpty())
+            - placeholder: ____2
+              accepted:
+                - repeat(maxAttempts - 1)
+              options:
+                - repeat(maxAttempts)
+                - repeat(maxAttempts + 1)
+                - while (maxAttempts > 0)
+                - repeat(maxAttempts - 1)
+            - placeholder: ____3
+              accepted:
+                - SendResult.SUCCESS, SendResult.PERMANENT -> return result
+              options:
+                - SendResult.SUCCESS, SendResult.PERMANENT -> return result
+                - SendResult.SUCCESS -> return result
+                - SendResult.PERMANENT -> return result
+                - SendResult.RETRYABLE -> return result
+            - placeholder: ____4
+              accepted:
+                - return uploader.upload(batch)
+              options:
+                - return SendResult.RETRYABLE
+                - return uploader.upload(batch)
+                - return SendResult.PERMANENT
+                - return SendResult.SUCCESS
+          explanation: Retry upload on RETRYABLE responses up to maxAttempts, returning terminal success or permanent failure immediately.
         hints:
           - 'Count attempts, not retries: `maxAttempts = 1` still performs one upload.'
           - 'Stop as soon as the result is not `RETRYABLE`.'
@@ -177,6 +223,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["<"]
+            options:
+              - <
+              - '>'
+              - <=
+              - '>='
             case_sensitive: true
         explanation: An entry remains valid only while its age is less than the TTL.
       - type: predict_output
@@ -232,6 +283,11 @@ lessons:
         blanks:
           - placeholder: "____1"
             accepted: ["?: return null"]
+            options:
+              - '?: return null'
+              - '?: return'
+              - ?.let { it }
+              - '?: throw IllegalStateException()'
             case_sensitive: true
         explanation: The Elvis operator is a concise early return for the missing-entry case.
       - type: write_function
@@ -303,6 +359,42 @@ lessons:
                   return if (clock.nowMillis() - current.second < ttlMillis) current.first else null
               }
           }
+        guided:
+          template: "fun interface Clock {\n    fun nowMillis(): Long\n}\n\nclass FakeClock(var now: Long) : Clock {\n    override fun nowMillis(): Long = now\n}\n\nclass TtlCache<T>(private val clock: Clock, private val ttlMillis: Long) {\n    private var entry: Pair<T, Long>? = null\n\n    fun put(value: T) {\n        ____1\n    }\n\n    fun get(): T? {\n        ____2\n        return if (____3) ____4\n    }\n}\n"
+          blanks:
+            - placeholder: ____1
+              accepted:
+                - entry = value to clock.nowMillis()
+              options:
+                - entry = value to ttlMillis
+                - entry = value to 0L
+                - entry = value to clock.nowMillis()
+                - entry = null
+            - placeholder: ____2
+              accepted:
+                - 'val current = entry ?: return null'
+              options:
+                - val current = entry!!
+                - 'val current = entry ?: return current'
+                - if (entry == null) return null
+                - 'val current = entry ?: return null'
+            - placeholder: ____3
+              accepted:
+                - clock.nowMillis() - current.second < ttlMillis
+              options:
+                - clock.nowMillis() - current.second < ttlMillis
+                - clock.nowMillis() - current.second <= ttlMillis
+                - clock.nowMillis() - current.second > ttlMillis
+                - current.second < ttlMillis
+            - placeholder: ____4
+              accepted:
+                - current.first else null
+              options:
+                - current.second else null
+                - current.first else null
+                - null else current.first
+                - current.first else return null
+          explanation: Timestamp cache entry on put, and return value on get only if age is strictly less than ttlMillis.
         hints:
           - Store both the value and the clock time in a private nullable field.
           - '`get` should first handle a missing entry with `?: return null`.'
