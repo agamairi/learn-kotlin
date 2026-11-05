@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@learn/core": ["../../packages/core/src/index.ts"],
+      "@learn/core/*": ["../../packages/core/src/*"],
+      "@learn/content": ["../../packages/content/src/index.ts"],
+      "@learn/content/*": ["../../packages/content/src/*"],
+      "@learn/api": ["../../packages/api/src/index.ts"],
+      "@learn/api/*": ["../../packages/api/src/*"],
+      "@learn/storage": ["../../packages/storage/src/index.ts"],
+      "@learn/storage/*": ["../../packages/storage/src/*"]
+    }
+  },
+  "include": ["src/**/*", "App.tsx", "index.ts", "app.json"]
+}

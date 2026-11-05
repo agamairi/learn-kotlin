@@ -1,0 +1,137 @@
+{
+  "schemaVersion": "1.0",
+  "packId": "react-foundations",
+  "version": "1.0.0",
+  "title": "React Foundations",
+  "description": "Mobile-first React practice for component thinking, state flow, hooks, accessibility, and performance.",
+  "language": "react",
+  "level": "beginner",
+  "publisher": { "name": "Learn Code", "homepage": "https://learn-code.dev" },
+  "license": "CC BY 4.0",
+  "source": { "url": "https://github.com/learn-code/react-foundations", "ref": "main", "path": "packs/react-foundations.json" },
+  "contentHash": "sha256:e2fe6992ff1e5bbd58b18bba17ea0065288d4da238216a552dc47998d151e235",
+  "updatedAt": "2026-11-04T00:00:00Z",
+  "minimumClientVersion": "0.1.0",
+  "capabilities": ["mobile", "reasoning", "code-examples"],
+  "tags": ["react", "react-native", "components", "interviews"],
+  "courses": [
+    {
+      "id": "react-core",
+      "title": "React for Product Engineers",
+      "description": "Learn to model UI as small components with predictable state and accessible interactions.",
+      "language": "react",
+      "chapters": [
+        {
+          "id": "react-unit-components",
+          "title": "Unit 1 · Components and JSX",
+          "summary": "Compose UI from pure components, JSX expressions, and stable keys.",
+          "lessons": [
+            {
+              "id": "react-components-core",
+              "title": "See the component tree",
+              "explanation": "React becomes easier when every component has one clear responsibility and renders from its inputs.",
+              "exercises": [
+                { "id": "react-c1", "type": "multiple_choice", "prompt": "What does a React component usually return?", "options": ["A description of UI", "A database row", "A CSS file only", "A network socket"], "correctIndex": 0, "topicTags": ["components"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "A component returns a description of what should appear for its current inputs and state." },
+                { "id": "react-c2", "type": "multiple_choice", "prompt": "What does JSX allow you to write?", "options": ["HTML-like syntax inside JavaScript", "SQL inside CSS", "Swift inside HTML", "Only JSON data"], "correctIndex": 0, "topicTags": ["jsx"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "JSX is syntax that lets component code describe UI with familiar tag-like expressions." },
+                { "id": "react-c3", "type": "multiple_choice", "prompt": "Why should list items have stable keys?", "options": ["React can match items across renders", "Keys encrypt the list", "Keys make every render synchronous", "Keys remove all state"], "correctIndex": 0, "topicTags": ["keys"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Stable keys help React identify which items changed, moved, or were removed." },
+                { "id": "react-c4", "type": "multiple_choice", "prompt": "What is a good component boundary?", "options": ["A focused piece of UI with a clear responsibility", "Every individual character", "The entire app in one file", "Only a CSS color"], "correctIndex": 0, "topicTags": ["components"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Focused boundaries make UI behavior easier to read, test, and reuse." },
+                { "id": "react-c5", "type": "multiple_choice", "prompt": "What should a render function avoid?", "options": ["Side effects that must happen once", "Pure calculations", "Conditional expressions", "Child components"], "correctIndex": 0, "topicTags": ["rendering"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Render should stay pure; side effects belong in an effect or event handler." },
+                { "id": "react-c6", "type": "multiple_choice", "prompt": "What is the role of props?", "options": ["Pass data and callbacks from parent to child", "Mutate the DOM directly", "Create a database", "Schedule a native thread"], "correctIndex": 0, "topicTags": ["props"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Props are the explicit input boundary from a parent component to a child." },
+                { "id": "react-c7", "type": "multiple_choice", "prompt": "What is composition in React?", "options": ["Building larger UI by nesting smaller components", "Copying every component into one file", "Replacing JavaScript with CSS", "Using only class names"], "correctIndex": 0, "topicTags": ["composition"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Composition lets components combine through children, props, and focused boundaries." },
+                { "id": "react-c8", "type": "multiple_choice", "prompt": "Which approach makes a component easier to reuse?", "options": ["Give it explicit props instead of hidden global assumptions", "Read random globals", "Mutate its parent directly", "Hard-code every label"], "correctIndex": 0, "topicTags": ["components"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Explicit inputs make a component predictable in different screens and tests." }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "react-unit-state",
+          "title": "Unit 2 · Props and state",
+          "summary": "Choose the right owner for state and move data through the tree deliberately.",
+          "lessons": [
+            {
+              "id": "react-state-core",
+              "title": "Keep state close to its owner",
+              "explanation": "State is a design decision. Put it at the lowest common owner that needs to coordinate the behavior.",
+              "exercises": [
+                { "id": "react-s1", "type": "multiple_choice", "prompt": "What does useState return?", "options": ["Current state and a setter", "A promise only", "A DOM node", "A CSS module"], "correctIndex": 0, "topicTags": ["state"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "useState returns the current value and a function to request its update." },
+                { "id": "react-s2", "type": "multiple_choice", "prompt": "When should you use a functional state update?", "options": ["When the next value depends on the previous value", "Only for strings", "Only during server rendering", "Never"], "correctIndex": 0, "topicTags": ["state"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "The functional form reads the latest previous value and avoids stale updates." },
+                { "id": "react-s3", "type": "multiple_choice", "prompt": "What is lifting state up?", "options": ["Moving shared state to a common parent", "Deleting all state", "Moving state into CSS", "Copying state into every child"], "correctIndex": 0, "topicTags": ["state"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "A common owner can coordinate siblings and pass the needed values down." },
+                { "id": "react-s4", "type": "multiple_choice", "prompt": "Which is a controlled input?", "options": ["Its value comes from React state", "It stores data only in the browser", "It has no event handler", "It cannot be focused"], "correctIndex": 0, "topicTags": ["forms"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Controlled inputs keep the displayed value and source of truth in React state." },
+                { "id": "react-s5", "type": "multiple_choice", "prompt": "Why should state be treated as immutable?", "options": ["New references help React detect updates predictably", "Mutation always makes code faster", "React cannot store objects", "It removes the need for renders"], "correctIndex": 0, "topicTags": ["immutability"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Creating the next value gives React a clear signal and keeps previous snapshots safe." },
+                { "id": "react-s6", "type": "multiple_choice", "prompt": "What should a child do when it needs to change parent-owned state?", "options": ["Call a callback passed through props", "Mutate the parent object", "Reach into the DOM", "Create a second hidden source of truth"], "correctIndex": 0, "topicTags": ["props", "state"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Callbacks make the data flow explicit and preserve a single owner for the state." },
+                { "id": "react-s7", "type": "multiple_choice", "prompt": "What is derived data?", "options": ["A value calculated from existing props or state", "A second copy that must be synchronized", "A database migration", "A browser permission"], "correctIndex": 0, "topicTags": ["state"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Derived values usually should be calculated instead of stored as duplicate state." },
+                { "id": "react-s8", "type": "multiple_choice", "prompt": "What is a useful sign that state is in the wrong place?", "options": ["Several siblings need awkward synchronization", "The component has a button", "The screen has a title", "The state is a number"], "correctIndex": 0, "topicTags": ["state-design"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Awkward synchronization often means the shared owner should move higher in the tree." }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "react-unit-hooks",
+          "title": "Unit 3 · Hooks",
+          "summary": "Use hooks for state, effects, memoization, and reusable behavior.",
+          "lessons": [
+            {
+              "id": "react-hooks-core",
+              "title": "Use hooks with intent",
+              "explanation": "Hooks are small contracts. Name the state, effect, or reusable behavior you need before selecting a hook.",
+              "exercises": [
+                { "id": "react-h1", "type": "multiple_choice", "prompt": "What is the Rules of Hooks requirement?", "options": ["Call hooks at the top level of React functions", "Call hooks inside loops", "Call hooks only from click handlers", "Call hooks after returns"], "correctIndex": 0, "topicTags": ["hooks"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Stable hook order lets React associate each hook call with the right state slot." },
+                { "id": "react-h2", "type": "multiple_choice", "prompt": "When is useEffect appropriate?", "options": ["Synchronizing with an external system", "Calculating a label from props", "Replacing every event handler", "Declaring a type"], "correctIndex": 0, "topicTags": ["effects"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Effects connect React to external systems such as subscriptions, timers, or network clients." },
+                { "id": "react-h3", "type": "multiple_choice", "prompt": "What does an effect cleanup function handle?", "options": ["Unsubscribing or cancelling work when dependencies change", "Rendering JSX", "Sorting props", "Creating a key"], "correctIndex": 0, "topicTags": ["effects"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Cleanup prevents stale subscriptions, timers, and requests from leaking across renders." },
+                { "id": "react-h4", "type": "multiple_choice", "prompt": "What does useMemo cache?", "options": ["The result of a calculation until dependencies change", "A server response forever", "A DOM tree", "A user account"], "correctIndex": 0, "topicTags": ["memoization"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "useMemo can avoid repeating an expensive calculation when its inputs are unchanged." },
+                { "id": "react-h5", "type": "multiple_choice", "prompt": "What does useCallback memoize?", "options": ["A function reference", "A network body", "A CSS selector", "A component tree on disk"], "correctIndex": 0, "topicTags": ["memoization"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "useCallback preserves a function reference while dependencies remain unchanged." },
+                { "id": "react-h6", "type": "multiple_choice", "prompt": "When should you extract a custom hook?", "options": ["When stateful behavior is reused across components", "For every single variable", "Only to hide errors", "When no component uses it"], "correctIndex": 0, "topicTags": ["custom-hooks"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Custom hooks share behavior while leaving each component in control of its own state." },
+                { "id": "react-h7", "type": "multiple_choice", "prompt": "Why can an incomplete dependency array be dangerous?", "options": ["An effect can read stale values", "It disables JSX", "It makes keys unique", "It removes all network calls"], "correctIndex": 0, "topicTags": ["effects"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Dependencies describe the values an effect synchronizes with; missing one can leave a stale closure." },
+                { "id": "react-h8", "type": "multiple_choice", "prompt": "What should you do before adding memoization?", "options": ["Measure or identify a real render cost", "Wrap every component", "Remove all state", "Disable accessibility"], "correctIndex": 0, "topicTags": ["performance"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Memoization adds mental overhead, so use it when the measured or obvious cost justifies it." }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "react-unit-data",
+          "title": "Unit 4 · Data and effects",
+          "summary": "Handle loading, errors, cancellation, and server data without confusing UI state.",
+          "lessons": [
+            {
+              "id": "react-data-core",
+              "title": "Make async UI states explicit",
+              "explanation": "A friendly app distinguishes idle, loading, success, empty, error, and cancelled states instead of hiding them in one boolean.",
+              "exercises": [
+                { "id": "react-d1", "type": "multiple_choice", "prompt": "Which state is missing if a screen only has loading and data?", "options": ["Error", "Color", "Font", "Padding"], "correctIndex": 0, "topicTags": ["async-ui"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Users need a recoverable error state when the request cannot provide data." },
+                { "id": "react-d2", "type": "multiple_choice", "prompt": "Why cancel or ignore a stale request result?", "options": ["A previous screen query should not overwrite newer state", "It makes JSON smaller", "It removes loading states", "It improves font rendering"], "correctIndex": 0, "topicTags": ["async-ui"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Stale responses can race with current intent and show data for the wrong query." },
+                { "id": "react-d3", "type": "multiple_choice", "prompt": "What is optimistic UI?", "options": ["Show the expected result before the server confirms it", "Never show errors", "Render only after a full reload", "Store every click forever"], "correctIndex": 0, "topicTags": ["ux"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Optimistic updates feel fast but need a rollback path when the server rejects the action." },
+                { "id": "react-d4", "type": "multiple_choice", "prompt": "What should an empty state tell the learner?", "options": ["What is empty and what action can help next", "Only the HTTP status", "A random code sample", "Nothing"], "correctIndex": 0, "topicTags": ["ux"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "An empty state should provide orientation and a useful next action." },
+                { "id": "react-d5", "type": "multiple_choice", "prompt": "Where should request-specific loading state live?", "options": ["Near the UI that depends on that request", "In an unrelated global boolean", "Only in a comment", "Inside a CSS class"], "correctIndex": 0, "topicTags": ["state-design"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Local ownership keeps unrelated parts of the app from appearing blocked." },
+                { "id": "react-d6", "type": "multiple_choice", "prompt": "Why is a retry action useful after a recoverable error?", "options": ["It gives the user control without restarting the screen", "It guarantees the server works", "It hides telemetry", "It removes validation"], "correctIndex": 0, "topicTags": ["errors"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Retry turns a temporary failure into a clear next step." },
+                { "id": "react-d7", "type": "multiple_choice", "prompt": "What should a data-fetching effect depend on?", "options": ["The query inputs that define the request", "Every CSS color", "Nothing ever", "Only the button label"], "correctIndex": 0, "topicTags": ["effects"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "When request inputs change, the effect should synchronize with the new request." },
+                { "id": "react-d8", "type": "multiple_choice", "prompt": "Which is a useful boundary for server data?", "options": ["Normalize it at the edge and render a UI-friendly shape", "Pass raw unknown values everywhere", "Mix transport errors into labels", "Store duplicate copies in each child"], "correctIndex": 0, "topicTags": ["data-modeling"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "A boundary keeps transport details from leaking through every presentational component." }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "react-unit-quality",
+          "title": "Unit 5 · Quality and interviews",
+          "summary": "Explain accessibility, testing, performance, and trade-offs like a product engineer.",
+          "lessons": [
+            {
+              "id": "react-quality-core",
+              "title": "Ship UI people can trust",
+              "explanation": "Good React decisions protect the learner: clear interaction semantics, resilient states, and tests that describe behavior.",
+              "exercises": [
+                { "id": "react-q1", "type": "multiple_choice", "prompt": "What should a custom clickable element provide?", "options": ["A real button or equivalent keyboard and accessibility semantics", "Only a cursor change", "A hidden div", "An animation without a label"], "correctIndex": 0, "topicTags": ["accessibility"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Interaction semantics should work for keyboards, screen readers, touch, and automation." },
+                { "id": "react-q2", "type": "multiple_choice", "prompt": "What does a behavior-focused component test assert?", "options": ["What the user can see and do", "Private variable names", "The exact internal hook order", "The bundle hash"], "correctIndex": 0, "topicTags": ["testing"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Tests that follow user behavior stay useful when implementation details change." },
+                { "id": "react-q3", "type": "multiple_choice", "prompt": "What is a good first performance move for a long list?", "options": ["Measure and use an appropriate list strategy", "Memoize every child blindly", "Remove labels", "Disable scrolling"], "correctIndex": 0, "topicTags": ["performance"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Long lists need measurement and an appropriate virtualization or rendering strategy." },
+                { "id": "react-q4", "type": "multiple_choice", "prompt": "Why should loading and error states be tested?", "options": ["They are real product paths, not exceptional decorations", "They never happen", "They only affect CSS", "They make the test suite shorter"], "correctIndex": 0, "topicTags": ["testing", "async-ui"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Users experience loading and failure states often enough that they deserve explicit coverage." },
+                { "id": "react-q5", "type": "multiple_choice", "prompt": "What is prop drilling a signal to evaluate?", "options": ["Whether a shared context or better component boundary is appropriate", "Whether every prop should be global", "Whether JSX should be removed", "Whether tests should be deleted"], "correctIndex": 0, "topicTags": ["architecture"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Prop drilling is not automatically bad, but repeated awkward plumbing can reveal a boundary issue." },
+                { "id": "react-q6", "type": "multiple_choice", "prompt": "Which trade-off should you mention when proposing Context?", "options": ["It reduces plumbing but can broaden update scope", "It makes all state local", "It removes the need for types", "It prevents rerenders"], "correctIndex": 0, "topicTags": ["architecture"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Context is useful for shared values, but broad consumers can make updates less local." },
+                { "id": "react-q7", "type": "multiple_choice", "prompt": "What makes a UI state machine clearer than several booleans?", "options": ["Impossible combinations become harder to represent", "It avoids all events", "It only supports success", "It hides network state"], "correctIndex": 0, "topicTags": ["state-design"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "A discriminated state can express idle, loading, success, and error as intentional modes." },
+                { "id": "react-q8", "type": "multiple_choice", "prompt": "What is the strongest interview explanation for a React decision?", "options": ["Connect the choice to user behavior, state ownership, and trade-offs", "Say the framework always requires it", "Avoid discussing failure", "Only name the hook"], "correctIndex": 0, "topicTags": ["interviews"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "A strong answer explains the user-facing problem, the owner of state, and the cost of the solution." }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

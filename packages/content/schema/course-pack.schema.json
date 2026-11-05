@@ -1,0 +1,375 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://learn-code.dev/schemas/course-pack-v1.json",
+  "title": "CoursePack",
+  "description": "Schema definition for Learn Code versioned JSON course packs.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "packId",
+    "version",
+    "title",
+    "description",
+    "language",
+    "publisher",
+    "license",
+    "source",
+    "contentHash",
+    "updatedAt",
+    "courses"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "description": "Contract version, e.g. '1.0'"
+    },
+    "packId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Immutable lowercase kebab-case pack identifier"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+      "description": "Semantic content version"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "language": {
+      "type": "string",
+      "minLength": 1
+    },
+    "level": {
+      "type": "string",
+      "enum": ["beginner", "intermediate", "advanced", "all_levels"]
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "publisher": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "homepage": { "type": "string" },
+        "url": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "license": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "object",
+      "required": ["url"],
+      "properties": {
+        "url": { "type": "string", "minLength": 1 },
+        "ref": { "type": "string" },
+        "commit": { "type": "string" },
+        "path": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "contentHash": {
+      "type": "string",
+      "minLength": 1
+    },
+    "updatedAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "minimumClientVersion": {
+      "type": "string"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "courses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Course"
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "Course": {
+      "type": "object",
+      "required": ["id", "title", "description", "chapters"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "language": { "type": "string" },
+        "chapters": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Chapter"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "Chapter": {
+      "type": "object",
+      "required": ["id", "title", "summary", "lessons"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "lessons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Lesson"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "Lesson": {
+      "type": "object",
+      "required": ["id", "title", "explanation", "exercises"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "explanation": { "type": "string", "minLength": 1 },
+        "exercises": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Exercise"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "Exercise": {
+      "type": "object",
+      "required": ["id", "type", "prompt"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "multiple_choice",
+            "cloze",
+            "predict_output",
+            "write_function",
+            "multi_part_problem"
+          ]
+        },
+        "prompt": { "type": "string", "minLength": 1 },
+        "topicTags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "difficulty": { "type": "string" },
+        "estimatedSeconds": { "type": "integer", "minimum": 0 },
+        "aiGenerated": { "type": "boolean" },
+        "ai_generated": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "multiple_choice" } } },
+          "then": { "$ref": "#/$defs/MultipleChoiceFields" }
+        },
+        {
+          "if": { "properties": { "type": { "const": "cloze" } } },
+          "then": { "$ref": "#/$defs/ClozeFields" }
+        },
+        {
+          "if": { "properties": { "type": { "const": "predict_output" } } },
+          "then": { "$ref": "#/$defs/PredictOutputFields" }
+        },
+        {
+          "if": { "properties": { "type": { "const": "write_function" } } },
+          "then": { "$ref": "#/$defs/WriteFunctionFields" }
+        },
+        {
+          "if": { "properties": { "type": { "const": "multi_part_problem" } } },
+          "then": { "$ref": "#/$defs/MultiPartProblemFields" }
+        }
+      ]
+    },
+    "MultipleChoiceFields": {
+      "type": "object",
+      "required": ["options", "explanation"],
+      "properties": {
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 5,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "correctIndex": { "type": "integer", "minimum": 0 },
+        "correct_index": { "type": "integer", "minimum": 0 },
+        "grading": {
+          "type": "object",
+          "properties": {
+            "kind": { "type": "string" },
+            "correctIndex": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "explanation": { "type": "string", "minLength": 1 },
+        "code": { "type": "string" }
+      }
+    },
+    "ClozeFields": {
+      "type": "object",
+      "required": ["template", "blanks", "explanation"],
+      "properties": {
+        "template": { "type": "string", "minLength": 1 },
+        "explanation": { "type": "string", "minLength": 1 },
+        "blanks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Blank" }
+        }
+      }
+    },
+    "PredictOutputFields": {
+      "type": "object",
+      "required": ["code", "explanation"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "expectedOutput": { "type": "string" },
+        "expected_output": { "type": "string" },
+        "explanation": { "type": "string", "minLength": 1 }
+      }
+    },
+    "WriteFunctionFields": {
+      "type": "object",
+      "required": ["guided"],
+      "properties": {
+        "starterCode": { "type": "string" },
+        "starter_code": { "type": "string" },
+        "hiddenTests": { "type": "string" },
+        "hidden_tests": { "type": "string" },
+        "referenceSolution": { "type": "string" },
+        "reference_solution": { "type": "string" },
+        "hints": {
+          "type": "array",
+          "maxItems": 3,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "explanation": { "type": "string" },
+        "guided": { "$ref": "#/$defs/CodePuzzle" }
+      }
+    },
+    "MultiPartProblemFields": {
+      "type": "object",
+      "required": ["story", "parts"],
+      "properties": {
+        "story": { "type": "string", "minLength": 1 },
+        "parts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/ProblemPart" }
+        },
+        "faq": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/FaqItem" }
+        },
+        "discussion": { "type": "string" },
+        "sourceNote": { "type": "string" },
+        "source_note": { "type": "string" }
+      }
+    },
+    "Blank": {
+      "type": "object",
+      "required": ["placeholder", "accepted"],
+      "properties": {
+        "placeholder": {
+          "type": "string",
+          "pattern": "^____\\d+$"
+        },
+        "accepted": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "caseSensitive": { "type": "boolean" },
+        "case_sensitive": { "type": "boolean" },
+        "options": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      },
+      "additionalProperties": true
+    },
+    "CodePuzzle": {
+      "type": "object",
+      "required": ["template", "blanks"],
+      "properties": {
+        "template": { "type": "string", "minLength": 1 },
+        "blanks": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/Blank" }
+        },
+        "explanation": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "ProblemPart": {
+      "type": "object",
+      "required": ["id", "prompt", "expected", "guided"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "prompt": { "type": "string", "minLength": 1 },
+        "starterCode": { "type": "string" },
+        "starter_code": { "type": "string" },
+        "hiddenTests": { "type": "string" },
+        "hidden_tests": { "type": "string" },
+        "referenceSolution": { "type": "string" },
+        "reference_solution": { "type": "string" },
+        "expected": { "type": "string", "minLength": 1 },
+        "hints": {
+          "type": "array",
+          "maxItems": 3,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "guided": { "$ref": "#/$defs/CodePuzzle" }
+      },
+      "additionalProperties": true
+    },
+    "FaqItem": {
+      "type": "object",
+      "required": ["question", "answer"],
+      "properties": {
+        "question": { "type": "string", "minLength": 1 },
+        "answer": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    }
+  }
+}

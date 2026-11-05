@@ -1,0 +1,21 @@
+<svg width="320" height="240" viewBox="0 0 320 240" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Octo Coach celebrating a perfect lesson</title>
+  <desc id="desc">A happy purple octopus celebrates beside a gold star and a perfect lesson ribbon.</desc>
+  <rect width="320" height="240" rx="32" fill="#EEEAF8"/>
+  <path d="M45 55L50 70L66 75L50 80L45 96L40 80L24 75L40 70L45 55Z" fill="#F2B84B"/>
+  <path d="M273 131L278 146L294 151L278 156L273 172L268 156L252 151L268 146L273 131Z" fill="#F2B84B"/>
+  <circle cx="126" cy="123" r="70" fill="#F8F6FF" stroke="#6856A6" stroke-width="4"/>
+  <path d="M78 139C78 87 98 64 126 64C154 64 174 87 174 139V154C174 172 164 185 154 185C143 185 140 170 133 170C125 170 121 185 110 185C100 185 91 172 91 154V139H78Z" fill="#6856A6"/>
+  <path d="M91 153C82 178 89 197 101 199C112 201 116 182 119 171" fill="#493878"/>
+  <path d="M119 169C116 194 126 207 137 202C146 198 142 180 139 170" fill="#493878"/>
+  <path d="M147 170C154 191 167 195 173 185C180 174 167 158 160 150" fill="#493878"/>
+  <path d="M108 111L115 118L123 109" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M137 109L144 116L152 107" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M119 132C126 140 135 140 142 132" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="101" cy="140" rx="9" ry="5" fill="#F39AB4"/>
+  <ellipse cx="154" cy="140" rx="9" ry="5" fill="#F39AB4"/>
+  <path d="M212 64H279V124H212C205 124 199 118 199 111V77C199 70 205 64 212 64Z" fill="#F2B84B" stroke="#806126" stroke-width="3"/>
+  <path d="M212 124L225 142L235 124" fill="#F2B84B" stroke="#806126" stroke-width="3"/>
+  <text x="239" y="101" text-anchor="middle" fill="#45391F" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="18" font-weight="800">PERFECT</text>
+  <text x="160" y="226" text-anchor="middle" fill="#493878" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="15" font-weight="800" letter-spacing="1">LESSON COMPLETE</text>
+</svg>

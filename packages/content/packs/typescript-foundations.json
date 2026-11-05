@@ -1,0 +1,137 @@
+{
+  "schemaVersion": "1.0",
+  "packId": "typescript-foundations",
+  "version": "1.0.0",
+  "title": "TypeScript Foundations",
+  "description": "Mobile-first TypeScript practice for types, narrowing, async APIs, generics, and interview reasoning.",
+  "language": "typescript",
+  "level": "beginner",
+  "publisher": { "name": "Learn Code", "homepage": "https://learn-code.dev" },
+  "license": "CC BY 4.0",
+  "source": { "url": "https://github.com/learn-code/typescript-foundations", "ref": "main", "path": "packs/typescript-foundations.json" },
+  "contentHash": "sha256:af0c1c36a4b7fa67a2269682e20e34a73d55d5216cd1c50dfa1fe8fa82e1f66d",
+  "updatedAt": "2026-11-04T00:00:00Z",
+  "minimumClientVersion": "0.1.0",
+  "capabilities": ["mobile", "reasoning", "code-examples"],
+  "tags": ["typescript", "javascript", "react-native", "interviews"],
+  "courses": [
+    {
+      "id": "typescript-core",
+      "title": "TypeScript for Product Engineers",
+      "description": "Build confidence with types that explain intent without turning every question into a type puzzle.",
+      "language": "typescript",
+      "chapters": [
+        {
+          "id": "typescript-unit-basics",
+          "title": "Unit 1 · Types and inference",
+          "summary": "Use annotations, inference, objects, arrays, and readonly intent.",
+          "lessons": [
+            {
+              "id": "typescript-basics-core",
+              "title": "Let the types explain the data",
+              "explanation": "TypeScript is most useful when types describe the decisions already present in your domain.",
+              "exercises": [
+                { "id": "ts-b1", "type": "multiple_choice", "prompt": "What does TypeScript add to JavaScript?", "options": ["Static type checking during development", "A new browser runtime", "A database engine", "Automatic UI design"], "correctIndex": 0, "topicTags": ["types"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "TypeScript checks types before runtime and emits JavaScript for execution." },
+                { "id": "ts-b2", "type": "multiple_choice", "prompt": "What is type inference?", "options": ["The compiler deduces a type from a value or context", "The runtime downloads types", "Every value becomes any", "Types are selected randomly"], "correctIndex": 0, "topicTags": ["inference"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Inference reduces repetition while preserving static checking." },
+                { "id": "ts-b3", "type": "multiple_choice", "prompt": "Which type represents text?", "options": ["string", "Text", "StringValue", "char[]"], "correctIndex": 0, "topicTags": ["primitives"], "difficulty": "easy", "estimatedSeconds": 15, "explanation": "The primitive TypeScript type for text is lowercase string." },
+                { "id": "ts-b4", "type": "multiple_choice", "prompt": "What does readonly communicate?", "options": ["A property should not be assigned through that reference", "The value is frozen at runtime in every case", "The field is private", "The field is nullable"], "correctIndex": 0, "topicTags": ["readonly"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "readonly protects the type-level write path; it is not a universal runtime freeze." },
+                { "id": "ts-b5", "type": "multiple_choice", "prompt": "Which type is a good shape for an object with id and title?", "options": ["An interface or object type", "boolean only", "never only", "Function only"], "correctIndex": 0, "topicTags": ["objects"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Interfaces and object types name the fields and their intended types." },
+                { "id": "ts-b6", "type": "multiple_choice", "prompt": "Why prefer a specific array type over any[]?", "options": ["It preserves useful guarantees for each element", "It makes arrays immutable", "It skips compilation", "It forces all values to strings"], "correctIndex": 0, "topicTags": ["arrays"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Specific element types catch invalid values at the point where they are introduced." },
+                { "id": "ts-b7", "type": "multiple_choice", "prompt": "What does optional property syntax mean?", "options": ["The property may be absent", "The property is always null", "The property is private", "The property is a method"], "correctIndex": 0, "topicTags": ["objects"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "A question mark on a property means callers must handle its absence." },
+                { "id": "ts-b8", "type": "multiple_choice", "prompt": "What is the main risk of using any everywhere?", "options": ["It turns off useful checking at the boundary", "It makes code impossible to run", "It guarantees runtime safety", "It makes all values readonly"], "correctIndex": 0, "topicTags": ["any"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "any is an escape hatch that can let incorrect assumptions travel through the program." }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "typescript-unit-unions",
+          "title": "Unit 2 · Unions and narrowing",
+          "summary": "Model alternatives and prove which case you have before using it.",
+          "lessons": [
+            {
+              "id": "typescript-unions-core",
+              "title": "Make impossible states visible",
+              "explanation": "Union types make alternatives explicit. Narrowing is the proof step that lets code safely use one branch.",
+              "exercises": [
+                { "id": "ts-u1", "type": "multiple_choice", "prompt": "What does string | number mean?", "options": ["The value can be a string or a number", "The value must be both", "The value is always unknown", "The value is a tuple"], "correctIndex": 0, "topicTags": ["unions"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "The pipe creates a union: one of the listed alternatives." },
+                { "id": "ts-u2", "type": "multiple_choice", "prompt": "What is narrowing?", "options": ["Using a runtime check to refine a broader type", "Deleting a type", "Making every value any", "Sorting keys"], "correctIndex": 0, "topicTags": ["narrowing"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Checks such as typeof or in give TypeScript evidence about the current branch." },
+                { "id": "ts-u3", "type": "multiple_choice", "prompt": "Which keyword checks a primitive's runtime type?", "options": ["typeof", "instance", "kindof", "shapeof"], "correctIndex": 0, "topicTags": ["narrowing"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "typeof is a JavaScript runtime operator understood by TypeScript's narrowing analysis." },
+                { "id": "ts-u4", "type": "multiple_choice", "prompt": "What is a discriminated union?", "options": ["A union with a shared literal field identifying each case", "A union of only numbers", "An array with no keys", "A class with no methods"], "correctIndex": 0, "topicTags": ["discriminated-unions"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "A shared discriminant such as kind lets a switch prove which fields are available." },
+                { "id": "ts-u5", "type": "multiple_choice", "prompt": "Why is a never branch useful in an exhaustive switch?", "options": ["It makes new unhandled cases fail at compile time", "It catches network errors", "It converts strings to numbers", "It creates a default UI"], "correctIndex": 0, "topicTags": ["exhaustiveness"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "An assertNever helper turns future union cases into visible compiler failures." },
+                { "id": "ts-u6", "type": "multiple_choice", "prompt": "What does an intersection type A & B describe?", "options": ["A value that satisfies both shapes", "Either A or B", "Neither A nor B", "Only a function"], "correctIndex": 0, "topicTags": ["intersections"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Intersection types combine requirements from both sides." },
+                { "id": "ts-u7", "type": "multiple_choice", "prompt": "What should you do with unknown input from a network response?", "options": ["Validate or narrow it before use", "Cast it to any immediately", "Assume every property exists", "Store it in CSS"], "correctIndex": 0, "topicTags": ["unknown", "validation"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "unknown forces a boundary check instead of allowing unchecked property access." },
+                { "id": "ts-u8", "type": "multiple_choice", "prompt": "Which design makes API states easier to render?", "options": ["A discriminated union for loading, success, and error", "Several unrelated booleans", "One any object", "A magic string with no type"], "correctIndex": 0, "topicTags": ["state-modeling"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "A tagged state union makes valid UI modes and their data explicit." }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "typescript-unit-generics",
+          "title": "Unit 3 · Generics",
+          "summary": "Reuse type-safe helpers without erasing the relationship between inputs and outputs.",
+          "lessons": [
+            {
+              "id": "typescript-generics-core",
+              "title": "Keep the relationship between values",
+              "explanation": "Generics are most valuable when the output type depends on the input type and the compiler can preserve that relationship.",
+              "exercises": [
+                { "id": "ts-g1", "type": "multiple_choice", "prompt": "What does a generic type parameter represent?", "options": ["A type chosen by the caller and carried through a definition", "A runtime database", "A CSS variable", "An error string"], "correctIndex": 0, "topicTags": ["generics"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Generics let a definition work across types while preserving relationships." },
+                { "id": "ts-g2", "type": "multiple_choice", "prompt": "Why is function identity<T>(value: T): T useful?", "options": ["The returned value keeps the same type as the input", "It converts everything to string", "It validates JSON", "It prevents all nulls"], "correctIndex": 0, "topicTags": ["generics"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "The type parameter links the argument and return type." },
+                { "id": "ts-g3", "type": "multiple_choice", "prompt": "What does a generic constraint such as T extends { id: string } guarantee?", "options": ["T has at least an id string", "T is exactly that object", "T is a number", "T cannot be inferred"], "correctIndex": 0, "topicTags": ["constraints"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "extends limits callers to types that satisfy the required shape." },
+                { "id": "ts-g4", "type": "multiple_choice", "prompt": "What does keyof T produce?", "options": ["A union of keys known on T", "All values of T", "A runtime array", "Only method names"], "correctIndex": 0, "topicTags": ["keyof"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "keyof creates a type-level union of property keys." },
+                { "id": "ts-g5", "type": "multiple_choice", "prompt": "What is a type-safe get<T, K extends keyof T> helper protecting?", "options": ["The key must exist on the object type", "The object must be frozen", "The key is always a number", "The value is always optional"], "correctIndex": 0, "topicTags": ["keyof", "generics"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "The key constraint prevents asking for a property that is not part of T." },
+                { "id": "ts-g6", "type": "multiple_choice", "prompt": "When are generic constraints better than any?", "options": ["When a helper needs a small known capability", "Never", "Only in CSS", "When no relationship matters"], "correctIndex": 0, "topicTags": ["constraints"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Constraints keep the capability you need without discarding all other type information." },
+                { "id": "ts-g7", "type": "multiple_choice", "prompt": "What does a generic default type provide?", "options": ["A fallback when callers omit the type argument", "A runtime default value", "A database schema", "A forced union"], "correctIndex": 0, "topicTags": ["generics"], "difficulty": "medium", "estimatedSeconds": 20, "explanation": "Default type parameters reduce ceremony while keeping explicit override possible." },
+                { "id": "ts-g8", "type": "multiple_choice", "prompt": "What is a sign a generic is too clever?", "options": ["Callers need a type puzzle to understand a simple API", "It uses one type parameter", "It has a name", "It compiles"], "correctIndex": 0, "topicTags": ["trade-offs"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Generics should clarify reuse; if they obscure a small API, a simpler type may be better." }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "typescript-unit-async",
+          "title": "Unit 4 · Async APIs",
+          "summary": "Model promises, errors, validation, and cancellation at the network boundary.",
+          "lessons": [
+            {
+              "id": "typescript-async-core",
+              "title": "Trust the boundary, not the payload",
+              "explanation": "Network data is unknown until validated. Keep transport failure, domain failure, and UI state visible.",
+              "exercises": [
+                { "id": "ts-a1", "type": "multiple_choice", "prompt": "What does an async function return?", "options": ["A Promise", "A synchronous string only", "A type alias", "A React element always"], "correctIndex": 0, "topicTags": ["promises"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "An async function wraps its result in a Promise, including thrown errors as rejection." },
+                { "id": "ts-a2", "type": "multiple_choice", "prompt": "What does await do inside an async function?", "options": ["Waits for a promise result without blocking the whole thread", "Makes the request synchronous globally", "Catches every error automatically", "Validates JSON"], "correctIndex": 0, "topicTags": ["async-await"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "await suspends the async function until the promise settles and returns its value or throws." },
+                { "id": "ts-a3", "type": "multiple_choice", "prompt": "Where should untrusted API data be validated?", "options": ["At the boundary before domain code relies on it", "Only after rendering", "Never", "Inside CSS"], "correctIndex": 0, "topicTags": ["validation"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Validating at the boundary keeps unsafe assumptions from spreading across the app." },
+                { "id": "ts-a4", "type": "multiple_choice", "prompt": "What should a catch block add for a user-facing request?", "options": ["A recoverable state and useful next action", "A silent empty screen", "An infinite retry", "A type assertion"], "correctIndex": 0, "topicTags": ["errors"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Error handling should preserve context and guide the user toward recovery." },
+                { "id": "ts-a5", "type": "multiple_choice", "prompt": "Why can a stale request response be dangerous?", "options": ["It can overwrite state for newer user intent", "It makes TypeScript compile slower", "It changes the browser language", "It disables generics"], "correctIndex": 0, "topicTags": ["races"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Responses can arrive out of order, so stale work needs cancellation or request identity checks." },
+                { "id": "ts-a6", "type": "multiple_choice", "prompt": "What does Promise.all do when one promise rejects?", "options": ["The combined promise rejects", "It silently returns every value", "It retries the failed promise", "It converts errors to null"], "correctIndex": 0, "topicTags": ["promises"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Promise.all is fail-fast; use another combinator when partial success is the goal." },
+                { "id": "ts-a7", "type": "multiple_choice", "prompt": "What is a useful UI state union for a request?", "options": ["idle, loading, success, and error cases", "isLoading and isNotLoading only", "any", "one global boolean"], "correctIndex": 0, "topicTags": ["state-modeling"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Explicit cases make impossible combinations such as loading and error at once harder to represent." },
+                { "id": "ts-a8", "type": "multiple_choice", "prompt": "What is a good response to user cancellation?", "options": ["Stop or ignore the work without showing a false error", "Show success anyway", "Retry forever", "Throw a random exception"], "correctIndex": 0, "topicTags": ["cancellation"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Cancellation is often a normal lifecycle event, not a product error." }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "typescript-unit-interviews",
+          "title": "Unit 5 · Interview judgment",
+          "summary": "Choose clarity, explain trade-offs, and use TypeScript to make correctness visible.",
+          "lessons": [
+            {
+              "id": "typescript-interviews-core",
+              "title": "Explain the type decision",
+              "explanation": "A strong TypeScript answer starts with the domain risk and then picks the smallest type feature that makes the risk visible.",
+              "exercises": [
+                { "id": "ts-i1", "type": "multiple_choice", "prompt": "What should you clarify before designing a type?", "options": ["The domain states, boundaries, and invalid cases", "The longest possible generic", "The formatter version only", "Nothing"], "correctIndex": 0, "topicTags": ["problem-solving"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Types should describe meaningful domain decisions, not be invented before the problem is understood." },
+                { "id": "ts-i2", "type": "multiple_choice", "prompt": "When is unknown better than any?", "options": ["When data is untrusted and should be narrowed", "When you want no checking", "When every property is known", "Only for CSS"], "correctIndex": 0, "topicTags": ["unknown"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "unknown keeps the boundary honest and requires a proof step before use." },
+                { "id": "ts-i3", "type": "multiple_choice", "prompt": "What does a discriminated union communicate in an interview?", "options": ["The legal states and the data each state owns", "Only the color of a button", "That all values are strings", "That errors are impossible"], "correctIndex": 0, "topicTags": ["state-modeling"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "It makes domain states explicit and lets control flow prove which fields are available." },
+                { "id": "ts-i4", "type": "multiple_choice", "prompt": "What is a good first response to a type error?", "options": ["Inspect the violated assumption before adding a cast", "Cast to any immediately", "Delete the type", "Ignore it"], "correctIndex": 0, "topicTags": ["debugging"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "A type error often points to a mismatch in the domain model or an unchecked boundary." },
+                { "id": "ts-i5", "type": "multiple_choice", "prompt": "Why should a type alias have a domain name?", "options": ["The name communicates intent at call sites", "It makes runtime objects smaller", "It prevents all errors", "It replaces tests"], "correctIndex": 0, "topicTags": ["readability"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Names such as LessonId or RequestState carry meaning beyond the primitive shape." },
+                { "id": "ts-i6", "type": "multiple_choice", "prompt": "What is the maintenance cost of a very clever type?", "options": ["Future readers may struggle to use or change the API", "It always runs slower", "It cannot compile", "It disables JavaScript"], "correctIndex": 0, "topicTags": ["trade-offs"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Type-level cleverness is still product complexity and should earn its place." },
+                { "id": "ts-i7", "type": "multiple_choice", "prompt": "What makes a helper type-safe without being rigid?", "options": ["A generic relationship plus a small constraint", "Any on every parameter", "No inputs", "A runtime comment"], "correctIndex": 0, "topicTags": ["generics"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Relationships and constraints preserve useful flexibility without erasing guarantees." },
+                { "id": "ts-i8", "type": "multiple_choice", "prompt": "How should you explain a TypeScript trade-off?", "options": ["Connect type complexity to the risk it prevents", "Say stricter is always better", "Avoid mentioning users", "Only name syntax"], "correctIndex": 0, "topicTags": ["communication"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "The best choice balances correctness, readability, onboarding cost, and the actual domain risk." }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

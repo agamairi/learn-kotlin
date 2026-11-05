@@ -1,0 +1,20 @@
+<svg width="360" height="240" viewBox="0 0 360 240" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Octo Coach flying with 100 percent accuracy</title>
+  <desc id="desc">A purple octopus flies like a superhero with a cape and a 100 percent accuracy badge.</desc>
+  <rect width="360" height="240" rx="32" fill="#FFF7E7"/>
+  <path d="M50 66L75 56L62 80L37 88L50 66Z" fill="#F2B84B" opacity=".75"/>
+  <path d="M303 168L329 160L313 184L287 191L303 168Z" fill="#F2B84B" opacity=".75"/>
+  <path d="M114 115C87 97 65 93 45 106C67 114 82 129 93 151C101 135 108 124 114 115Z" fill="#F39AB4" stroke="#493878" stroke-width="4"/>
+  <path d="M211 122C239 103 261 103 283 116C259 123 245 136 231 156C224 140 218 130 211 122Z" fill="#F39AB4" stroke="#493878" stroke-width="4"/>
+  <circle cx="172" cy="113" r="62" fill="#EEEAF8" stroke="#6856A6" stroke-width="4"/>
+  <path d="M127 129C127 81 146 59 172 59C198 59 217 81 217 129V143C217 161 207 174 198 174C188 174 184 159 177 159C170 159 166 174 156 174C146 174 137 161 137 143V129H127Z" fill="#6856A6"/>
+  <path d="M139 150C132 172 138 190 149 191C159 192 163 177 166 166" fill="#493878"/>
+  <path d="M163 164C162 187 171 198 181 194C190 190 186 172 184 163" fill="#493878"/>
+  <path d="M188 164C194 184 207 187 213 179C219 169 208 154 201 146" fill="#493878"/>
+  <circle cx="157" cy="108" r="7" fill="white"/>
+  <circle cx="187" cy="108" r="7" fill="white"/>
+  <path d="M165 126C170 131 176 131 181 126" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <path d="M285 47C292 32 314 34 318 51C332 54 335 73 322 82C326 98 309 110 295 102C283 112 263 101 267 85C252 78 257 56 274 54C276 51 280 49 285 47Z" fill="#4C6B5A"/>
+  <text x="295" y="82" text-anchor="middle" fill="white" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="22" font-weight="800">100%</text>
+  <text x="181" y="226" text-anchor="middle" fill="#493878" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="15" font-weight="800" letter-spacing="1">SUPER REASONER</text>
+</svg>

@@ -1,0 +1,18 @@
+<svg width="320" height="240" viewBox="0 0 320 240" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Octo Coach asking a question</title>
+  <desc id="desc">A friendly purple octopus holds up one tentacle beside a question bubble.</desc>
+  <rect width="320" height="240" rx="32" fill="#EEEAF8"/>
+  <circle cx="124" cy="130" r="68" fill="#F8F6FF" stroke="#6856A6" stroke-width="4"/>
+  <path d="M76 145C76 91 97 66 124 66C151 66 172 91 172 145V158C172 176 162 188 153 188C143 188 139 174 132 174C125 174 121 188 111 188C101 188 96 176 96 158V145H76Z" fill="#6856A6"/>
+  <path d="M93 157C85 177 89 197 101 200C112 202 115 187 119 178" fill="#493878"/>
+  <path d="M118 176C116 198 125 211 136 207C145 204 142 186 139 176" fill="#493878"/>
+  <path d="M145 176C151 198 164 201 170 193C177 183 166 168 158 158" fill="#493878"/>
+  <circle cx="108" cy="116" r="7" fill="white"/>
+  <circle cx="140" cy="116" r="7" fill="white"/>
+  <path d="M119 132C124 137 130 137 135 132" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="101" cy="139" rx="9" ry="5" fill="#F39AB4"/>
+  <ellipse cx="147" cy="139" rx="9" ry="5" fill="#F39AB4"/>
+  <path d="M178 72L192 49L197 74L222 80L200 91L198 115L184 96L160 99L175 82L178 72Z" fill="#F2B84B"/>
+  <path d="M219 43H284C297 43 307 53 307 66V104C307 117 297 127 284 127H264L248 148L247 127H219C206 127 196 117 196 104V66C196 53 206 43 219 43Z" fill="white" stroke="#6856A6" stroke-width="4"/>
+  <text x="250" y="99" text-anchor="middle" fill="#493878" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="52" font-weight="800">?</text>
+</svg>

@@ -6,7 +6,8 @@
 local.properties
 .idea
 .DS_Store
+node_modules/
+.expo/
 /captures
 .externalNativeBuild
 .cxx
-

@@ -1,0 +1,13 @@
+{
+  "name": "@learn/storage",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@learn/api": "0.1.0"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "tsx --test src/**/*.test.ts"
+  }
+}

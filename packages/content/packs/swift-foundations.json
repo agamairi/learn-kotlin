@@ -1,0 +1,137 @@
+{
+  "schemaVersion": "1.0",
+  "packId": "swift-foundations",
+  "version": "1.0.0",
+  "title": "Swift Foundations",
+  "description": "Mobile-first Swift practice for language fluency, SwiftUI judgment, and interview confidence.",
+  "language": "swift",
+  "level": "beginner",
+  "publisher": { "name": "Learn Code", "homepage": "https://learn-code.dev" },
+  "license": "CC BY 4.0",
+  "source": { "url": "https://github.com/learn-code/swift-foundations", "ref": "main", "path": "packs/swift-foundations.json" },
+  "contentHash": "sha256:3b047f799a143d102b2b645df8c329b557fa5074864a0e656f6a9428526f2035",
+  "updatedAt": "2026-11-04T00:00:00Z",
+  "minimumClientVersion": "0.1.0",
+  "capabilities": ["mobile", "reasoning", "code-examples"],
+  "tags": ["swift", "ios", "swiftui", "interviews"],
+  "courses": [
+    {
+      "id": "swift-core",
+      "title": "Swift for Mobile Engineers",
+      "description": "Build the mental models behind safe, readable Swift before reaching for a full IDE.",
+      "language": "swift",
+      "chapters": [
+        {
+          "id": "swift-unit-foundations",
+          "title": "Unit 1 · Swift foundations",
+          "summary": "Values, types, optionals, structs, enums, and control flow.",
+          "lessons": [
+            {
+              "id": "swift-foundations-core",
+              "title": "Think in Swift values",
+              "explanation": "Swift rewards explicit, value-oriented code. Learn the choices that make a small mobile feature easier to trust.",
+              "exercises": [
+                { "id": "swift-f1", "type": "multiple_choice", "prompt": "Which keyword declares a binding that cannot be reassigned?", "code": "let retryLimit = 3", "options": ["let", "var", "const", "fixed"], "correctIndex": 0, "topicTags": ["values"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Use let for a binding that should not be reassigned after initialization." },
+                { "id": "swift-f2", "type": "multiple_choice", "prompt": "What does the question mark in String? mean?", "code": "var nickname: String?", "options": ["The value is optional and may be nil", "The value is always empty", "The value is immutable", "The value is a collection"], "correctIndex": 0, "topicTags": ["optionals"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "A question mark creates an Optional, which can hold a value or nil." },
+                { "id": "swift-f3", "type": "multiple_choice", "prompt": "Which construct is best for unwrapping an optional and exiting early when it is nil?", "options": ["if let", "guard let", "switch only", "force cast"], "correctIndex": 1, "topicTags": ["optionals", "control-flow"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "guard let keeps the happy path unwrapped and makes the failure exit explicit." },
+                { "id": "swift-f4", "type": "multiple_choice", "prompt": "What is a struct in Swift primarily used for?", "options": ["A reference-only object", "A value type that groups data and behavior", "A database connection", "A background thread"], "correctIndex": 1, "topicTags": ["structs"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Structs are value types and are a common default for modeling app data." },
+                { "id": "swift-f5", "type": "multiple_choice", "prompt": "Which type is useful when a value should be one of a closed set of cases?", "options": ["enum", "tuple", "AnyObject", "UnsafePointer"], "correctIndex": 0, "topicTags": ["enums"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "An enum models a finite set of states and lets the compiler help with exhaustive handling." },
+                { "id": "swift-f6", "type": "multiple_choice", "prompt": "Why is exhaustive switch handling valuable?", "options": ["It removes all runtime work", "It forces every known state to be considered", "It converts values to strings", "It makes every case asynchronous"], "correctIndex": 1, "topicTags": ["control-flow"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Exhaustive switches make new enum cases visible at compile time instead of silently ignored." },
+                { "id": "swift-f7", "type": "multiple_choice", "prompt": "What does type inference allow Swift to do?", "options": ["Infer a value's type from context", "Skip all type checking", "Convert every value to Any", "Make optionals impossible"], "correctIndex": 0, "topicTags": ["types"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Swift can infer many types while still checking them statically." },
+                { "id": "swift-f8", "type": "multiple_choice", "prompt": "Which choice is safer than force-unwrapping an optional in production code?", "options": ["Use guard let or if let", "Add more exclamation marks", "Cast everything to Any", "Ignore the nil case"], "correctIndex": 0, "topicTags": ["optionals"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Optional binding handles the absence case explicitly instead of crashing when nil appears." }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "swift-unit-collections",
+          "title": "Unit 2 · Collections",
+          "summary": "Use arrays, dictionaries, sets, and transformations with clear intent.",
+          "lessons": [
+            {
+              "id": "swift-collections-core",
+              "title": "Shape data with collections",
+              "explanation": "Collection choice is a reasoning decision: preserve order, look up by key, or remove duplicates.",
+              "exercises": [
+                { "id": "swift-c1", "type": "multiple_choice", "prompt": "Which collection preserves order and allows duplicate values?", "options": ["Array", "Set", "Dictionary", "ClosedRange"], "correctIndex": 0, "topicTags": ["arrays"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Array is the ordered collection that can contain duplicate elements." },
+                { "id": "swift-c2", "type": "multiple_choice", "prompt": "Which collection is designed for unique values?", "options": ["Array", "Set", "Dictionary", "Tuple"], "correctIndex": 1, "topicTags": ["sets"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Set stores unique values and is useful for membership checks and de-duplication." },
+                { "id": "swift-c3", "type": "multiple_choice", "prompt": "What is the best collection for looking up a user by an id?", "options": ["Array", "Set", "Dictionary", "String"], "correctIndex": 2, "topicTags": ["dictionaries"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Dictionary maps keys to values, making keyed lookup the clearest model." },
+                { "id": "swift-c4", "type": "multiple_choice", "prompt": "Which transformation keeps only elements matching a condition?", "options": ["map", "filter", "reduce", "sorted"], "correctIndex": 1, "topicTags": ["higher-order-functions"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "filter returns the elements for which the predicate is true." },
+                { "id": "swift-c5", "type": "multiple_choice", "prompt": "Which transformation changes every element into a new value?", "options": ["map", "filter", "contains", "removeAll"], "correctIndex": 0, "topicTags": ["higher-order-functions"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "map applies a transform to each element and returns the transformed collection." },
+                { "id": "swift-c6", "type": "multiple_choice", "prompt": "What is reduce commonly used for?", "options": ["Combine elements into one accumulated result", "Remove duplicates only", "Pause a task", "Create a view"], "correctIndex": 0, "topicTags": ["higher-order-functions"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "reduce folds a collection into a single value such as a sum or grouped result." },
+                { "id": "swift-c7", "type": "multiple_choice", "prompt": "Why can Swift arrays behave like value types?", "options": ["Copies are isolated when mutated", "They always use linked lists", "They cannot be passed to functions", "They only hold numbers"], "correctIndex": 0, "topicTags": ["value-semantics"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Copy-on-write value semantics provide predictable ownership while avoiding unnecessary copies." },
+                { "id": "swift-c8", "type": "multiple_choice", "prompt": "Which operation is a good first choice when you need sorted display data without mutating the source?", "options": ["sorted()", "sort()", "removeAll()", "shuffleInPlace()"], "correctIndex": 0, "topicTags": ["arrays"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "sorted returns a new ordered collection; sort mutates a mutable collection in place." }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "swift-unit-concurrency",
+          "title": "Unit 3 · Concurrency",
+          "summary": "Recognize async work, actors, cancellation, and main-thread UI updates.",
+          "lessons": [
+            {
+              "id": "swift-concurrency-core",
+              "title": "Make async work understandable",
+              "explanation": "Concurrency is about isolating work and describing when a value is available, not about sprinkling threads everywhere.",
+              "exercises": [
+                { "id": "swift-a1", "type": "multiple_choice", "prompt": "Which keyword marks a function that can suspend while waiting?", "options": ["async", "awaited", "threaded", "yielding-only"], "correctIndex": 0, "topicTags": ["async-await"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "async declares that a function may suspend and be called with await." },
+                { "id": "swift-a2", "type": "multiple_choice", "prompt": "What does await communicate at a call site?", "options": ["The call may suspend until a result is ready", "The call always runs on the main thread", "The call is guaranteed to fail", "The call creates a database"], "correctIndex": 0, "topicTags": ["async-await"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "await makes suspension points visible where asynchronous work may pause." },
+                { "id": "swift-a3", "type": "multiple_choice", "prompt": "What problem does an actor help prevent?", "options": ["Unsafe concurrent access to isolated mutable state", "All network failures", "Missing UI colors", "Slow compilation"], "correctIndex": 0, "topicTags": ["actors"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Actors serialize access to their isolated state and help prevent data races." },
+                { "id": "swift-a4", "type": "multiple_choice", "prompt": "Which annotation is commonly used for UI-bound observable state?", "options": ["@MainActor", "@BackgroundOnly", "@UIThreadNever", "@SendableOnly"], "correctIndex": 0, "topicTags": ["main-actor"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "@MainActor documents and enforces that the isolated work belongs on the main actor." },
+                { "id": "swift-a5", "type": "multiple_choice", "prompt": "Why should async work check for cancellation?", "options": ["A cancelled screen should stop wasting work", "Cancellation makes values immutable", "It increases network bandwidth", "It removes the need for errors"], "correctIndex": 0, "topicTags": ["cancellation"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Cancellation lets work exit when the user no longer needs its result." },
+                { "id": "swift-a6", "type": "multiple_choice", "prompt": "What is async let useful for?", "options": ["Starting independent async work that can be awaited later", "Declaring a constant string", "Making a view transparent", "Handling only synchronous code"], "correctIndex": 0, "topicTags": ["async-let"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "async let makes independent child tasks explicit so their results can be awaited together." },
+                { "id": "swift-a7", "type": "multiple_choice", "prompt": "Which error-handling shape fits an async operation that can throw?", "options": ["try await", "catch await only", "throwing let", "async catchless"], "correctIndex": 0, "topicTags": ["errors", "async-await"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "A throwing async call combines the two effects as try await." },
+                { "id": "swift-a8", "type": "multiple_choice", "prompt": "What is a good default for a cancelled image request?", "options": ["Ignore its result and release its resources", "Show stale data as fresh", "Retry forever", "Block the UI until it finishes"], "correctIndex": 0, "topicTags": ["cancellation"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Cancellation should be treated as a normal lifecycle outcome when a result is no longer relevant." }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "swift-unit-swiftui",
+          "title": "Unit 4 · SwiftUI",
+          "summary": "Understand views, state flow, bindings, lists, navigation, and accessibility.",
+          "lessons": [
+            {
+              "id": "swift-swiftui-core",
+              "title": "Build a calm SwiftUI screen",
+              "explanation": "SwiftUI works best when the view describes state and lets data flow predictably through the hierarchy.",
+              "exercises": [
+                { "id": "swift-u1", "type": "multiple_choice", "prompt": "What is the body property of a SwiftUI View?", "options": ["A description of the view hierarchy", "A database table", "A network request", "A mutable global variable"], "correctIndex": 0, "topicTags": ["views"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "body describes what SwiftUI should render for the current state." },
+                { "id": "swift-u2", "type": "multiple_choice", "prompt": "Which wrapper is appropriate for simple local view state?", "options": ["@State", "@Route", "@Database", "@Thread"], "correctIndex": 0, "topicTags": ["state"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "@State stores local state owned by the view." },
+                { "id": "swift-u3", "type": "multiple_choice", "prompt": "What does a Binding provide?", "options": ["A two-way connection to state owned elsewhere", "A copy of immutable text", "A network socket", "A compile-time enum"], "correctIndex": 0, "topicTags": ["binding"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Binding lets a child read and write state owned by a parent or model." },
+                { "id": "swift-u4", "type": "multiple_choice", "prompt": "Which view is a natural choice for repeated rows of data?", "options": ["List", "Color", "Spacer", "Divider"], "correctIndex": 0, "topicTags": ["lists"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "List is optimized for displaying repeated, scrollable rows." },
+                { "id": "swift-u5", "type": "multiple_choice", "prompt": "Why does ForEach need stable identity for dynamic data?", "options": ["SwiftUI can diff and update the right rows", "It encrypts each row", "It prevents all scrolling", "It creates a singleton"], "correctIndex": 0, "topicTags": ["lists", "identity"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Stable identity helps SwiftUI understand what changed between renders." },
+                { "id": "swift-u6", "type": "multiple_choice", "prompt": "What should an accessible button communicate beyond its visual label?", "options": ["Its action and meaningful context", "Its source file path", "Its memory address", "Its animation duration only"], "correctIndex": 0, "topicTags": ["accessibility"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Assistive technology needs a clear action and context, not just decorative styling." },
+                { "id": "swift-u7", "type": "multiple_choice", "prompt": "Which container is designed for stack-based navigation in modern SwiftUI?", "options": ["NavigationStack", "NavigationThread", "RouteStackOnly", "WindowList"], "correctIndex": 0, "topicTags": ["navigation"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "NavigationStack models a navigation path and pushes destinations predictably." },
+                { "id": "swift-u8", "type": "multiple_choice", "prompt": "What is the most useful mental model for a SwiftUI view?", "options": ["A function of state that can be recomputed", "A permanent pixel buffer", "A mutable singleton", "A database row"], "correctIndex": 0, "topicTags": ["views", "state"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Views are lightweight descriptions derived from state, so recomputation is expected." }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "swift-unit-interviews",
+          "title": "Unit 5 · Interview patterns",
+          "summary": "Explain complexity, boundaries, testing, and the simplest correct approach.",
+          "lessons": [
+            {
+              "id": "swift-interviews-core",
+              "title": "Reason before you code",
+              "explanation": "Interview confidence comes from naming the invariant, the edge cases, and the trade-off before writing syntax.",
+              "exercises": [
+                { "id": "swift-i1", "type": "multiple_choice", "prompt": "What should you clarify before implementing an interview problem?", "options": ["Input, output, constraints, and edge cases", "The interviewer’s favorite framework", "A micro-optimization", "The longest possible solution"], "correctIndex": 0, "topicTags": ["problem-solving"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "A clear contract prevents solving the wrong problem and gives you test cases to discuss." },
+                { "id": "swift-i2", "type": "multiple_choice", "prompt": "What is the average lookup complexity of a hash table?", "options": ["O(1)", "O(log n)", "O(n)", "O(n log n)"], "correctIndex": 0, "topicTags": ["complexity"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Hash tables provide average constant-time lookup when hashing remains well distributed." },
+                { "id": "swift-i3", "type": "multiple_choice", "prompt": "When is a two-pointer approach especially useful?", "options": ["Walking a sequence from two coordinated positions", "Rendering every view", "Handling only hash collisions", "Replacing every recursive call"], "correctIndex": 0, "topicTags": ["two-pointers"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Two pointers are useful for sorted arrays, windows, and coordinated scans." },
+                { "id": "swift-i4", "type": "multiple_choice", "prompt": "What is a base case in recursion?", "options": ["The condition that stops further recursive calls", "The slowest branch", "A hidden global variable", "A network retry"], "correctIndex": 0, "topicTags": ["recursion"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Without a base case, recursive calls do not have a defined stopping point." },
+                { "id": "swift-i5", "type": "multiple_choice", "prompt": "Which test is most valuable for a boundary-focused solution?", "options": ["An empty or smallest valid input", "Only a random happy path", "A screenshot of the code", "A test with no assertion"], "correctIndex": 0, "topicTags": ["testing"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Smallest and empty inputs expose off-by-one and missing-state errors early." },
+                { "id": "swift-i6", "type": "multiple_choice", "prompt": "What makes a solution easier to review?", "options": ["A named invariant and focused helpers", "Many clever one-liners", "Hidden state", "Unexplained magic constants"], "correctIndex": 0, "topicTags": ["communication"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Naming the invariant and separating decisions makes correctness easier to inspect." },
+                { "id": "swift-i7", "type": "multiple_choice", "prompt": "When should you prefer the simplest correct algorithm over premature optimization?", "options": ["When constraints do not require the extra complexity", "Never", "Only after deleting tests", "Whenever a variable is named result"], "correctIndex": 0, "topicTags": ["trade-offs"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Complexity has a maintenance cost; optimize in response to constraints and evidence." },
+                { "id": "swift-i8", "type": "multiple_choice", "prompt": "What is a strong way to communicate complexity?", "options": ["State time and space costs and why they arise", "Say it is fast", "Avoid discussing it", "Only mention the language version"], "correctIndex": 0, "topicTags": ["complexity", "communication"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "A concise explanation connects the algorithm's operations to its time and space costs." }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

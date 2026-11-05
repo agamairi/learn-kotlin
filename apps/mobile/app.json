@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Learn Kotlin",
+    "slug": "learn-kotlin-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F7F4EE",
+    "splash": {
+      "backgroundColor": "#F7F4EE",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.learncode.mobile",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F4EE"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "local-development"
+      }
+    }
+  }
+}
