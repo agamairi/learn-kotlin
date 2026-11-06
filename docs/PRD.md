@@ -87,6 +87,8 @@ Needs to curate quality, manage subscriptions, measure retention, moderate packs
 
 ## 5. Current Repository Baseline
 
+> **Implementation update (2026-11-04):** The Kotlin/Gradle Android modules described in this historical baseline have now been removed from the repository. The active source of truth is the Expo React Native client in `apps/mobile` and the TypeScript packages in `packages/`. The baseline below records the product and behavioral inventory that informed the migration.
+
 The existing app is a valuable product prototype, not a blank slate.
 
 ### Existing user experience

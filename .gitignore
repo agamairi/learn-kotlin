@@ -1,13 +1,6 @@
-*.iml
-.gradle
-.kotlin
-/build
-/*/build
-local.properties
-.idea
 .DS_Store
 node_modules/
 .expo/
-/captures
-.externalNativeBuild
-.cxx
+dist/
+coverage/
+*.log

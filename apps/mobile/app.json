@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Learn Kotlin",
-    "slug": "learn-kotlin-mobile",
+    "name": "Learn Code",
+    "slug": "learn-code-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
