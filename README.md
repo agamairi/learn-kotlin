@@ -8,16 +8,16 @@ The current client is mobile-first and runs on iOS and Android. Expo web is avai
 
 This milestone implements the first React Native product foundation from [`docs/PRD.md`](docs/PRD.md):
 
-- **Onboarding:** welcome flow, guest mode, account-shaped entry point, and first-course selection.
-- **Language tracks:** Kotlin, Swift, React, and TypeScript selectors that switch the active course, home content, lesson path, and map.
-- **Learning path:** a five-unit island map with tappable lesson nodes and five starter course packs.
+- **Onboarding:** welcome flow, guest mode, and first-course selection.
+- **Language tracks:** Kotlin, Swift, Flutter/Dart, React Native/TypeScript, and Java selectors that switch the active course, home content, lesson path, and map.
+- **Learning path:** a five-unit island map with tappable lesson nodes and five validated interview course packs.
 - **Guided lessons:** eight practice cards per lesson, code examples, multiple-choice, cloze, predict-output, guided puzzle, and multipart question support.
 - **Mistake queue:** failed cards move to the back of the current lesson queue instead of forcing an immediate retry.
 - **Learning loop:** daily XP, streaks, streak freezes, review cards, lesson summaries, pace bonuses, and Octo Coach celebrations.
 - **Mobile UI:** floating bottom navigation, Octopus mascot poses, milestone animations, warm visual system, Home, Path, Review, Stats, and Settings screens.
-- **Local-first state:** guest progress, AsyncStorage persistence, sync outbox boundaries, and an account/cloud-sync shell ready for a real backend.
-- **BYOK settings:** local-only provider/key configuration for the future AI Coach. Production secure storage is still required before real provider calls.
-- **Course-pack foundation:** versioned JSON schema, validation and lifecycle helpers, content hashes, and starter Kotlin, Swift, React, and TypeScript packs.
+- **Local-first state:** guest progress in SQLite, transactional lesson settlement, duplicate-safe XP, streaks, hearts, review schedules, and a portable `.learncode` backup/restore flow.
+- **Honest beta surface:** no fake sign-in, cloud-sync, AI, marketplace, or BYOK controls are exposed.
+- **Course-pack foundation:** versioned JSON schema, validation and lifecycle helpers, content hashes, and 400 interview exercises across five beta packs.
 - **Shared packages:** platform-neutral core learning rules, content loading, sync contracts, storage adapters, and UI tokens.
 
 ## Current boundaries
@@ -27,7 +27,7 @@ This is a polished product prototype, not the complete subscription business des
 - Real authentication and cloud sync backend.
 - Secure native key storage and production AI provider requests.
 - GitHub/community pack download, signature verification, moderation, updates, and marketplace discovery.
-- Push notifications, ads, subscriptions, lives, entitlements, leaderboards, and leagues.
+- Push notifications, AdMob/UMP, lifetime purchase entitlements, leaderboards, and leagues.
 - Production web and desktop clients.
 
 ## Repository layout
@@ -39,7 +39,7 @@ packages/content/            JSON schema, loaders, validation, lifecycle, and pa
 packages/api/                Sync and account contract boundary
 packages/storage/            Local persistence and sync-store adapters
 packages/ui/                 Shared brand and theme tokens
-packages/content/packs/      Kotlin, Swift, React, and TypeScript starter packs
+packages/content/packs/      Five beta interview packs plus historical starter packs
 docs/PRD.md                  Product requirements, roadmap, and business analysis
 ```
 
@@ -98,6 +98,9 @@ npm test
 # Validate only the content package
 npm --workspace @learn/content test
 
+# Validate all bundled packs and verify their declared hashes
+npm run validate:packs
+
 # Validate only the API package
 npm run test:api
 
@@ -113,18 +116,19 @@ The configured EAS preview profile produces an internal APK. Install EAS CLI if 
 npx eas build --platform android --profile preview
 ```
 
-The profile is defined in [`apps/mobile/eas.json`](apps/mobile/eas.json). Local native development can also use `npm --workspace @learn/mobile run android`.
+The profile is defined in [`apps/mobile/eas.json`](apps/mobile/eas.json). The first build requires `npx eas login` and `npx eas init` in `apps/mobile` so Expo can create a real project and Android signing credentials. Local native development can also use `npm --workspace @learn/mobile run android`.
 
 ## Adding course content
 
-Course packs are JSON documents validated against [`packages/content/schema/course-pack.schema.json`](packages/content/schema/course-pack.schema.json). Starter packs live in [`packages/content/packs`](packages/content/packs):
+Course packs are JSON documents validated against [`packages/content/schema/course-pack.schema.json`](packages/content/schema/course-pack.schema.json). Beta packs live in [`packages/content/packs`](packages/content/packs):
 
 - `kotlin-foundations.json`
 - `swift-foundations.json`
-- `react-foundations.json`
-- `typescript-foundations.json`
+- `flutter-dart-interviews.json`
+- `react-native-typescript-interviews.json`
+- `java-android-interviews.json`
 
-Each starter pack contains five units and lessons expanded to at least eight practice cards. The pack loader verifies structure, semantic rules, and the declared content hash. The current mobile catalog bundles known packs at build time; remote GitHub/community installation is a planned marketplace capability, not yet enabled in the client.
+Each beta pack contains five units, ten lessons, and 80 distinct exercises. The pack loader verifies structure, semantic rules, and the declared content hash. Run `npm run validate:packs` before opening a content PR. The current mobile catalog bundles known packs at build time; remote GitHub/community installation is a planned marketplace capability, not yet enabled in the client. See [`packages/content/packs/README.md`](packages/content/packs/README.md) for authoring and stable-ID rules.
 
 When adding a bundled language, add the pack, register it in [`apps/mobile/src/data/courseCatalog.ts`](apps/mobile/src/data/courseCatalog.ts), and add its language type to [`apps/mobile/src/types/languages.ts`](apps/mobile/src/types/languages.ts). Keep IDs stable so progress remains compatible across content updates.
 

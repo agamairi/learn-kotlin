@@ -1,0 +1,1879 @@
+{
+  "schemaVersion": "1.0",
+  "packId": "react-native-typescript-interviews",
+  "version": "2.0.0",
+  "title": "React Native & TypeScript Interviews",
+  "description": "Type-safe mobile UI, React reasoning, native behavior, performance, and reliable app workflows.",
+  "language": "react-native",
+  "level": "intermediate",
+  "publisher": {
+    "name": "Learn Code"
+  },
+  "license": "CC BY 4.0",
+  "source": {
+    "url": "https://github.com/agamairi/learn-kotlin",
+    "path": "packages/content/packs/react-native-typescript-interviews.json"
+  },
+  "contentHash": "sha256:17a98a0943934b8d7c0dd1a4d032f0547a7303de2836a6394c6488052f66399b",
+  "updatedAt": "2026-11-06T00:00:00Z",
+  "minimumClientVersion": "0.1.0",
+  "capabilities": [
+    "mobile",
+    "interview-reasoning",
+    "guided-puzzles"
+  ],
+  "tags": [
+    "interviews",
+    "mobile",
+    "react-native"
+  ],
+  "courses": [
+    {
+      "id": "react-native-typescript-core",
+      "title": "React Native & TypeScript Interviews",
+      "description": "Type-safe mobile UI, React reasoning, native behavior, performance, and reliable app workflows.",
+      "language": "react-native",
+      "chapters": [
+        {
+          "id": "react-native-unit-typescript",
+          "title": "1 · TypeScript for mobile apps",
+          "summary": "Turn uncertain API input into explicit and safe UI states.",
+          "lessons": [
+            {
+              "id": "rn-typescript-a",
+              "title": "Unions and runtime boundaries",
+              "explanation": "Use types to encode states without trusting network data blindly.",
+              "exercises": [
+                {
+                  "id": "rn-unknown-api",
+                  "type": "multiple_choice",
+                  "prompt": "fetch returns an untrusted JSON payload. Which type should represent it before validation?",
+                  "code": "const payload = await response.json();",
+                  "options": [
+                    "unknown followed by runtime validation",
+                    "any and an unchecked cast to User",
+                    "User because the endpoint says so",
+                    "never because JSON may be absent"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "A TypeScript type does not validate runtime JSON; unknown forces a check before domain use.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-discriminated",
+                  "type": "multiple_choice",
+                  "prompt": "A request can load, succeed with rows, or fail with an error. Which type forbids a success state with an error?",
+                  "options": [
+                    "Three unrelated booleans",
+                    "An object with optional rows and optional error",
+                    "Record<string, any>",
+                    "A discriminated union with separate status cases"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Each union variant carries only its valid data, and status narrows the branch.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-never-switch",
+                  "type": "multiple_choice",
+                  "prompt": "A new screen state is added but a switch omits it. What reveals the omission at compile time?",
+                  "options": [
+                    "A Boolean status check",
+                    "An any cast on the state",
+                    "An exhaustive default assigning the remaining value to never",
+                    "A default that returns null for everything"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "A never check fails when a new variant remains after known cases.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-generic-response",
+                  "type": "multiple_choice",
+                  "prompt": "A repository wrapper should return the precise parsed model type. What does a generic function preserve?",
+                  "options": [
+                    "Native thread affinity",
+                    "The relationship between validated input and output model type",
+                    "Runtime validation automatically",
+                    "The network response status"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Generics retain compile-time relationships; the parser still must validate runtime data.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-optional-null",
+                  "type": "multiple_choice",
+                  "prompt": "An API distinguishes an omitted patch field from an explicit null that clears it. Which property type can express both?",
+                  "options": [
+                    "field?: string | null",
+                    "field: string",
+                    "field?: string with no null",
+                    "field: never"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "The optional marker permits absence; the null union permits an explicit clear operation.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-readonly-shallow",
+                  "type": "multiple_choice",
+                  "prompt": "A function receives Readonly<User> where User has tags: string[]. What is still possible?",
+                  "options": [
+                    "Reassigning user.id",
+                    "Changing every field through TypeScript reflection only",
+                    "Automatically deep-freezing the object",
+                    "Mutating the nested tags array through a reference"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Readonly is shallow at the type level; use deep immutable modeling where nested mutation must be prevented.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "rn-runtime-enum",
+                  "type": "multiple_choice",
+                  "prompt": "A TypeScript union says status is active or inactive, but JSON contains pending. What should the app do?",
+                  "options": [
+                    "Render active by default silently",
+                    "Cast as never and continue",
+                    "Reject or explicitly map the unknown value at the boundary",
+                    "Assume the type union converted it"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Static types do not alter incoming bytes; runtime decoding must handle unsupported values.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-unknown-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the safe type for raw response data before parsing.",
+                  "template": "const payload: ____1 = await response.json();\nconst user = parseUser(payload);",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "unknown"
+                      ],
+                      "options": [
+                        "unknown",
+                        "any",
+                        "User",
+                        "never"
+                      ]
+                    }
+                  ],
+                  "explanation": "unknown requires the parser to prove the shape before the app treats it as User.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "rn-typescript-b",
+              "title": "Precise app contracts",
+              "explanation": "Choose types that maintain caller and state relationships.",
+              "exercises": [
+                {
+                  "id": "rn-keyof",
+                  "type": "multiple_choice",
+                  "prompt": "A helper reads a known property from a model. Which key constraint rejects misspelled property names?",
+                  "options": [
+                    "K extends Object",
+                    "K extends keyof T",
+                    "K extends string only",
+                    "K = any"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "keyof T restricts keys to properties of T and keeps the return type T[K].",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-partial-patch",
+                  "type": "multiple_choice",
+                  "prompt": "A profile patch accepts only supplied fields. What risk comes from applying Partial<Profile> directly to domain state?",
+                  "options": [
+                    "It does not validate runtime input or distinguish every clear semantics automatically",
+                    "It removes every property from Profile",
+                    "It forces all fields to null",
+                    "It creates a database transaction"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Partial is a compile-time convenience; API patch rules and runtime validation still need explicit handling.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-omitted-secret",
+                  "type": "multiple_choice",
+                  "prompt": "A UI preview should receive a User except passwordHash. Which utility type models that compile-time omission?",
+                  "options": [
+                    "Partial<User>",
+                    "Required<User>",
+                    "Pick<User, \"passwordHash\">",
+                    "Omit<User, \"passwordHash\">"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Omit excludes the sensitive property from the view-facing type. Actual serialization must also omit it.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-event-union",
+                  "type": "multiple_choice",
+                  "prompt": "A reducer handles add, remove, and reset with different payloads. Which event shape narrows safely?",
+                  "options": [
+                    "A string and an unrelated global variable",
+                    "A number enum with arbitrary data",
+                    "A union keyed by literal type fields with case-specific payloads",
+                    "One object with optional payload: any"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "A discriminant connects each action to its required payload.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-error-catch",
+                  "type": "multiple_choice",
+                  "prompt": "A catch variable is unknown. What is the safe way to show a message?",
+                  "options": [
+                    "Treat it as a string always",
+                    "Narrow with instanceof Error and provide a fallback for other throws",
+                    "Access error.message without checking",
+                    "Cast every value to Error"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "JavaScript can throw any value, so a user-facing message requires narrowing.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-brand-id",
+                  "type": "multiple_choice",
+                  "prompt": "Both UserID and OrderID are strings and are accidentally mixed. Which type-level design can catch this?",
+                  "options": [
+                    "Distinct branded ID types at domain boundaries",
+                    "Renaming both variables to id",
+                    "Casting both to any",
+                    "Using number for one arbitrary endpoint"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Brands can prevent accidental cross-domain string substitution at compile time, though runtime values still need validation.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "rn-type-assert",
+                  "type": "multiple_choice",
+                  "prompt": "A developer writes response as Profile after JSON parsing. What does that assertion do at runtime?",
+                  "options": [
+                    "Validates every field",
+                    "Fetches a schema automatically",
+                    "Clones the response",
+                    "Nothing; it only tells the compiler to trust the developer"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Type assertions do not emit runtime checks and can hide malformed payloads.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-exhaustive-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the type used to reveal an unhandled discriminated-union variant.",
+                  "template": "default: { const missing: ____1 = state; return missing; }",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "never"
+                      ],
+                      "options": [
+                        "never",
+                        "any",
+                        "unknown",
+                        "object"
+                      ]
+                    }
+                  ],
+                  "explanation": "If every variant was handled, the remaining state type is never.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-typescript"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "react-native-unit-react",
+          "title": "2 · React reasoning",
+          "summary": "Avoid stale state, effect races, and identity bugs.",
+          "lessons": [
+            {
+              "id": "rn-react-a",
+              "title": "State and closures",
+              "explanation": "Trace React updates using the state snapshot model.",
+              "exercises": [
+                {
+                  "id": "rn-functional-update",
+                  "type": "multiple_choice",
+                  "prompt": "Two rapid presses each increment a counter from the same render. Which updater preserves both increments?",
+                  "options": [
+                    "setCount(current => current + 1)",
+                    "setCount(count + 1)",
+                    "count++ without setCount",
+                    "setCount(1) each press"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "The functional updater receives the latest queued state; a captured count can be stale.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-stale-interval",
+                  "type": "multiple_choice",
+                  "prompt": "An interval callback always logs count = 0 after count changes. What is the likely cause?",
+                  "options": [
+                    "React state cannot hold numbers",
+                    "Intervals always run on a native thread",
+                    "setCount mutates the variable in place",
+                    "The callback closed over the count from the initial render"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Closures capture render snapshots. Update dependencies or use a ref/function updater for the intended behavior.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-effect-deps",
+                  "type": "multiple_choice",
+                  "prompt": "An effect fetches by userId but has an empty dependency array. What happens when userId changes?",
+                  "options": [
+                    "The component unmounts always",
+                    "The request is canceled by TypeScript",
+                    "The effect does not rerun for the new ID",
+                    "React automatically inspects the fetch URL"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Dependencies specify which reactive values should restart the effect.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-effect-cleanup",
+                  "type": "multiple_choice",
+                  "prompt": "A screen subscribes to AppState in an effect. What should cleanup do?",
+                  "options": [
+                    "Call setState after unmount",
+                    "Remove that subscription when the effect ends",
+                    "Create another subscription",
+                    "Clear all app storage"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Cleanup prevents duplicate listeners and work after the component lifetime.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-list-key",
+                  "type": "multiple_choice",
+                  "prompt": "Messages reorder and each row has local draft state. What key maintains correct row identity?",
+                  "options": [
+                    "The message stable ID",
+                    "The current array index",
+                    "Math.random() on each render",
+                    "The message text if duplicate texts exist"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Stable keys attach local state to the same item across reorders.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-usememo",
+                  "type": "multiple_choice",
+                  "prompt": "A derived array is cheap to compute. Should useMemo be added automatically?",
+                  "options": [
+                    "Yes; memoizing all values is always free",
+                    "Yes; it replaces state management",
+                    "No; React Native cannot use useMemo",
+                    "No; measure render cost and dependency behavior first"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Memoization adds complexity and has its own cost; use it for measured work or referential stability needs.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-context-rerender",
+                  "type": "multiple_choice",
+                  "prompt": "A large context value object is recreated each render and many consumers update. What is a focused improvement?",
+                  "options": [
+                    "Store context in a global mutable object",
+                    "Remove all consumers",
+                    "Split state by concern or stabilize provider value when profiling shows a cost",
+                    "Wrap every screen in a new provider"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Context consumers respond to value identity changes; smaller scopes reduce unrelated work.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "rn-update-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the update that uses the latest queued state after repeated taps.",
+                  "template": "setCount(____1);",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "current => current + 1"
+                      ],
+                      "options": [
+                        "current => current + 1",
+                        "count + 1",
+                        "count++",
+                        "() => count"
+                      ]
+                    }
+                  ],
+                  "explanation": "A functional updater avoids reading a stale render snapshot.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 35
+                }
+              ]
+            },
+            {
+              "id": "rn-react-b",
+              "title": "Effects and reconciliation",
+              "explanation": "Make request lifetime and render purity explicit.",
+              "exercises": [
+                {
+                  "id": "rn-search-guided",
+                  "type": "write_function",
+                  "prompt": "Complete a latest-request-wins search handler.",
+                  "starterCode": "async function search(query: string) {\n  const id = ____1;\n  const rows = await ____2;\n  if (id === requestId.current) ____3;\n}",
+                  "hiddenTests": "Search A then B, resolve B then A: only B rows remain visible.",
+                  "referenceSolution": "async function search(query: string) {\n  const id = ++requestId.current;\n  const rows = await repository.search(query);\n  if (id === requestId.current) setRows(rows);\n}",
+                  "guided": {
+                    "template": "async function search(query: string) {\n  const id = ____1;\n  const rows = await ____2;\n  if (id === requestId.current) ____3;\n}",
+                    "blanks": [
+                      {
+                        "placeholder": "____1",
+                        "accepted": [
+                          "++requestId.current"
+                        ],
+                        "options": [
+                          "++requestId.current",
+                          "requestId.current",
+                          "0",
+                          "Date.now()"
+                        ]
+                      },
+                      {
+                        "placeholder": "____2",
+                        "accepted": [
+                          "repository.search(query)"
+                        ],
+                        "options": [
+                          "repository.clear()",
+                          "Promise.resolve([])",
+                          "repository.search(\"\")",
+                          "repository.search(query)"
+                        ]
+                      },
+                      {
+                        "placeholder": "____3",
+                        "accepted": [
+                          "setRows(rows)"
+                        ],
+                        "options": [
+                          "setRows(oldRows)",
+                          "requestId.current = 0",
+                          "setRows(rows)",
+                          "setRows([])"
+                        ]
+                      }
+                    ],
+                    "explanation": "Each request gets a generation. Apply its rows only if no later request has replaced it."
+                  },
+                  "explanation": "Each request gets a generation. Apply its rows only if no later request has replaced it.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "rn-render-sideeffect",
+                  "type": "multiple_choice",
+                  "prompt": "A component starts a network request in its render body. Why is that unsafe?",
+                  "options": [
+                    "It automatically blocks all other screens",
+                    "Rendering can repeat without committing, causing duplicate work",
+                    "Render bodies only run once",
+                    "Network calls are forbidden by TypeScript"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Rendering should describe UI; effects belong to a managed lifecycle boundary.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-derived-state",
+                  "type": "multiple_choice",
+                  "prompt": "A filtered array is wholly determined by items and query. What is the simplest state model?",
+                  "options": [
+                    "Derive it during render, memoizing only if needed",
+                    "Store a second independent filtered state that can drift",
+                    "Mutate original items in place",
+                    "Keep filtered rows in a global variable"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Duplicating derived state creates synchronization bugs; compute from sources of truth.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-key-reset",
+                  "type": "multiple_choice",
+                  "prompt": "A form should intentionally reset when accountId changes. Which identity tool can do that?",
+                  "options": [
+                    "Use an array index as key",
+                    "Call setState in render",
+                    "Keep all fields in a module global",
+                    "Key the form by accountId"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Changing key creates a new component identity and resets its local state deliberately.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-ref-v-state",
+                  "type": "multiple_choice",
+                  "prompt": "A mutable request ID must be read by callbacks but should not trigger rendering. Where should it live?",
+                  "options": [
+                    "A new local variable in render",
+                    "A prop mutated by the child",
+                    "useRef",
+                    "useState on every change"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "A ref persists across renders without scheduling a render when changed.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-effect-loop",
+                  "type": "multiple_choice",
+                  "prompt": "An effect depends on an inline object created every render, then sets state. Why can it loop?",
+                  "options": [
+                    "The JS engine changes hook order randomly",
+                    "The object identity changes each render, retriggering the effect",
+                    "TypeScript deep-compares every object",
+                    "useEffect never reruns after state updates"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Dependencies compare by identity for objects. Move stable inputs into the dependency list or memoize deliberately.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "rn-reducer",
+                  "type": "multiple_choice",
+                  "prompt": "A checkout has idle, pending, confirmed, and failed transitions. When is a reducer especially useful?",
+                  "options": [
+                    "When related transitions need one explicit state machine",
+                    "When every state is a Boolean",
+                    "Only when a native module is used",
+                    "To replace all network validation"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "A reducer centralizes transition logic and helps prevent impossible combinations.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-effect-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the cleanup that prevents a late request from committing after selection changes.",
+                  "template": "useEffect(() => { let active = true; load(id).then(v => { if (active) setData(v); }); return () => { ____1; }; }, [id]);",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "active = false"
+                      ],
+                      "options": [
+                        "active = false",
+                        "active = true",
+                        "setData(null)",
+                        "load(id)"
+                      ]
+                    }
+                  ],
+                  "explanation": "Cleanup marks this effect instance stale before its result callback can apply.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-react"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "react-native-unit-platform",
+          "title": "3 · React Native UI",
+          "summary": "Handle long lists, layout, gestures, keyboard, and accessibility.",
+          "lessons": [
+            {
+              "id": "rn-platform-a",
+              "title": "Lists and layout",
+              "explanation": "Apply native mobile layout constraints and identity.",
+              "exercises": [
+                {
+                  "id": "rn-flatlist",
+                  "type": "multiple_choice",
+                  "prompt": "A feed contains thousands of rows. Which component should render it lazily?",
+                  "options": [
+                    "FlatList with stable keyExtractor",
+                    "ScrollView mapping every row",
+                    "View containing every row",
+                    "Text with joined rows"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "FlatList virtualizes rows; ScrollView renders all children up front.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-key-extractor",
+                  "type": "multiple_choice",
+                  "prompt": "Rows reorder after a server refresh. What should keyExtractor return?",
+                  "options": [
+                    "The current row index",
+                    "Math.random()",
+                    "A timestamp generated during render",
+                    "A stable item ID from the server"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Stable keys preserve row identity through insertion and reorder.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-flex-default",
+                  "type": "multiple_choice",
+                  "prompt": "A row unexpectedly stacks children vertically in React Native. What style usually changes direction?",
+                  "options": [
+                    "float: \"left\"",
+                    "position: \"row\"",
+                    "flexDirection: \"row\"",
+                    "display: \"inline\""
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "React Native Flexbox defaults to column; row lays children horizontally.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-long-text",
+                  "type": "multiple_choice",
+                  "prompt": "A long title overflows beside a fixed icon in a row. What often gives the text bounded remaining space?",
+                  "options": [
+                    "A timer before layout",
+                    "A text wrapper with flexShrink: 1 or appropriate flex sizing",
+                    "CSS white-space: nowrap",
+                    "A bigger icon"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Text needs a constraint in the row to wrap or truncate; web CSS properties do not apply directly.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-safe-area",
+                  "type": "multiple_choice",
+                  "prompt": "A bottom action overlaps gesture navigation on some Android devices. Which layout input should the screen respect?",
+                  "options": [
+                    "Safe-area insets and current edge-to-edge configuration",
+                    "Only a fixed 20-pixel margin",
+                    "The iOS status bar height",
+                    "A web viewport unit"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "System inset sizes vary by device and navigation mode; the action should clear the system gesture region.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-image-size",
+                  "type": "multiple_choice",
+                  "prompt": "A remote image flickers and shifts nearby content when loaded. What should be reserved before fetch completes?",
+                  "options": [
+                    "Only a background color",
+                    "A new random key",
+                    "A larger zIndex",
+                    "Known width and height or an aspectRatio constraint"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Reserving dimensions prevents layout jump when image data arrives.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-layout-feedback",
+                  "type": "multiple_choice",
+                  "prompt": "onLayout sets state on every pass to a slightly different value. What is a likely symptom?",
+                  "options": [
+                    "Automatic native caching",
+                    "Only a TypeScript warning",
+                    "Repeated layout/render work or a feedback loop",
+                    "A guaranteed one-time update"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "State updates trigger rendering and potentially another layout; update only when a meaningful value changes.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "rn-list-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the item identity source for a virtualized list.",
+                  "template": "<FlatList data={rows} keyExtractor={item => ____1} renderItem={renderRow} />",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "item.id"
+                      ],
+                      "options": [
+                        "item.id",
+                        "Math.random().toString()",
+                        "String(index)",
+                        "item.title[0]"
+                      ]
+                    }
+                  ],
+                  "explanation": "Stable domain IDs preserve row identity after inserts and reorders.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "rn-platform-b",
+              "title": "Interaction and accessibility",
+              "explanation": "Account for keyboard, Back, and touch semantics.",
+              "exercises": [
+                {
+                  "id": "rn-keyboard",
+                  "type": "multiple_choice",
+                  "prompt": "A focused input is covered by the keyboard on a short screen. What should the layout address?",
+                  "options": [
+                    "Disable Android Back",
+                    "Keyboard-aware resizing or scrolling with safe-area spacing",
+                    "Only font weight",
+                    "A forced full-screen modal for every input"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "The focused field must remain visible when the keyboard changes usable height.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-accessibility",
+                  "type": "multiple_choice",
+                  "prompt": "A heart icon button has no text. What should it expose to a screen reader?",
+                  "options": [
+                    "An accessibility label and button role describing the action",
+                    "Only an emoji glyph",
+                    "An invisible random key",
+                    "The file name of its SVG"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Assistive technology needs the action meaning, not just visual shape.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-touch-target",
+                  "type": "multiple_choice",
+                  "prompt": "A 16-pixel icon is hard to tap. Which change improves it without enlarging the drawing?",
+                  "options": [
+                    "Reduce opacity",
+                    "Add a longer animation",
+                    "Change its TypeScript type",
+                    "Increase the pressable area with padding or hitSlop"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "A larger touch target improves usability while artwork can remain small.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-back",
+                  "type": "multiple_choice",
+                  "prompt": "Android Back is pressed inside a lesson with unsaved selections. What should navigation decide?",
+                  "options": [
+                    "Ignore Back in every state",
+                    "Clear the entire local database",
+                    "Whether to abandon or preserve the lesson run, then navigate consistently",
+                    "Always award completion XP"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Back navigation should follow the same progress rule as leaving via an on-screen control.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-gesture-conflict",
+                  "type": "multiple_choice",
+                  "prompt": "A horizontal swipe card sits inside a vertical list. What must gesture design account for?",
+                  "options": [
+                    "Use CSS touch-action alone",
+                    "Direction thresholds and responder coordination so scrolling still works",
+                    "Always capture every touch for the card",
+                    "Disable vertical scrolling permanently"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Competing gestures need a clear activation policy on native touch systems.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "rn-platform-code",
+                  "type": "multiple_choice",
+                  "prompt": "A behavior differs between Android and iOS. Where should that difference be expressed?",
+                  "options": [
+                    "At a small platform boundary or platform-specific component",
+                    "In every question renderer branch",
+                    "In a global mutable flag scattered through the app",
+                    "By assuming iOS behavior everywhere"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Narrow platform boundaries keep shared behavior readable and testable.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-screen-reader-order",
+                  "type": "multiple_choice",
+                  "prompt": "A row reads its price before its product name in accessibility focus despite visual order. What should be reviewed?",
+                  "options": [
+                    "Only the API response order",
+                    "Whether the image is PNG",
+                    "The Metro cache",
+                    "The accessible grouping and traversal order of its native elements"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Visual placement does not guarantee useful spoken order; grouping and labels should convey the row meaning.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-a11y-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the role for a pressable icon that adds an item.",
+                  "template": "<Pressable accessibilityRole=\"____1\" accessibilityLabel=\"Add item\" onPress={add}>",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "button"
+                      ],
+                      "options": [
+                        "button",
+                        "image",
+                        "text",
+                        "header"
+                      ]
+                    }
+                  ],
+                  "explanation": "A pressable action should announce itself as a button.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-platform"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "react-native-unit-architecture",
+          "title": "4 · Architecture and performance",
+          "summary": "Control data ownership, renders, and native boundaries.",
+          "lessons": [
+            {
+              "id": "rn-architecture-a",
+              "title": "State and cache",
+              "explanation": "Keep server data and local edits consistent.",
+              "exercises": [
+                {
+                  "id": "rn-cache-source",
+                  "type": "multiple_choice",
+                  "prompt": "A screen should show cached rows offline and refresh online. What should UI observe?",
+                  "options": [
+                    "A local repository snapshot updated by validated network writes",
+                    "Only the latest fetch response",
+                    "A mutable module-level array",
+                    "A fetch in every row render"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "A local source of truth supports offline display and coherent updates.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-query-key",
+                  "type": "multiple_choice",
+                  "prompt": "Two product screens use the same cache entry despite different IDs. What is likely wrong?",
+                  "options": [
+                    "Both screens use TypeScript",
+                    "The list is virtualized",
+                    "The navigator uses safe areas",
+                    "The cache key omits productId"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Request identity must include every parameter that changes the result.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-optimistic-rollback",
+                  "type": "multiple_choice",
+                  "prompt": "A like action updates immediately, then the server rejects it. What should the client do?",
+                  "options": [
+                    "Delete the whole feed",
+                    "Retry with a new action ID forever",
+                    "Rollback or reconcile that operation and show useful feedback",
+                    "Keep the false success"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Optimistic state needs a failure path linked to the same mutation.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-flatlist-renders",
+                  "type": "multiple_choice",
+                  "prompt": "Rows rerender frequently despite unchanged row data. What should be measured first?",
+                  "options": [
+                    "The number of comments in source",
+                    "Which props and callbacks change identity and whether rerenders are costly",
+                    "Only APK file size",
+                    "Whether every component uses useMemo"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Profiling reveals whether referential changes or expensive row work matter before adding memoization.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-native-module",
+                  "type": "multiple_choice",
+                  "prompt": "A device API is unavailable in JavaScript. What should a native module expose?",
+                  "options": [
+                    "A narrow async method or event contract with typed inputs and errors",
+                    "The entire Android Activity object to JS",
+                    "A raw pointer kept in React state",
+                    "A synchronous busy loop"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "A small explicit boundary limits platform coupling and makes error handling testable.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-bridge-payload",
+                  "type": "multiple_choice",
+                  "prompt": "A high-frequency sensor sends large arrays to JS every frame. What is a likely bottleneck even with modern native interop?",
+                  "options": [
+                    "TypeScript interface names",
+                    "The app icon",
+                    "The number of lessons in JSON",
+                    "Cross-boundary serialization and JS/render work at that frequency"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Reduce, batch, or sample data at the native boundary rather than flooding JS with every raw event.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "rn-state-scope",
+                  "type": "multiple_choice",
+                  "prompt": "Typing in one search input rerenders a whole dashboard. What state placement might improve this?",
+                  "options": [
+                    "Mutate a prop directly",
+                    "Force navigation on every keystroke",
+                    "Keep transient query state near the search feature and profile consumers",
+                    "Move query into one global context containing all dashboard data"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Localizing fast-changing state limits unrelated subscribers.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-cache-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the key component needed to separate cached item details.",
+                  "template": "const queryKey = [\"product\", ____1] as const;",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "productId"
+                      ],
+                      "options": [
+                        "productId",
+                        "Date.now()",
+                        "Math.random()",
+                        "screenWidth"
+                      ]
+                    }
+                  ],
+                  "explanation": "A stable ID makes cache identity follow the requested product.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "rn-architecture-b",
+              "title": "Diagnostics and testing",
+              "explanation": "Verify behavior at the right boundaries.",
+              "exercises": [
+                {
+                  "id": "rn-release-crash",
+                  "type": "multiple_choice",
+                  "prompt": "Debug works but minified Android release crashes before JS starts. What should be inspected first?",
+                  "options": [
+                    "Question difficulty labels",
+                    "Native release logs and shrinker rules for reflected classes",
+                    "Only TypeScript typecheck",
+                    "The simulator screenshot alone"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Release shrinking can remove classes used reflectively; Logcat shows native startup failures.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-test-effect",
+                  "type": "multiple_choice",
+                  "prompt": "A screen test should verify canceling an old search. What behavior matters?",
+                  "options": [
+                    "Old A results never replace newer B results after both resolve",
+                    "The hook has a particular variable name",
+                    "The component uses useMemo everywhere",
+                    "A live production API is called"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "The test should control response order and assert visible state, not internal naming.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-metro-native",
+                  "type": "multiple_choice",
+                  "prompt": "A native package is installed but the running development build lacks its module. What is required?",
+                  "options": [
+                    "Only restart TypeScript language service",
+                    "Change a question pack ID",
+                    "Turn Wi-Fi off and on",
+                    "Rebuild the native app after adding the native dependency"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Metro can refresh JS, but a newly linked native module must be compiled into the binary.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-memory-leak",
+                  "type": "multiple_choice",
+                  "prompt": "A navigation screen leaks after it is popped. Which resources should be checked?",
+                  "options": [
+                    "Whether its keys are kebab-case",
+                    "A single static color",
+                    "AppState listeners, timers, subscriptions, and retained closures",
+                    "Only the screen title text"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Long-lived listeners and callbacks can retain screen state after unmount unless cleaned up.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-offline-test",
+                  "type": "multiple_choice",
+                  "prompt": "What is a meaningful offline smoke test for a saved lesson?",
+                  "options": [
+                    "Clear storage before checking progress",
+                    "Force-stop, disable network, relaunch, and verify progress and questions remain available",
+                    "Only load the screen once with Metro running",
+                    "Check JSON syntax without opening the app"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Restart plus offline use proves the local source of truth is actually durable and bundled content loads.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-perf-trace",
+                  "type": "multiple_choice",
+                  "prompt": "A long list stalls during scroll. Which evidence distinguishes JS render work from native image decode cost?",
+                  "options": [
+                    "A device profile or trace covering JS and UI frame timing",
+                    "A guess based on file names",
+                    "Only an npm audit result",
+                    "The number of TypeScript generics"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Frame traces point to the actual bottleneck; optimization should follow measured work.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "rn-new-arch",
+                  "type": "multiple_choice",
+                  "prompt": "An interviewer asks whether the new architecture eliminates all cross-language costs. What is accurate?",
+                  "options": [
+                    "It makes every native call free",
+                    "It removes the need for native builds",
+                    "It compiles TypeScript to Kotlin",
+                    "It changes interop mechanisms, but boundary volume and JS/UI work still matter"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Architecture improvements do not make high-frequency large payload transfers or rendering work costless.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-cleanup-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the cleanup for an AppState subscription owned by an effect.",
+                  "template": "useEffect(() => { const sub = AppState.addEventListener(\"change\", onState); return () => sub.____1(); }, []);",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "remove"
+                      ],
+                      "options": [
+                        "remove",
+                        "subscribe",
+                        "emit",
+                        "pauseForever"
+                      ]
+                    }
+                  ],
+                  "explanation": "Removing the subscription prevents duplicate callbacks and retained screen closures.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "react-native-unit-production",
+          "title": "5 · Production mobile workflows",
+          "summary": "Handle auth, offline edits, notifications, and uncertain outcomes.",
+          "lessons": [
+            {
+              "id": "rn-production-a",
+              "title": "Requests and lifecycle",
+              "explanation": "Make network work safe as screens and app state change.",
+              "exercises": [
+                {
+                  "id": "rn-token-storage",
+                  "type": "multiple_choice",
+                  "prompt": "An app must persist an auth refresh token. Where should it go?",
+                  "options": [
+                    "Platform secure storage with an appropriate accessibility policy",
+                    "Plain AsyncStorage",
+                    "A progress backup JSON file",
+                    "A source constant committed to Git"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Tokens belong in OS-backed secure storage, separate from portable learner progress.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-refresh-race",
+                  "type": "multiple_choice",
+                  "prompt": "Five requests get 401 and all refresh a token at once. What avoids conflicting refreshes?",
+                  "options": [
+                    "Start five unrelated refreshes",
+                    "Return five login screens immediately",
+                    "Retry each request with the expired token",
+                    "A single-flight refresh operation shared by pending requests"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Coalescing refresh work preserves one new credential and lets requests resume consistently.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-abort",
+                  "type": "multiple_choice",
+                  "prompt": "A screen leaves while its fetch is pending. What should the request owner do?",
+                  "options": [
+                    "Start a replacement fetch immediately",
+                    "Clear all cached courses",
+                    "Abort when possible and prevent late state application",
+                    "Keep updating the unmounted screen"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Cancellation and stale guards align request lifetime with the screen or repository owner.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-offline-queue",
+                  "type": "multiple_choice",
+                  "prompt": "A user edits a profile offline. What must be persisted to resume sync after process death?",
+                  "options": [
+                    "The current View object",
+                    "The edit payload, stable operation ID, and pending status",
+                    "Only a loading spinner",
+                    "Only current component state"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "A durable command lets the app retry the same logical edit after restart.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-push-open",
+                  "type": "multiple_choice",
+                  "prompt": "A push notification targets order 42 while the app is cold. What should navigation use?",
+                  "options": [
+                    "Parse and validate a stable order ID, then load the order",
+                    "A live component reference serialized in the push",
+                    "A random route each time",
+                    "Assume the order is in memory"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Cold starts need restorable route data and loading or missing states.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-appstate-sync",
+                  "type": "multiple_choice",
+                  "prompt": "The app resumes from background. What is a safe refresh behavior?",
+                  "options": [
+                    "Delete cache before every refresh",
+                    "Run refresh in every row render",
+                    "Assume background work never changes data",
+                    "Refresh according to staleness policy while preserving cached content"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "A resume refresh should not erase usable offline state while networking is uncertain.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-post-timeout",
+                  "type": "multiple_choice",
+                  "prompt": "A payment POST times out. What can the client conclude?",
+                  "options": [
+                    "The server definitely charged twice",
+                    "A new random ID makes retry safe",
+                    "The result is uncertain until reconciled by stable operation ID",
+                    "The server definitely rolled back"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "The server may have committed before the response was lost; idempotency and reconciliation matter.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "rn-abort-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the object passed to fetch so an effect cleanup can cancel it.",
+                  "template": "const controller = new AbortController();\nfetch(url, { signal: ____1 });",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "controller.signal"
+                      ],
+                      "options": [
+                        "controller.signal",
+                        "controller.abort",
+                        "url.signal",
+                        "new Promise()"
+                      ]
+                    }
+                  ],
+                  "explanation": "fetch accepts an AbortSignal; cleanup can call controller.abort().",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "rn-production-b",
+              "title": "Reliable state transitions",
+              "explanation": "Preserve causality across retries and app restarts.",
+              "exercises": [
+                {
+                  "id": "rn-conflict",
+                  "type": "multiple_choice",
+                  "prompt": "A local offline edit and a server edit both change the same field. What does sync need?",
+                  "options": [
+                    "A random coin flip",
+                    "A documented conflict rule with versions or domain merge semantics",
+                    "Always trust whichever response arrives last",
+                    "Always drop the local edit without telling the user"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Arrival order is not user intent; revisions reveal concurrent changes.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-dedupe",
+                  "type": "multiple_choice",
+                  "prompt": "An optimistic comment is retried and appears twice after server response. What would prevent this?",
+                  "options": [
+                    "Match the server receipt to the stable client operation ID and merge by item ID",
+                    "Append all responses blindly",
+                    "Generate a new temporary ID on each retry",
+                    "Sort comments alphabetically"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Stable operation and item identity lets the client reconcile the optimistic row instead of duplicating it.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-transaction",
+                  "type": "multiple_choice",
+                  "prompt": "A local queue record and optimistic UI record must commit together. What protects against half-completion?",
+                  "options": [
+                    "Two separate setState calls",
+                    "A timeout between writes",
+                    "Only a try/catch around rendering",
+                    "One durable storage transaction"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "An atomic transaction keeps related local records consistent across crashes.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-notification-dedupe",
+                  "type": "multiple_choice",
+                  "prompt": "The same notification is delivered through foreground and open handlers. What prevents duplicate navigation?",
+                  "options": [
+                    "Compare only the display text",
+                    "Disable all push handling",
+                    "Track a stable notification/action ID for the navigation event",
+                    "Navigate in both handlers unconditionally"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Delivery paths can overlap; a stable event ID allows a one-time transition.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-retry-jitter",
+                  "type": "multiple_choice",
+                  "prompt": "Many clients retry after an outage. Which policy lowers synchronized load?",
+                  "options": [
+                    "Retry from each rerender",
+                    "Bounded exponential backoff with jitter for safe-to-retry operations",
+                    "Immediate infinite retries",
+                    "One fixed millisecond delay"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Jitter spreads clients; bounds control cost and idempotency determines whether a request can repeat.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-backup-secret",
+                  "type": "multiple_choice",
+                  "prompt": "A learner exports a progress backup. What must be excluded?",
+                  "options": [
+                    "Purchase entitlement flags, credentials, and advertising IDs",
+                    "Completed lesson IDs",
+                    "XP history",
+                    "Review schedules"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Progress is portable; sensitive credentials and store entitlement state must remain with their verified owners.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "rn-idempotent-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the ID reused on every attempt of one queued mutation.",
+                  "template": "await api.send(command.payload, { idempotencyKey: ____1 });",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "command.id"
+                      ],
+                      "options": [
+                        "command.id",
+                        "crypto.randomUUID()",
+                        "Date.now().toString()",
+                        "screenId"
+                      ]
+                    }
+                  ],
+                  "explanation": "One logical operation keeps one idempotency key across retries.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "rn-queue-multipart",
+                  "type": "multi_part_problem",
+                  "prompt": "Repair a mobile offline mutation queue",
+                  "story": "A comment is submitted offline. The app can restart, and an HTTP timeout may happen after server commit. Complete the two stages.",
+                  "difficulty": "hard",
+                  "parts": [
+                    {
+                      "id": "rn-queue-part-1",
+                      "prompt": "Persist the command before scheduling delivery.",
+                      "starterCode": "async function enqueue(comment: CommentDraft) {\n  const id = ____1;\n  await store.____2({ id, comment, status: \"pending\" });\n  jobs.____3(id);\n}",
+                      "hiddenTests": "Given an operationId, one durable pending command with that ID exists before scheduling.",
+                      "referenceSolution": "async function enqueue(comment: CommentDraft) {\n  const id = comment.operationId;\n  await store.insert({ id, comment, status: \"pending\" });\n  jobs.schedule(id);\n}",
+                      "guided": {
+                        "template": "async function enqueue(comment: CommentDraft) {\n  const id = ____1;\n  await store.____2({ id, comment, status: \"pending\" });\n  jobs.____3(id);\n}",
+                        "blanks": [
+                          {
+                            "placeholder": "____1",
+                            "accepted": [
+                              "comment.operationId"
+                            ],
+                            "options": [
+                              "comment.operationId",
+                              "crypto.randomUUID()",
+                              "comment.text",
+                              "String(Date.now())"
+                            ]
+                          },
+                          {
+                            "placeholder": "____2",
+                            "accepted": [
+                              "insert"
+                            ],
+                            "options": [
+                              "remove",
+                              "clear",
+                              "count",
+                              "insert"
+                            ]
+                          },
+                          {
+                            "placeholder": "____3",
+                            "accepted": [
+                              "schedule"
+                            ],
+                            "options": [
+                              "forget",
+                              "complete",
+                              "schedule",
+                              "cancel"
+                            ]
+                          }
+                        ],
+                        "explanation": "Use the comment operation ID, persist the pending command, then schedule its delivery."
+                      },
+                      "expected": "Use the comment operation ID, persist the pending command, then schedule its delivery."
+                    },
+                    {
+                      "id": "rn-queue-part-2",
+                      "prompt": "Settle confirmed results and retain uncertain commands.",
+                      "starterCode": "async function deliver(cmd: Command) {\n  const receipt = await api.____1(cmd.comment, cmd.id);\n  if (receipt.confirmed) await store.____2(cmd.id);\n  else jobs.____3(cmd.id);\n}",
+                      "hiddenTests": "A confirmed receipt completes once; an uncertain response remains pending for same-key retry.",
+                      "referenceSolution": "async function deliver(cmd: Command) {\n  const receipt = await api.send(cmd.comment, cmd.id);\n  if (receipt.confirmed) await store.markComplete(cmd.id);\n  else jobs.retryLater(cmd.id);\n}",
+                      "guided": {
+                        "template": "async function deliver(cmd: Command) {\n  const receipt = await api.____1(cmd.comment, cmd.id);\n  if (receipt.confirmed) await store.____2(cmd.id);\n  else jobs.____3(cmd.id);\n}",
+                        "blanks": [
+                          {
+                            "placeholder": "____1",
+                            "accepted": [
+                              "send"
+                            ],
+                            "options": [
+                              "send",
+                              "erase",
+                              "preview",
+                              "cancel"
+                            ]
+                          },
+                          {
+                            "placeholder": "____2",
+                            "accepted": [
+                              "markComplete"
+                            ],
+                            "options": [
+                              "insertAgain",
+                              "clearAll",
+                              "duplicate",
+                              "markComplete"
+                            ]
+                          },
+                          {
+                            "placeholder": "____3",
+                            "accepted": [
+                              "retryLater"
+                            ],
+                            "options": [
+                              "forget",
+                              "erase",
+                              "retryLater",
+                              "markComplete"
+                            ]
+                          }
+                        ],
+                        "explanation": "Send with the stable key, complete only confirmed work, and retry uncertain outcomes."
+                      },
+                      "expected": "Send with the stable key, complete only confirmed work, and retry uncertain outcomes."
+                    }
+                  ],
+                  "topicTags": [
+                    "react-native",
+                    "react-native-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -365,6 +365,23 @@ describe('Idempotent Lesson Settlement and ProgressRecorder', () => {
       });
       assert.equal(recorder.lessonRunXp('fresh-run'), 10);
     });
+
+    test('a completed lesson cannot mint completion XP from a second run', async () => {
+      await recorder.beginLessonRun('lesson-1', 'first-run');
+      await recorder.record({ attemptId: 'first-mc', exerciseId: 'card-mc', correct: true, lessonRunId: 'first-run' });
+      await recorder.record({ attemptId: 'first-cloze', exerciseId: 'card-cloze', correct: true, lessonRunId: 'first-run' });
+      await recorder.record({ attemptId: 'first-drill', exerciseId: 'drill', correct: true, lessonRunId: 'first-run' });
+      await recorder.record({ attemptId: 'first-p1', problemId: 'problem', partId: 'part-1', correct: true, lessonRunId: 'first-run' });
+      await recorder.record({ attemptId: 'first-p2', problemId: 'problem', partId: 'part-2', correct: true, lessonRunId: 'first-run' });
+      const first = await recorder.settleLessonRun('lesson-1', 'first-run');
+      assert.equal(first.type, 'settled');
+      const xpAfterFirst = progressRepo.getDailyActivities()[0]?.xpEarned;
+
+      await recorder.beginLessonRun('lesson-1', 'second-run');
+      const second = await recorder.settleLessonRun('lesson-1', 'second-run');
+      assert.equal(second.type, 'duplicate');
+      assert.equal(progressRepo.getDailyActivities()[0]?.xpEarned, xpAfterFirst);
+    });
   });
 
   describe('isLessonComplete logic', () => {

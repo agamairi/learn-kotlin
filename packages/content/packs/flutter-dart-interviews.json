@@ -1,0 +1,1883 @@
+{
+  "schemaVersion": "1.0",
+  "packId": "flutter-dart-interviews",
+  "version": "2.0.0",
+  "title": "Flutter & Dart Interviews",
+  "description": "Dart reasoning, asynchronous work, widget identity, architecture, and production Flutter problems.",
+  "language": "flutter",
+  "level": "intermediate",
+  "publisher": {
+    "name": "Learn Code"
+  },
+  "license": "CC BY 4.0",
+  "source": {
+    "url": "https://github.com/agamairi/learn-kotlin",
+    "path": "packages/content/packs/flutter-dart-interviews.json"
+  },
+  "contentHash": "sha256:3bea7a09fd09bc58b49e313036c2245d4b16b1bae80ab8070d8c62d4aa46a441",
+  "updatedAt": "2026-11-06T00:00:00Z",
+  "minimumClientVersion": "0.1.0",
+  "capabilities": [
+    "mobile",
+    "interview-reasoning",
+    "guided-puzzles"
+  ],
+  "tags": [
+    "interviews",
+    "mobile",
+    "flutter"
+  ],
+  "courses": [
+    {
+      "id": "flutter-dart-core",
+      "title": "Flutter & Dart Interviews",
+      "description": "Dart reasoning, asynchronous work, widget identity, architecture, and production Flutter problems.",
+      "language": "flutter",
+      "chapters": [
+        {
+          "id": "flutter-unit-dart",
+          "title": "1 · Dart language reasoning",
+          "summary": "Use null safety, equality, collections, and patterns deliberately.",
+          "lessons": [
+            {
+              "id": "flutter-dart-a",
+              "title": "Null safety and values",
+              "explanation": "Reason about contracts at API boundaries.",
+              "exercises": [
+                {
+                  "id": "fl-null-fallback",
+                  "type": "multiple_choice",
+                  "prompt": "An API nickname may be an empty but valid string. Which expression uses Guest only for null?",
+                  "code": "String? nickname = response.nickname;",
+                  "options": [
+                    "nickname ?? \"Guest\"",
+                    "nickname!.isEmpty ? \"Guest\" : nickname",
+                    "nickname ?? \"\"",
+                    "nickname.toString()"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Null coalescing preserves an empty string and replaces only null.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-late-trap",
+                  "type": "multiple_choice",
+                  "prompt": "A late non-null field is read before assignment. What happens?",
+                  "code": "late String token;\nprint(token);",
+                  "options": [
+                    "It prints null",
+                    "It prints an empty string",
+                    "The field is initialized from the type",
+                    "A LateInitializationError is thrown"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "late defers the initialization check to runtime; it does not create a value.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-final-list",
+                  "type": "multiple_choice",
+                  "prompt": "A final list is mutated through add. What happens?",
+                  "code": "final items = <String>[\"a\"];\nitems.add(\"b\");",
+                  "options": [
+                    "A new list is assigned to items",
+                    "items becomes null",
+                    "The list contains a and b",
+                    "The compiler rejects add"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "final fixes the variable binding. It does not make the referenced List immutable.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-const-list",
+                  "type": "multiple_choice",
+                  "prompt": "An immutable compile-time list is required. Which declaration enforces no add at runtime?",
+                  "options": [
+                    "var <String>[\"a\", \"b\"]",
+                    "const <String>[\"a\", \"b\"]",
+                    "final <String>[\"a\", \"b\"]",
+                    "late <String>[\"a\", \"b\"]"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "A const list is immutable. final only prevents rebinding the variable.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-equality-model",
+                  "type": "multiple_choice",
+                  "prompt": "Two distinct model instances with identical fields compare unequal by default. What must change for value equality?",
+                  "options": [
+                    "Implement == and hashCode consistently or use a value model generator",
+                    "Make both fields final only",
+                    "Call toString before comparing",
+                    "Put both objects in a List"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Dart objects use identity equality by default unless the class overrides it.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-covariance-risk",
+                  "type": "multiple_choice",
+                  "prompt": "A mutable generic collection is passed through a broader type and then receives an incompatible value. What should the design avoid?",
+                  "options": [
+                    "All generic types",
+                    "Only read-only iteration",
+                    "Named constructors",
+                    "Unsound writes through runtime-checked covariant paths"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Dart may insert runtime type checks for covariant generic assignments; clear ownership and type-safe APIs avoid surprises.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-pattern-switch",
+                  "type": "multiple_choice",
+                  "prompt": "A sealed response model has success and failure cases. What is a good reason to use a switch expression?",
+                  "options": [
+                    "It caches network results",
+                    "It makes every model mutable",
+                    "The analyzer can help enforce coverage of the closed cases",
+                    "It automatically retries failures"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Exhaustive patterns make missing state handling visible when the model evolves.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-null-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the operator that uses a fallback only when the value is null.",
+                  "template": "final label = nickname ____1 \"Guest\";",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "??"
+                      ],
+                      "options": [
+                        "??",
+                        "||",
+                        "?:",
+                        "!"
+                      ]
+                    }
+                  ],
+                  "explanation": "Dart ?? checks null; an empty string remains unchanged.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 35
+                }
+              ]
+            },
+            {
+              "id": "flutter-dart-b",
+              "title": "Collections and patterns",
+              "explanation": "Choose transformations that preserve meaning.",
+              "exercises": [
+                {
+                  "id": "fl-map-spread",
+                  "type": "multiple_choice",
+                  "prompt": "A map update should retain prior keys and change one value. Which expression produces a new map?",
+                  "code": "final old = <String, int>{\"a\": 1, \"b\": 2};",
+                  "options": [
+                    "Map.from(old)..clear()",
+                    "{...old, \"b\": 3}",
+                    "old[\"b\"] = 3",
+                    "{\"b\": 3}"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "The spread copies entries and the later key overrides b, leaving old unchanged.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-where-lazy",
+                  "type": "multiple_choice",
+                  "prompt": "You call where on an Iterable and mutate the source before iterating. What should be considered?",
+                  "options": [
+                    "where is lazy, so later iteration can see the changed source",
+                    "where always copies immediately",
+                    "where sorts automatically",
+                    "where requires a Stream"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Iterable.where evaluates when consumed; call toList for a snapshot when needed.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-count-guided",
+                  "type": "write_function",
+                  "prompt": "A stream of sensor IDs needs per-sensor counts. Complete the one-pass aggregation.",
+                  "starterCode": "Map<String, int> countIds(List<String> ids) {\n  final counts = ____1;\n  for (final id in ids) {\n    counts[id] = ____2;\n  }\n  return ____3;\n}",
+                  "hiddenTests": "For [a,b,a], return {a:2,b:1}; for empty input return an empty map.",
+                  "referenceSolution": "Map<String, int> countIds(List<String> ids) {\n  final counts = <String, int>{};\n  for (final id in ids) {\n    counts[id] = (counts[id] ?? 0) + 1;\n  }\n  return counts;\n}",
+                  "guided": {
+                    "template": "Map<String, int> countIds(List<String> ids) {\n  final counts = ____1;\n  for (final id in ids) {\n    counts[id] = ____2;\n  }\n  return ____3;\n}",
+                    "blanks": [
+                      {
+                        "placeholder": "____1",
+                        "accepted": [
+                          "<String, int>{}"
+                        ],
+                        "options": [
+                          "<String, int>{}",
+                          "<String>[]",
+                          "<int>{}",
+                          "null"
+                        ]
+                      },
+                      {
+                        "placeholder": "____2",
+                        "accepted": [
+                          "(counts[id] ?? 0) + 1"
+                        ],
+                        "options": [
+                          "counts[id] ?? 1",
+                          "1",
+                          "(counts[id] ?? 0) - 1",
+                          "(counts[id] ?? 0) + 1"
+                        ]
+                      },
+                      {
+                        "placeholder": "____3",
+                        "accepted": [
+                          "counts"
+                        ],
+                        "options": [
+                          "{}",
+                          "null",
+                          "counts",
+                          "ids"
+                        ]
+                      }
+                    ],
+                    "explanation": "A map stores one count per distinct ID. Default missing counts to zero before incrementing."
+                  },
+                  "explanation": "A map stores one count per distinct ID. Default missing counts to zero before incrementing.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-record",
+                  "type": "multiple_choice",
+                  "prompt": "A function returns both a parsed value and warning count without creating a class. Which Dart feature fits?",
+                  "options": [
+                    "A Future with two generic parameters",
+                    "A Set with duplicate keys",
+                    "A late field on a global object",
+                    "A record such as (value: parsed, warnings: count)"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Records carry a fixed group of typed values, including named fields.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-extension",
+                  "type": "multiple_choice",
+                  "prompt": "A String extension adds isValidID. Does it override an existing String member of the same name?",
+                  "options": [
+                    "Only in release mode",
+                    "Only after a hot reload",
+                    "No, instance members take precedence over extensions",
+                    "Yes, extensions replace core methods"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Extensions are statically resolved helpers and cannot override instance members.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-for-if",
+                  "type": "multiple_choice",
+                  "prompt": "A widget list includes a warning tile only when hasError. Which collection syntax expresses this without a nullable child?",
+                  "options": [
+                    "Set<Widget>{Header(), null}",
+                    "[Header(), if (hasError) WarningTile()]",
+                    "[Header(), hasError ? WarningTile() : null]",
+                    "[Header()]..add(null)"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Collection if conditionally includes a real Widget; a nullable element would not satisfy List<Widget>.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-firstwhere",
+                  "type": "multiple_choice",
+                  "prompt": "firstWhere on an Iterable finds no match and has no orElse. What occurs?",
+                  "options": [
+                    "A StateError is thrown",
+                    "It returns null automatically",
+                    "It returns the first element",
+                    "It retries after a delay"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Provide orElse or use a nullable search helper when absence is expected.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-copy-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the spread expression that copies entries before overriding status.",
+                  "template": "final updated = <String, String>{____1, \"status\": \"done\"};",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "...previous"
+                      ],
+                      "options": [
+                        "...previous",
+                        "previous",
+                        "..previous",
+                        "*previous"
+                      ]
+                    }
+                  ],
+                  "explanation": "A map spread inserts prior entries; the later status key wins.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-dart"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "flutter-unit-async",
+          "title": "2 · Async Dart",
+          "summary": "Understand event ordering, streams, isolates, and cancellation.",
+          "lessons": [
+            {
+              "id": "flutter-async-a",
+              "title": "Futures and scheduling",
+              "explanation": "Separate asynchronous waits from CPU work.",
+              "exercises": [
+                {
+                  "id": "fl-async-return",
+                  "type": "multiple_choice",
+                  "prompt": "What type does an async function returning 7 expose to its caller?",
+                  "code": "Future<int> fetch() async { return 7; }",
+                  "options": [
+                    "Future<int>",
+                    "int",
+                    "Stream<int>",
+                    "void"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "An async function wraps its result in a Future that callers await.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-await-error",
+                  "type": "multiple_choice",
+                  "prompt": "An awaited Future throws. Where can the caller handle the error?",
+                  "options": [
+                    "Only in a global error handler",
+                    "By checking Future == null",
+                    "With a synchronous return after await",
+                    "Around the await in try/catch"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "An async error propagates through await and can be caught in the surrounding async function.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-microtask-order",
+                  "type": "multiple_choice",
+                  "prompt": "A microtask and a zero-duration Timer are scheduled on the same isolate. Which normally runs first after current synchronous code?",
+                  "options": [
+                    "They run simultaneously",
+                    "Order is random",
+                    "The microtask",
+                    "The timer event"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Dart drains the microtask queue before taking the next event queue item. Avoid relying on complex timing beyond this rule.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-future-wait",
+                  "type": "multiple_choice",
+                  "prompt": "Three independent requests must all succeed to build a screen. Which API starts and awaits them together?",
+                  "options": [
+                    "Timer.run for each then return immediately",
+                    "Future.wait with the three Futures",
+                    "await each request before starting the next",
+                    "Stream.periodic"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Future.wait observes multiple independent Futures and returns their results when all complete.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-isolate-cpu",
+                  "type": "multiple_choice",
+                  "prompt": "Decoding a huge JSON payload causes visible frame stalls. What moves CPU work off the UI isolate?",
+                  "options": [
+                    "Run parsing in another isolate, such as Isolate.run for suitable data",
+                    "Wrap the same synchronous parser in Future.value",
+                    "Call await before each loop iteration with no work split",
+                    "Use setState more often"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "An isolate gives CPU parsing another event loop; Future wrapping alone does not move synchronous work.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-future-cancel",
+                  "type": "multiple_choice",
+                  "prompt": "A screen disposes while an HTTP Future is pending. What is true about Dart Future itself?",
+                  "options": [
+                    "Calling Future.cancel always stops the socket",
+                    "dispose automatically cancels every Future",
+                    "A Timer converts it to a Stream",
+                    "A Future does not provide general cancellation; cancel the underlying operation or ignore stale results"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Cancellation depends on the underlying API. A mounted/generation guard prevents late UI updates.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-timeout",
+                  "type": "multiple_choice",
+                  "prompt": "A request timeout fires. Can the underlying operation always be assumed canceled?",
+                  "options": [
+                    "Only in debug mode",
+                    "The Future returns null automatically",
+                    "No; timeout of the Future does not guarantee underlying work stopped",
+                    "Yes, all sockets close instantly"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Use the client cancellation facility when available; a timed-out operation may still finish.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-await-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the expression that catches an asynchronous fetch error in this function.",
+                  "template": "try { final rows = ____1 repository.fetchRows(); } catch (error) { report(error); }",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "await"
+                      ],
+                      "options": [
+                        "await",
+                        "yield",
+                        "sync",
+                        "listen"
+                      ]
+                    }
+                  ],
+                  "explanation": "await turns the Future failure into a throw at this call site.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 35
+                }
+              ]
+            },
+            {
+              "id": "flutter-async-b",
+              "title": "Streams and ownership",
+              "explanation": "Keep subscriptions and latest results under control.",
+              "exercises": [
+                {
+                  "id": "fl-stream-subscription",
+                  "type": "multiple_choice",
+                  "prompt": "A State object listens to a long-lived stream. What should happen in dispose?",
+                  "options": [
+                    "Call setState once more",
+                    "Cancel its StreamSubscription",
+                    "Keep listening forever",
+                    "Start a second subscription"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Canceling releases the screen listener and prevents updates after its lifetime.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-stream-single",
+                  "type": "multiple_choice",
+                  "prompt": "A single-subscription stream already has one listener. What happens when a second listener is attached?",
+                  "options": [
+                    "It throws a StateError",
+                    "Both listeners always receive values",
+                    "The first listener is silently canceled",
+                    "The stream becomes a Future"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Single-subscription streams allow one listener; use a broadcast stream when multiple observers are intended.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-broadcast-loss",
+                  "type": "multiple_choice",
+                  "prompt": "A broadcast stream emits before a listener subscribes. What should a new listener expect by default?",
+                  "options": [
+                    "It receives the entire history",
+                    "The stream rewinds automatically",
+                    "The first event repeats once",
+                    "It misses earlier events"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Broadcast streams normally do not retain past events; state needs explicit replay or storage.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-search-generation",
+                  "type": "multiple_choice",
+                  "prompt": "Search A starts, then B; A finishes last. Which guard keeps B visible?",
+                  "options": [
+                    "Keep a single global loading Boolean",
+                    "Wait a fixed 100 ms before A",
+                    "Apply a result only when its request generation is current",
+                    "Apply the last response to arrive"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Generation checks reject stale responses independently of timing.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-stream-error",
+                  "type": "multiple_choice",
+                  "prompt": "A stream subscription has no onError and the stream emits an error. What should be designed?",
+                  "options": [
+                    "Put a try/catch only around listen construction",
+                    "An explicit error handler or transformation at the owning boundary",
+                    "Ignore errors because listen always retries",
+                    "Convert all errors to empty success"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Asynchronous stream errors need a handler or await-for error path, not just a synchronous try around listen.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-backpressure",
+                  "type": "multiple_choice",
+                  "prompt": "A sensor emits faster than the UI can render. What is a sensible display policy?",
+                  "options": [
+                    "Sample or coalesce readings for UI while retaining raw data only if required",
+                    "Call setState for every reading without limit",
+                    "Block the sensor callback on a frame",
+                    "Duplicate each reading for reliability"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "UI often needs the latest representative state rather than every high-frequency event.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-stream-transform",
+                  "type": "multiple_choice",
+                  "prompt": "A login event stream has rapid duplicate states. What should be checked before adding a custom distinct transform?",
+                  "options": [
+                    "Only the widget color",
+                    "Whether each event has a random ID",
+                    "Whether the Stream is nullable",
+                    "Whether equality correctly expresses the state and whether losing identical events is acceptable"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Deduplication is correct only when equal states are semantically interchangeable.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-sub-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the lifecycle action for a stream subscription owned by a State object.",
+                  "template": "@override void dispose() { subscription.____1(); super.dispose(); }",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "cancel"
+                      ],
+                      "options": [
+                        "cancel",
+                        "listen",
+                        "add",
+                        "pauseForever"
+                      ]
+                    }
+                  ],
+                  "explanation": "Cancel the subscription when its owning State is disposed.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-async"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "flutter-unit-widgets",
+          "title": "3 · Widgets and lifecycle",
+          "summary": "Use element identity, keys, and layout constraints correctly.",
+          "lessons": [
+            {
+              "id": "flutter-widgets-a",
+              "title": "Build and identity",
+              "explanation": "Understand what rebuilds actually do.",
+              "exercises": [
+                {
+                  "id": "fl-widget-element",
+                  "type": "multiple_choice",
+                  "prompt": "A parent rebuild creates a new Widget configuration of the same type and key. What usually happens to the existing Element?",
+                  "options": [
+                    "It updates the existing Element with the new Widget",
+                    "It always destroys the entire subtree",
+                    "It becomes a RenderObject",
+                    "It skips all child updates automatically"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Widgets are immutable descriptions; compatible type and key let the framework update the existing Element.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-build-sideeffect",
+                  "type": "multiple_choice",
+                  "prompt": "A network request placed directly in build fires repeatedly. Where should the work begin?",
+                  "options": [
+                    "In every Text constructor",
+                    "In a paint callback",
+                    "By calling setState inside build",
+                    "In an owned lifecycle action or an external state layer, with a stable dependency"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "build can run often and must remain side-effect free; start work at a deliberate lifecycle boundary.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-setstate-dispose",
+                  "type": "multiple_choice",
+                  "prompt": "An async callback calls setState after its State was disposed. What should be done?",
+                  "options": [
+                    "Keep the old State in a static field",
+                    "Disable async operations",
+                    "Cancel the work when possible and guard with mounted before updating",
+                    "Call setState again until it succeeds"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "A disposed State cannot update UI. Ownership and a mounted check avoid late mutations.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-key-reorder",
+                  "type": "multiple_choice",
+                  "prompt": "Rows with local checkbox state reorder. Which key ties the state to the same record?",
+                  "options": [
+                    "No key under any circumstances",
+                    "ValueKey(record.id)",
+                    "ValueKey(index)",
+                    "UniqueKey generated in every build"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Stable domain IDs let the element tree preserve state by item identity across moves.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-globalkey-cost",
+                  "type": "multiple_choice",
+                  "prompt": "A list has hundreds of rows. Why should GlobalKey not be the default for each row?",
+                  "options": [
+                    "It has wider identity and reparenting costs than local stable keys",
+                    "It cannot identify widgets",
+                    "It works only on iOS",
+                    "It forces all rows to be const"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "ValueKey is usually enough for sibling identity; GlobalKey has more expensive global semantics.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-init-dependency",
+                  "type": "multiple_choice",
+                  "prompt": "A State method needs an inherited dependency during initialization. Which callback is designed for dependency changes?",
+                  "options": [
+                    "The State constructor",
+                    "dispose",
+                    "build with unconditional setState",
+                    "didChangeDependencies"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "didChangeDependencies runs after initState and when an inherited dependency changes.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-renderobject",
+                  "type": "multiple_choice",
+                  "prompt": "Which layer performs layout and painting in Flutter?",
+                  "options": [
+                    "Element only",
+                    "BuildContext string",
+                    "RenderObject",
+                    "Widget only"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Widgets configure, Elements manage instances, and RenderObjects handle layout/paint when relevant.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-mounted-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the guard before updating UI after a Future resolves.",
+                  "template": "final result = await load();\nif (!____1) return;\nsetState(() => value = result);",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "mounted"
+                      ],
+                      "options": [
+                        "mounted",
+                        "context.size",
+                        "widget.key",
+                        "kDebugMode"
+                      ]
+                    }
+                  ],
+                  "explanation": "mounted is false after this State has been disposed.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "flutter-widgets-b",
+              "title": "Constraints and scrolling",
+              "explanation": "Diagnose layout failures and large-list cost.",
+              "exercises": [
+                {
+                  "id": "fl-unbounded-column",
+                  "type": "multiple_choice",
+                  "prompt": "A ListView inside a Column throws an unbounded height error. What usually fixes the constraint?",
+                  "options": [
+                    "Call setState after layout",
+                    "Wrap the ListView in Expanded to give it bounded remaining height",
+                    "Put a second ListView around it",
+                    "Set every child width to infinity"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "A vertical scroll view needs a finite height constraint in this Column layout.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-expanded-scroll",
+                  "type": "multiple_choice",
+                  "prompt": "Expanded is placed directly inside a SingleChildScrollView column and fails. Why?",
+                  "options": [
+                    "The scroll direction offers unbounded height, so there is no finite remaining space to expand into",
+                    "Expanded is only for Row",
+                    "The child must be const",
+                    "A ScrollView cannot contain Column"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Flex expansion requires bounded main-axis space; restructure the scrollable layout.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-listview-builder",
+                  "type": "multiple_choice",
+                  "prompt": "A feed has 20,000 rows. Which constructor avoids building all rows up front?",
+                  "options": [
+                    "Column(children: allRows)",
+                    "SingleChildScrollView with 20,000 children",
+                    "Stack with all rows",
+                    "ListView.builder with stable keys where needed"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "builder creates visible items lazily, reducing initial work and memory pressure.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-shrinkwrap",
+                  "type": "multiple_choice",
+                  "prompt": "Setting shrinkWrap: true on a large nested list appears to solve constraints. What trade-off needs review?",
+                  "options": [
+                    "It disables all network I/O",
+                    "It changes item equality",
+                    "It can require more layout work and weaken lazy scrolling benefits",
+                    "It always makes the list faster"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "shrinkWrap measures content extent and can be costly; prefer a bounded list or sliver layout for large data.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-const-rebuild",
+                  "type": "multiple_choice",
+                  "prompt": "A parent updates frequently. Where can const help in a static child subtree?",
+                  "options": [
+                    "Make mutable State immutable",
+                    "Canonicalize unchanged Widget configurations and reduce unnecessary reconstruction work",
+                    "Guarantee no RenderObject ever paints again",
+                    "Stop all inherited dependencies from updating"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "const is useful for truly static widget configurations, but it does not replace profiling or state isolation.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-layout-rule",
+                  "type": "multiple_choice",
+                  "prompt": "A Row child with long text overflows horizontally. Which widget can constrain it to remaining width?",
+                  "options": [
+                    "Expanded around the Text",
+                    "UnconstrainedBox around the Text",
+                    "Another Row with no width constraint",
+                    "A Timer before build"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Expanded provides a finite width for text to wrap or ellipsize within the Row.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-repaint-boundary",
+                  "type": "multiple_choice",
+                  "prompt": "A small animated indicator causes a complex neighboring chart to repaint. What may isolate paint work?",
+                  "options": [
+                    "A new GlobalKey every frame",
+                    "A larger setState scope",
+                    "Wrapping everything in Opacity",
+                    "A RepaintBoundary around a measured repaint region"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "RepaintBoundary can contain repaint propagation, but measure layer cost before applying broadly.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-list-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the lazy scrolling constructor for a long result set.",
+                  "template": "final list = ListView.____1(itemCount: rows.length, itemBuilder: buildRow);",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "builder"
+                      ],
+                      "options": [
+                        "builder",
+                        "eager",
+                        "all",
+                        "static"
+                      ]
+                    }
+                  ],
+                  "explanation": "ListView.builder creates children as needed for scrolling.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-widgets"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "flutter-unit-architecture",
+          "title": "4 · State and architecture",
+          "summary": "Choose ownership, immutable state, and testable boundaries.",
+          "lessons": [
+            {
+              "id": "flutter-architecture-a",
+              "title": "State ownership",
+              "explanation": "Match state mechanisms to scope and update frequency.",
+              "exercises": [
+                {
+                  "id": "fl-valuenotifier",
+                  "type": "multiple_choice",
+                  "prompt": "A small isolated toggle needs one observable value. Which built-in tool may be sufficient?",
+                  "options": [
+                    "ValueNotifier<bool> with a listener or ValueListenableBuilder",
+                    "A global mutable bool with no notification",
+                    "A database migration for every tap",
+                    "A new Isolate for the toggle"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "ValueNotifier is suitable for simple local observable state when ownership and disposal are clear.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-notifier-mutation",
+                  "type": "multiple_choice",
+                  "prompt": "A ChangeNotifier holds List<Item>. A caller mutates that list directly. Why might listeners miss the change?",
+                  "options": [
+                    "List is always immutable",
+                    "Widgets poll the list every millisecond",
+                    "ChangeNotifier synchronizes every collection",
+                    "notifyListeners is not called by arbitrary list mutation"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Encapsulate mutation in the owner and notify after state changes, or expose immutable snapshots.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-provider-scope",
+                  "type": "multiple_choice",
+                  "prompt": "Two screens need the same cart state. Where should its provider live?",
+                  "options": [
+                    "As a new provider on every build",
+                    "Only inside one transient dialog",
+                    "At a shared ancestor whose lifetime covers both screens",
+                    "Inside each row widget"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "The state owner must outlive the consumers that need a coherent cart.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-riverpod-dispose",
+                  "type": "multiple_choice",
+                  "prompt": "An auto-disposed provider starts a request. What should happen when no listeners remain?",
+                  "options": [
+                    "Write to a global variable without checks",
+                    "Release or cancel owned work using the provider disposal hook where supported",
+                    "Keep the request forever by default",
+                    "Call setState in a dead widget"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Provider lifetime should govern work ownership; disposal can stop a request or prevent stale delivery.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-bloc-event",
+                  "type": "multiple_choice",
+                  "prompt": "A BLoC receives AddItem twice quickly. Which design avoids a lost update?",
+                  "options": [
+                    "Process events against the latest owned state with a defined concurrency policy",
+                    "Read an old snapshot in two parallel handlers and overwrite with each result",
+                    "Ignore the second event silently",
+                    "Use a random delay before emit"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Event ordering and transformer choice affect concurrent handlers; update from current state or serialize dependent operations.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-immutable-state",
+                  "type": "multiple_choice",
+                  "prompt": "Why publish a new immutable state object after a repository update?",
+                  "options": [
+                    "It automatically persists to disk",
+                    "It removes all rebuilds",
+                    "It makes every API response valid",
+                    "Consumers can observe a clear value transition without shared mutable aliases"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Immutable snapshots clarify ownership and make equality and tests more predictable.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-di-test",
+                  "type": "multiple_choice",
+                  "prompt": "A screen model depends on network data. What allows a deterministic unit test?",
+                  "options": [
+                    "Use a real server in every unit test",
+                    "Read a global singleton with hidden state",
+                    "Inject a repository interface and supply an in-memory fake",
+                    "Construct HttpClient inside every method"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "A replaceable dependency isolates business decisions from the network.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-notify-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the notification after a ChangeNotifier updates its private state.",
+                  "template": "void add(Item item) { _items = [..._items, item]; ____1; }",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "notifyListeners()"
+                      ],
+                      "options": [
+                        "notifyListeners()",
+                        "setState()",
+                        "build()",
+                        "dispose()"
+                      ]
+                    }
+                  ],
+                  "explanation": "ChangeNotifier must notify listeners after its owned state changes.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "flutter-architecture-b",
+              "title": "Consistency and tests",
+              "explanation": "Keep data authoritative across view changes and failures.",
+              "exercises": [
+                {
+                  "id": "fl-repository-source",
+                  "type": "multiple_choice",
+                  "prompt": "A screen observes database rows while a refresh fetches newer rows. Which layer should apply the response?",
+                  "options": [
+                    "A static List with no persistence",
+                    "Repository writes validated rows to local storage, which emits to UI",
+                    "Each widget overwrites its own local copy",
+                    "Network callback directly mutates child State objects"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "One local source of truth keeps offline and refreshed views consistent.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-state-union",
+                  "type": "multiple_choice",
+                  "prompt": "Loading, loaded, and failed are mutually exclusive. What is a robust Dart model?",
+                  "options": [
+                    "A sealed state family with data on the relevant cases",
+                    "Three unrelated bools and nullable data",
+                    "One status string with dynamic payload",
+                    "A global Map<String, Object?>"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "A closed state model prevents contradictory combinations and makes exhaustive UI decisions possible.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-optimistic",
+                  "type": "multiple_choice",
+                  "prompt": "A liked item is shown immediately before server confirmation. What must happen if the server rejects it?",
+                  "options": [
+                    "Leave the false success forever",
+                    "Delete every item in the feed",
+                    "Retry with a new action ID indefinitely",
+                    "Rollback or reconcile the optimistic change and tell the user"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Optimistic updates need a failure path tied to the same operation.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-cross-screen",
+                  "type": "multiple_choice",
+                  "prompt": "Two screens show the same account balance. What reduces drift?",
+                  "options": [
+                    "Use separate timers to refresh randomly",
+                    "Update only the visible screen",
+                    "Both observe one repository-owned state source",
+                    "Each cache a mutable copy indefinitely"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Shared authoritative state lets both screens reflect the same committed value.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-widget-test",
+                  "type": "multiple_choice",
+                  "prompt": "A widget test taps Retry after a request error. What should it assert?",
+                  "options": [
+                    "The exact internal provider implementation",
+                    "The retry callback occurs and the visible state changes appropriately",
+                    "Only that the source contains the word Retry",
+                    "A live production server responds"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Behavioral assertions survive refactors while verifying the learner-facing flow.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-fake-clock",
+                  "type": "multiple_choice",
+                  "prompt": "A debounce test uses real waiting and is flaky. How should it be improved?",
+                  "options": [
+                    "Inject or control the scheduler/clock and advance fake time",
+                    "Sleep for an entire minute",
+                    "Remove debounce assertions",
+                    "Run it only on fast machines"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Controllable time makes event ordering reproducible and tests fast.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-state-replay",
+                  "type": "multiple_choice",
+                  "prompt": "A new screen subscribes after a price update. It must show the current price immediately. What should the source provide?",
+                  "options": [
+                    "Only a no-replay event stream",
+                    "A new price guessed from UI text",
+                    "A global loading spinner",
+                    "A current state value or queryable repository snapshot"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "State has a current value; one-off event streams can miss updates while a screen is absent.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-result-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the state case used to render an explicit recoverable failure.",
+                  "template": "switch (state) { case Loading(): return spinner; case Loaded(:final rows): return list(rows); case ____1: return retry(error); }",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "Failed(:final error)"
+                      ],
+                      "options": [
+                        "Failed(:final error)",
+                        "Loaded(:final error)",
+                        "Loading(:final error)",
+                        "Future(:final error)"
+                      ]
+                    }
+                  ],
+                  "explanation": "An explicit failed variant carries the error needed for a retry UI.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-architecture"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "flutter-unit-production",
+          "title": "5 · Production Flutter scenarios",
+          "summary": "Design reliable networking, navigation, platform integration, and performance.",
+          "lessons": [
+            {
+              "id": "flutter-production-a",
+              "title": "Platform and performance",
+              "explanation": "Protect smooth frames and native boundaries.",
+              "exercises": [
+                {
+                  "id": "fl-platform-channel",
+                  "type": "multiple_choice",
+                  "prompt": "A Dart screen needs a device-only API. What should cross a platform channel?",
+                  "options": [
+                    "Small serializable requests and results with explicit errors",
+                    "A live Widget object",
+                    "A raw BuildContext pointer",
+                    "A mutable Dart closure"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Platform channels exchange supported values; keep the native boundary narrow and error-aware.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-image-cache",
+                  "type": "multiple_choice",
+                  "prompt": "A long feed with many large images uses excessive memory. What is a reasonable first diagnosis?",
+                  "options": [
+                    "Disable list virtualization",
+                    "Duplicate every image in a global list",
+                    "Load original full-resolution files for thumbnails",
+                    "Inspect decode dimensions, cache size, and offscreen image lifetime"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Decoded images can cost far more memory than compressed files; size and lifetime matter.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-navigation-result",
+                  "type": "multiple_choice",
+                  "prompt": "An edit screen returns a saved item to its caller. Which navigation flow is appropriate?",
+                  "options": [
+                    "Assume the edit always succeeded",
+                    "Recreate the whole app",
+                    "Await the pushed route result and refresh by stable item ID",
+                    "Read a static global variable"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "A route result communicates a completed action, while the repository remains authoritative for durable data.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-deep-link",
+                  "type": "multiple_choice",
+                  "prompt": "A notification deep link opens a detail page before its data is cached. What should the destination do?",
+                  "options": [
+                    "Open the last viewed item instead",
+                    "Parse a stable ID, show loading, fetch or read locally, then handle missing data",
+                    "Require a live object pointer in the URL",
+                    "Crash if cache is empty"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Deep links need restorable identifiers and explicit loading and not-found states.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-offline-write",
+                  "type": "multiple_choice",
+                  "prompt": "A user saves a draft offline. Where should the save be committed before showing success?",
+                  "options": [
+                    "Durable local storage with an explicit pending-sync state",
+                    "Only a widget field",
+                    "Only a network request that cannot run",
+                    "An animation controller"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Local durability lets a draft survive process death; pending sync communicates remote status.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-retry-safe",
+                  "type": "multiple_choice",
+                  "prompt": "A POST may have committed before timing out. What enables a safe retry?",
+                  "options": [
+                    "A fresh random key for every attempt",
+                    "Assuming timeout proves failure",
+                    "Calling the POST in build",
+                    "A stable idempotency key accepted by the server"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "The same operation ID lets the server deduplicate repeated delivery.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-frames",
+                  "type": "multiple_choice",
+                  "prompt": "An animation janks only while a large synchronous transformation runs. What should you profile first?",
+                  "options": [
+                    "Only network DNS latency",
+                    "The number of routes in pubspec",
+                    "UI isolate frame time and the transformation cost",
+                    "The app icon dimensions"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "CPU work on the UI isolate competes with frame scheduling; profile before moving it.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-platform-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the async channel call that returns a native battery value.",
+                  "template": "final level = await channel.____1<int>(\"batteryLevel\");",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "invokeMethod"
+                      ],
+                      "options": [
+                        "invokeMethod",
+                        "setMethodCallHandler",
+                        "receiveBroadcastStream",
+                        "sendPort"
+                      ]
+                    }
+                  ],
+                  "explanation": "invokeMethod sends a named method request over a MethodChannel.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "flutter-production-b",
+              "title": "Offline queue and recovery",
+              "explanation": "Make uncertain outcomes and sync conflict explicit.",
+              "exercises": [
+                {
+                  "id": "fl-sync-conflict",
+                  "type": "multiple_choice",
+                  "prompt": "A server record changed after an offline local edit. What must sync decide?",
+                  "options": [
+                    "Pick whichever value has a longer string",
+                    "A documented conflict rule using revisions or domain merge semantics",
+                    "Always overwrite the server silently",
+                    "Always discard the local edit silently"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Arrival order alone cannot express user intent; versions reveal concurrent changes.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "fl-payment-unknown",
+                  "type": "multiple_choice",
+                  "prompt": "A charge request times out. Which state is honest before reconciliation?",
+                  "options": [
+                    "Pending or unknown outcome",
+                    "Definitely failed",
+                    "Definitely paid",
+                    "Automatically refunded"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "A timeout does not prove whether the server committed the charge.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-queue-order",
+                  "type": "multiple_choice",
+                  "prompt": "Two offline edits to the same record are queued. What must the uploader preserve or reconcile?",
+                  "options": [
+                    "Alphabetical order of payloads",
+                    "Only the last network arrival time",
+                    "A random shuffle for fairness",
+                    "Their causal order or a defined versioned merge rule"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Out-of-order delivery can undo later edits unless operations or versions encode the dependency.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-log-secrets",
+                  "type": "multiple_choice",
+                  "prompt": "A native plugin throws during checkout. What should a diagnostic report include?",
+                  "options": [
+                    "The entire local database",
+                    "No context at all",
+                    "A correlation ID and sanitized error category",
+                    "Full payment tokens and card details"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Sanitized context supports debugging without exposing sensitive values.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-app-resume",
+                  "type": "multiple_choice",
+                  "prompt": "The app resumes after hours offline. What should trigger a safe refresh?",
+                  "options": [
+                    "Assume the app never pauses",
+                    "A lifecycle-aware refresh policy that keeps cached data visible",
+                    "Clear all cached rows first",
+                    "Run a request in every widget build"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Resume can prompt a refresh, but existing offline data remains usable while it runs.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-isolate-ownership",
+                  "type": "multiple_choice",
+                  "prompt": "An isolate returns a parsed snapshot after the active course changed. What prevents stale application?",
+                  "options": [
+                    "Check request/course generation before committing the result",
+                    "Always write the result to the current course",
+                    "Cancel every user navigation action",
+                    "Trust completion order"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Moving work off the UI isolate does not remove races between old and new requests.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "fl-queue-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the stable identifier passed across retries of one command.",
+                  "template": "await api.send(edit, idempotencyKey: ____1);",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "command.id"
+                      ],
+                      "options": [
+                        "command.id",
+                        "newUuid()",
+                        "DateTime.now().toString()",
+                        "widget.key.toString()"
+                      ]
+                    }
+                  ],
+                  "explanation": "One command must retain the same ID for deduplication after timeouts.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "fl-offline-multipart",
+                  "type": "multi_part_problem",
+                  "prompt": "Queue an offline edit safely",
+                  "story": "A profile edit is saved without network. The worker can restart and the HTTP response may be lost. Complete the staged queue.",
+                  "difficulty": "hard",
+                  "parts": [
+                    {
+                      "id": "fl-queue-part-1",
+                      "prompt": "Persist before sending.",
+                      "starterCode": "Future<void> enqueue(Edit edit) async {\n  final id = ____1;\n  await store.____2(Command(id, edit));\n  scheduler.____3(id);\n}",
+                      "hiddenTests": "A saved edit yields one durable command with its original operation ID before scheduling.",
+                      "referenceSolution": "Future<void> enqueue(Edit edit) async {\n  final id = edit.operationId;\n  await store.insert(Command(id, edit));\n  scheduler.schedule(id);\n}",
+                      "guided": {
+                        "template": "Future<void> enqueue(Edit edit) async {\n  final id = ____1;\n  await store.____2(Command(id, edit));\n  scheduler.____3(id);\n}",
+                        "blanks": [
+                          {
+                            "placeholder": "____1",
+                            "accepted": [
+                              "edit.operationId"
+                            ],
+                            "options": [
+                              "edit.operationId",
+                              "newUuid()",
+                              "edit.title",
+                              "DateTime.now().toString()"
+                            ]
+                          },
+                          {
+                            "placeholder": "____2",
+                            "accepted": [
+                              "insert"
+                            ],
+                            "options": [
+                              "delete",
+                              "clear",
+                              "count",
+                              "insert"
+                            ]
+                          },
+                          {
+                            "placeholder": "____3",
+                            "accepted": [
+                              "schedule"
+                            ],
+                            "options": [
+                              "forget",
+                              "complete",
+                              "schedule",
+                              "cancel"
+                            ]
+                          }
+                        ],
+                        "explanation": "Retain the edit operation ID, insert the command, then schedule delivery."
+                      },
+                      "expected": "Retain the edit operation ID, insert the command, then schedule delivery."
+                    },
+                    {
+                      "id": "fl-queue-part-2",
+                      "prompt": "Settle confirmed and uncertain outcomes differently.",
+                      "starterCode": "Future<void> deliver(Command cmd) async {\n  final receipt = await api.____1(cmd.edit, key: cmd.id);\n  if (receipt.confirmed) await store.____2(cmd.id);\n  else scheduler.____3(cmd.id);\n}",
+                      "hiddenTests": "Confirmed delivery marks one command complete; uncertain delivery keeps it pending for a same-key retry.",
+                      "referenceSolution": "Future<void> deliver(Command cmd) async {\n  final receipt = await api.send(cmd.edit, key: cmd.id);\n  if (receipt.confirmed) await store.markComplete(cmd.id);\n  else scheduler.retryLater(cmd.id);\n}",
+                      "guided": {
+                        "template": "Future<void> deliver(Command cmd) async {\n  final receipt = await api.____1(cmd.edit, key: cmd.id);\n  if (receipt.confirmed) await store.____2(cmd.id);\n  else scheduler.____3(cmd.id);\n}",
+                        "blanks": [
+                          {
+                            "placeholder": "____1",
+                            "accepted": [
+                              "send"
+                            ],
+                            "options": [
+                              "send",
+                              "delete",
+                              "preview",
+                              "cancel"
+                            ]
+                          },
+                          {
+                            "placeholder": "____2",
+                            "accepted": [
+                              "markComplete"
+                            ],
+                            "options": [
+                              "insertAgain",
+                              "clearAll",
+                              "duplicate",
+                              "markComplete"
+                            ]
+                          },
+                          {
+                            "placeholder": "____3",
+                            "accepted": [
+                              "retryLater"
+                            ],
+                            "options": [
+                              "forget",
+                              "delete",
+                              "retryLater",
+                              "markComplete"
+                            ]
+                          }
+                        ],
+                        "explanation": "Send with the stable key, complete only confirmed commands, and retry uncertain outcomes."
+                      },
+                      "expected": "Send with the stable key, complete only confirmed commands, and retry uncertain outcomes."
+                    }
+                  ],
+                  "topicTags": [
+                    "flutter",
+                    "flutter-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

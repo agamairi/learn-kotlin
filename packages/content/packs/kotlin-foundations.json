@@ -1,132 +1,1882 @@
 {
   "schemaVersion": "1.0",
   "packId": "kotlin-foundations",
-  "version": "1.0.0",
-  "title": "Kotlin Foundations",
-  "description": "General Kotlin practice for mobile engineers, focused on reasoning, safe code, and interview-ready fundamentals.",
+  "version": "2.0.0",
+  "title": "Kotlin for Android Interviews",
+  "description": "Kotlin algorithms, concurrency, Compose, and production Android decisions in short interview challenges.",
   "language": "kotlin",
-  "level": "beginner",
-  "publisher": { "name": "Learn Code", "homepage": "https://learn-code.dev" },
+  "level": "intermediate",
+  "publisher": {
+    "name": "Learn Code"
+  },
   "license": "CC BY 4.0",
-  "source": { "url": "https://github.com/learn-code/kotlin-foundations", "ref": "main", "path": "packs/kotlin-foundations.json" },
-  "contentHash": "sha256:fa35cadc47caf64a93aab9537dccd949d2d4925d542f096e0ef32a5a443021d1",
-  "updatedAt": "2026-11-04T00:00:00Z",
+  "source": {
+    "url": "https://github.com/agamairi/learn-kotlin",
+    "path": "packages/content/packs/kotlin-foundations.json"
+  },
+  "contentHash": "sha256:548ecc00553adf3f782f5f7a21db89adcf9a94e46cf099b00a64647c14c6a45d",
+  "updatedAt": "2026-11-06T00:00:00Z",
   "minimumClientVersion": "0.1.0",
-  "capabilities": ["mobile", "reasoning", "code-examples"],
-  "tags": ["kotlin", "android", "null-safety", "interviews"],
+  "capabilities": [
+    "mobile",
+    "interview-reasoning",
+    "guided-puzzles"
+  ],
+  "tags": [
+    "interviews",
+    "mobile",
+    "kotlin"
+  ],
   "courses": [
     {
       "id": "kotlin-core",
-      "title": "Kotlin for Mobile Engineers",
-      "description": "Learn the language decisions behind readable Android and multiplatform code without starting in a full IDE.",
+      "title": "Kotlin for Android Interviews",
+      "description": "Kotlin algorithms, concurrency, Compose, and production Android decisions in short interview challenges.",
       "language": "kotlin",
       "chapters": [
         {
-          "id": "kotlin-unit-syntax",
-          "title": "Unit 1 · Syntax and values",
-          "summary": "Use val, var, data classes, enums, and when expressions with intent.",
+          "id": "kotlin-unit-semantics",
+          "title": "1 · Kotlin semantics",
+          "summary": "Reason about nullability, equality, generics, and closed state.",
           "lessons": [
             {
-              "id": "kotlin-syntax-core",
-              "title": "Model everyday app data",
-              "explanation": "Kotlin makes common data decisions explicit. Practise the smallest syntax that keeps intent visible.",
+              "id": "kotlin-semantics-a",
+              "title": "Nulls and value behavior",
+              "explanation": "Trace the runtime meaning of compact Kotlin code.",
               "exercises": [
-                { "id": "kotlin-s1", "type": "multiple_choice", "prompt": "Which keyword declares a read-only reference?", "code": "val displayName = \"Mina\"", "options": ["val", "var", "readonly", "let"], "correctIndex": 0, "topicTags": ["values"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "val prevents reassignment of the reference after initialization." },
-                { "id": "kotlin-s2", "type": "multiple_choice", "prompt": "What does a data class generate for value-like data?", "code": "data class Profile(val id: String, val displayName: String)", "options": ["equals, hashCode, toString, and copy", "An SQLite table", "A network request", "A coroutine"], "correctIndex": 0, "topicTags": ["data-classes"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Data classes generate useful value semantics and a copy function." },
-                { "id": "kotlin-s3", "type": "multiple_choice", "prompt": "What is a when expression required to provide?", "options": ["An exhaustive set of branches or else", "Only integer branches", "A background thread", "A database connection"], "correctIndex": 0, "topicTags": ["when"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "When used as an expression, Kotlin must know that a value is produced for every case." },
-                { "id": "kotlin-s4", "type": "multiple_choice", "prompt": "What is an enum class useful for?", "options": ["A fixed set of named states", "A list of arbitrary objects", "A mutable database", "A network stream"], "correctIndex": 0, "topicTags": ["enums"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Enums make a closed set of named states visible to the compiler and reader." },
-                { "id": "kotlin-s5", "type": "multiple_choice", "prompt": "What does type inference do?", "options": ["Kotlin deduces a type from the expression", "Kotlin disables type checking", "Kotlin converts everything to Any", "Kotlin makes values nullable"], "correctIndex": 0, "topicTags": ["types"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Kotlin can infer many types without losing static checking." },
-                { "id": "kotlin-s6", "type": "multiple_choice", "prompt": "Why prefer val when a value does not need reassignment?", "options": ["It communicates stable intent and reduces accidental mutation", "It always makes the object deeply immutable", "It starts a coroutine", "It improves network speed"], "correctIndex": 0, "topicTags": ["values"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Read-only references make data flow easier to reason about, even when nested objects can still mutate." },
-                { "id": "kotlin-s7", "type": "multiple_choice", "prompt": "What does a function expression return?", "options": ["The value of its final expression", "Always Unit", "Only a String", "A View"], "correctIndex": 0, "topicTags": ["functions"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Kotlin functions can use the final expression as their return value." },
-                { "id": "kotlin-s8", "type": "multiple_choice", "prompt": "What is a good first question in an unfamiliar Kotlin problem?", "options": ["What is the input, output, and boundary behavior?", "Which keyword looks shortest?", "Can every line be one expression?", "Can tests be skipped?"], "correctIndex": 0, "topicTags": ["problem-solving"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "A clear contract turns syntax selection into a testable reasoning decision." }
+                {
+                  "id": "kt-safe-copy",
+                  "type": "multiple_choice",
+                  "prompt": "A nullable API nickname should display Guest only when null. Which expression preserves an empty but valid nickname?",
+                  "code": "val nickname: String? = response.nickname",
+                  "options": [
+                    "nickname ?: \"Guest\"",
+                    "nickname.orEmpty().ifEmpty { \"Guest\" }",
+                    "nickname!!",
+                    "nickname?.takeIf { it.isNotEmpty() } ?: \"Guest\""
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Elvis handles null only. The empty string is not null and remains visible; the other fallbacks change that contract.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-data-equality",
+                  "type": "multiple_choice",
+                  "prompt": "Two separately allocated data-class values have equal properties. What is true?",
+                  "code": "data class User(val id: Int)\nval a = User(7); val b = User(7)",
+                  "options": [
+                    "Both comparisons are true",
+                    "Both comparisons are false",
+                    "a == b is false; a === b is true",
+                    "a == b is true; a === b is false"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Data-class equals compares primary-constructor properties; referential equality still distinguishes allocations.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-shallow-copy",
+                  "type": "multiple_choice",
+                  "prompt": "A data class owns a MutableList. What happens after copy() and a mutation through the copy?",
+                  "code": "data class Cart(val items: MutableList<String>)\nval a = Cart(mutableListOf(\"tea\")); val b = a.copy()\nb.items += \"rice\"",
+                  "options": [
+                    "The code will not compile",
+                    "The list becomes immutable",
+                    "Both carts see rice because copy is shallow",
+                    "Only b sees rice"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "copy reuses nested references. Prefer immutable nested values or an explicit deep copy when independent mutation matters.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-smart-cast",
+                  "type": "multiple_choice",
+                  "prompt": "A property can change between a null check and use. Which approach gives a stable non-null local?",
+                  "code": "var token: String? = null",
+                  "options": [
+                    "if (token == null) send(\"\")",
+                    "val current = token ?: return; send(current)",
+                    "if (token != null) send(token!!)",
+                    "send(token as String)"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Capturing the nullable property once removes the check/use gap. A forced assertion can still fail if the property changes.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-extension-dispatch",
+                  "type": "multiple_choice",
+                  "prompt": "Which overload is called? Assume no member function exists.",
+                  "code": "open class Animal\nclass Dog: Animal()\nfun Animal.label() = \"animal\"\nfun Dog.label() = \"dog\"\nval pet: Animal = Dog()",
+                  "options": [
+                    "pet.label() returns animal",
+                    "pet.label() returns dog",
+                    "It is ambiguous at runtime",
+                    "It throws ClassCastException"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Extensions resolve from the declared receiver type at compile time, unlike virtual member dispatch.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-elvis-throw",
+                  "type": "multiple_choice",
+                  "prompt": "An API ID is mandatory. Which expression fails immediately with a useful domain error if missing?",
+                  "code": "val id: String? = payload.id",
+                  "options": [
+                    "val key = id.orEmpty()",
+                    "val key = id!!",
+                    "val key = id.toString()",
+                    "val key = id ?: throw IllegalArgumentException(\"id missing\")"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Elvis can throw at the boundary. orEmpty silently accepts invalid input and !! loses context.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-let-scope",
+                  "type": "multiple_choice",
+                  "prompt": "A request ID must be logged only when present, including an empty string if the API permits it. Which code follows that rule?",
+                  "code": "val requestId: String? = response.requestId",
+                  "options": [
+                    "log(requestId ?: \"\")",
+                    "requestId!!.let { log(it) }",
+                    "requestId?.let { log(it) }",
+                    "if (requestId.isNullOrEmpty()) log(requestId)"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "The safe call executes for every non-null string, including empty; it avoids inventing a value or crashing.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-null-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the null-safe length; zero is required only for a null title.",
+                  "template": "val length = title____1 ?: 0",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "?.length"
+                      ],
+                      "options": [
+                        "?.length",
+                        "!!.length",
+                        ".length",
+                        "? length"
+                      ]
+                    }
+                  ],
+                  "explanation": "The safe call yields a nullable length; Elvis converts only null to zero.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 35
+                }
+              ]
+            },
+            {
+              "id": "kotlin-semantics-b",
+              "title": "Types and ownership",
+              "explanation": "Choose types and branches that express the real contract.",
+              "exercises": [
+                {
+                  "id": "kt-sealed-state",
+                  "type": "multiple_choice",
+                  "prompt": "A screen must represent loading, loaded, and failed states without contradictory flags. Which model is strongest?",
+                  "options": [
+                    "A string status plus nullable error",
+                    "A sealed interface with distinct data-bearing cases",
+                    "Three independent Boolean fields",
+                    "A nullable result plus isLoading Boolean"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "A sealed hierarchy makes illegal combinations unrepresentable and supports exhaustive when branches.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-generic-invariance",
+                  "type": "multiple_choice",
+                  "prompt": "Why cannot MutableList<Dog> be passed to a function accepting MutableList<Animal>?",
+                  "options": [
+                    "The function could insert a Cat into the Dog list",
+                    "Dog is unrelated to Animal",
+                    "MutableList is always read-only",
+                    "Generic types are erased before compilation"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "MutableList is invariant because writes would violate the original element type.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-out-projection",
+                  "type": "multiple_choice",
+                  "prompt": "A function only reads Animal values. Which parameter can accept List<Dog> safely?",
+                  "options": [
+                    "MutableList<Animal>",
+                    "Array<Animal>",
+                    "MutableList<in Dog>",
+                    "List<Animal>"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Kotlin List is covariant in its element type, so a List<Dog> can be read as a List<Animal>.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-map-key",
+                  "type": "multiple_choice",
+                  "prompt": "A mutable object is used as a HashMap key and a property in hashCode changes. What is the likely symptom?",
+                  "options": [
+                    "Only iteration order changes",
+                    "The compiler rejects the mutation",
+                    "Lookup by the same object may fail until the original bucket is used",
+                    "The map automatically rehashes the key"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Hash maps choose a bucket from hashCode at insertion; changing it breaks the lookup invariant.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-when-exhaustive",
+                  "type": "multiple_choice",
+                  "prompt": "A new PaymentState subtype is added. Which implementation most helps the compiler reveal missing UI handling?",
+                  "options": [
+                    "A string comparison against class names",
+                    "An exhaustive when expression over a sealed hierarchy without else",
+                    "A when with else returning Unknown",
+                    "A chain of nullable if checks"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Omitting else forces the compiler to flag an unhandled sealed case after the model grows.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-collection-readonly",
+                  "type": "multiple_choice",
+                  "prompt": "A function returns List<Event> backed by an internal MutableList. What guarantee does the return type provide?",
+                  "options": [
+                    "Callers cannot mutate through that List interface, but the owner can still change it",
+                    "The underlying list is deeply immutable",
+                    "All Event instances are immutable",
+                    "The list is copied automatically"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Read-only interfaces restrict the caller API; they do not freeze aliases or nested objects.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-scope-apply",
+                  "type": "multiple_choice",
+                  "prompt": "You configure a new builder and must return the same builder. Which scope function expresses that intent?",
+                  "options": [
+                    "let",
+                    "run",
+                    "with",
+                    "apply"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "apply uses this as receiver and returns the original object. let and run return the lambda result.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-sealed-cloze",
+                  "type": "cloze",
+                  "prompt": "Complete a state branch that handles every known subtype without a fallback.",
+                  "template": "val label = ____1(state) {\n  is Ready -> \"Ready\"\n  is Loading -> \"Loading\"\n}",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "when"
+                      ],
+                      "options": [
+                        "when",
+                        "if",
+                        "switch",
+                        "match"
+                      ]
+                    }
+                  ],
+                  "explanation": "when is an expression; sealed subtypes make exhaustive handling checkable.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-semantics"
+                  ],
+                  "estimatedSeconds": 55
+                }
               ]
             }
           ]
         },
         {
-          "id": "kotlin-unit-null-safety",
-          "title": "Unit 2 · Null safety",
-          "summary": "Handle absent data with nullable types, safe calls, Elvis defaults, and smart casts.",
+          "id": "kotlin-unit-algorithms",
+          "title": "2 · Algorithms and collections",
+          "summary": "Choose efficient structures and prove edge cases.",
           "lessons": [
             {
-              "id": "kotlin-null-safety-core",
-              "title": "Make absence explicit",
-              "explanation": "Nullable types turn missing data into a visible branch instead of a surprise crash.",
+              "id": "kotlin-algorithms-a",
+              "title": "Lookup and aggregation",
+              "explanation": "Build linear-time answers with explicit collection semantics.",
               "exercises": [
-                { "id": "kotlin-n1", "type": "multiple_choice", "prompt": "What does String? mean?", "options": ["The value may be null", "The value is always empty", "The value is mutable", "The value is a collection"], "correctIndex": 0, "topicTags": ["nullable-types"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "The question mark marks a nullable type that can hold a String or null." },
-                { "id": "kotlin-n2", "type": "multiple_choice", "prompt": "What does profile?.displayName return if profile is null?", "options": ["null", "An empty String", "A crash every time", "The profile id"], "correctIndex": 0, "topicTags": ["safe-calls"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "The safe-call operator short-circuits to null when the receiver is null." },
-                { "id": "kotlin-n3", "type": "multiple_choice", "prompt": "How do you provide a fallback of Guest when nickname is null?", "code": "val label = nickname ?: \"Guest\"", "options": ["nickname ?: \"Guest\"", "nickname ?? \"Guest\"", "nickname || \"Guest\"", "nickname.unwrapOr(\"Guest\")"], "correctIndex": 0, "topicTags": ["elvis"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "The Elvis operator returns its right side when the left side is null." },
-                { "id": "kotlin-n4", "type": "multiple_choice", "prompt": "What is the purpose of let on a nullable value?", "options": ["Run a block only when the value is non-null", "Make every value mutable", "Start a thread", "Convert a value to JSON"], "correctIndex": 0, "topicTags": ["scope-functions"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "value?.let { } is useful for scoping work to the non-null branch." },
-                { "id": "kotlin-n5", "type": "multiple_choice", "prompt": "Why should !! be used sparingly?", "options": ["It can throw if the value is null", "It makes code asynchronous", "It changes a val to var", "It is slower than every other operator"], "correctIndex": 0, "topicTags": ["null-safety"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "The not-null assertion moves the null failure to runtime." },
-                { "id": "kotlin-n6", "type": "multiple_choice", "prompt": "What is a smart cast?", "options": ["The compiler remembers a successful type or null check", "A cast performed by the network", "A UI animation", "A mutable list"], "correctIndex": 0, "topicTags": ["smart-casts"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "After a safe check, Kotlin can use the refined type in the guarded branch." },
-                { "id": "kotlin-n7", "type": "multiple_choice", "prompt": "What should a UI do when remote data is absent?", "options": ["Represent an intentional empty or loading state", "Force unwrap it", "Show stale data as fresh", "Crash to reveal the bug"], "correctIndex": 0, "topicTags": ["ui-state"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Absence is a product state that should be rendered or recovered from intentionally." },
-                { "id": "kotlin-n8", "type": "multiple_choice", "prompt": "What is the safest default for data from an API?", "options": ["Validate it before treating it as a non-null domain value", "Assume every field exists", "Use !! everywhere", "Ignore the response"], "correctIndex": 0, "topicTags": ["api-boundaries"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Validation keeps untrusted data from leaking unsafe assumptions into the rest of the app." }
+                {
+                  "id": "kt-frequency-map",
+                  "type": "multiple_choice",
+                  "prompt": "You need counts for 100,000 event types. What gives expected linear total time?",
+                  "options": [
+                    "A MutableMap<String, Int> updated once per event",
+                    "Count each type by rescanning the full list",
+                    "Sort the list once per event",
+                    "Use a List and contains for each event"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Expected constant-time hash lookup makes one pass O(n), with O(k) space for distinct types.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-associate-duplicates",
+                  "type": "multiple_choice",
+                  "prompt": "Two records share an ID. What risk does associateBy { it.id } introduce?",
+                  "options": [
+                    "It throws on duplicates",
+                    "It stores both records in a list",
+                    "It preserves the earliest record always",
+                    "The later record replaces the earlier value for that key"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "associateBy maps one value per key; detect duplicates or use groupBy when all records matter.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-set-dedupe",
+                  "type": "multiple_choice",
+                  "prompt": "You need the first appearance of each ID in the original order. Which design works in O(n) expected time?",
+                  "options": [
+                    "Use a nested loop and append every match",
+                    "Put records into an unordered Map and take values",
+                    "Track a HashSet of seen IDs while filtering the list",
+                    "Call distinctBy after sorting by ID"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "A seen set supports expected constant-time membership while a single pass preserves input order.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-sort-complexity",
+                  "type": "multiple_choice",
+                  "prompt": "A list of n transactions is sorted by timestamp and then scanned once. What is the asymptotic time?",
+                  "options": [
+                    "O(n²)",
+                    "O(n log n)",
+                    "O(n)",
+                    "O(log n)"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Comparison sorting dominates the linear scan. The scan does not multiply the sorting cost.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-overflow-sum",
+                  "type": "multiple_choice",
+                  "prompt": "Amounts are integer cents and may exceed Int range in aggregate. What should the accumulation type be?",
+                  "code": "val amounts: List<Int> = ...",
+                  "options": [
+                    "Long with conversion before accumulation",
+                    "Int because each amount fits Int",
+                    "Double to avoid overflow",
+                    "String concatenation"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Convert each amount before adding to a Long; floating point is a poor representation for exact cents.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-map-default",
+                  "type": "multiple_choice",
+                  "prompt": "Which expression increments a frequency without losing a first occurrence?",
+                  "code": "val counts = mutableMapOf<String, Int>()",
+                  "options": [
+                    "counts[key] = counts[key] ?: 1",
+                    "counts[key] = 1",
+                    "counts[key]!! + 1",
+                    "counts[key] = (counts[key] ?: 0) + 1"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "The Elvis default handles the absent key and the assignment stores the incremented result.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-parse-null",
+                  "type": "multiple_choice",
+                  "prompt": "CSV rows with malformed numeric amounts must be rejected and reported. Which conversion supports that flow?",
+                  "options": [
+                    "toDouble() and round later",
+                    "toString() on the field",
+                    "toLongOrNull() followed by an explicit error branch",
+                    "toLong() without handling"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "toLongOrNull exposes parsing failure as data so the caller can report the row rather than crash.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-count-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the expected constant-time membership structure for duplicate IDs.",
+                  "template": "val seen = mutable____1<String>()\nfor (id in ids) if (!seen.add(id)) report(id)",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "SetOf"
+                      ],
+                      "options": [
+                        "SetOf",
+                        "ListOf",
+                        "MapOf",
+                        "ArrayOf"
+                      ]
+                    }
+                  ],
+                  "explanation": "A mutable set returns false from add when the ID already exists.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                }
               ]
-            }
-          ]
-        },
-        {
-          "id": "kotlin-unit-collections",
-          "title": "Unit 3 · Collections",
-          "summary": "Transform lists and maps while keeping mutability and intent clear.",
-          "lessons": [
+            },
             {
-              "id": "kotlin-collections-core",
-              "title": "Transform app data",
-              "explanation": "Kotlin collection operations read like a small data pipeline: filter what matters, map it, then combine it when needed.",
+              "id": "kotlin-algorithms-b",
+              "title": "Windows and ordered input",
+              "explanation": "Track invariants while reducing search cost.",
               "exercises": [
-                { "id": "kotlin-c1", "type": "multiple_choice", "prompt": "What does listOf return?", "options": ["A read-only List", "A MutableList only", "An Array always", "A Set"], "correctIndex": 0, "topicTags": ["lists"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "listOf creates a read-only List view; use mutableListOf when mutation is required." },
-                { "id": "kotlin-c2", "type": "multiple_choice", "prompt": "Which operation keeps elements that match a predicate?", "options": ["filter", "map", "reduce", "zip"], "correctIndex": 0, "topicTags": ["filter"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "filter returns only elements whose predicate is true." },
-                { "id": "kotlin-c3", "type": "multiple_choice", "prompt": "Which operation changes each element into another value?", "options": ["map", "filter", "contains", "first"], "correctIndex": 0, "topicTags": ["map"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "map applies a transformation to every element." },
-                { "id": "kotlin-c4", "type": "multiple_choice", "prompt": "What does reduce commonly produce?", "options": ["One accumulated result", "A new thread", "Only unique values", "A nullable type"], "correctIndex": 0, "topicTags": ["reduce"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "reduce combines elements into one accumulated value such as a sum." },
-                { "id": "kotlin-c5", "type": "multiple_choice", "prompt": "Which collection is designed for unique values?", "options": ["Set", "List", "Sequence only", "Pair"], "correctIndex": 0, "topicTags": ["sets"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Set removes duplicate membership and supports set-style operations." },
-                { "id": "kotlin-c6", "type": "multiple_choice", "prompt": "What does associateBy help create?", "options": ["A map keyed by a selected property", "A sorted list only", "A coroutine scope", "A data class"], "correctIndex": 0, "topicTags": ["maps"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "associateBy is useful when later code needs keyed lookup by a domain property." },
-                { "id": "kotlin-c7", "type": "multiple_choice", "prompt": "When is a Sequence worth considering?", "options": ["When lazy chained processing can avoid intermediate collections", "For every three-item list", "Only for UI colors", "When mutation is required"], "correctIndex": 0, "topicTags": ["sequences"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Sequences evaluate lazily and can help with larger pipelines, but they add a trade-off." },
-                { "id": "kotlin-c8", "type": "multiple_choice", "prompt": "What should you ask before choosing a MutableList?", "options": ["Who owns the mutation and whether it is necessary", "Whether the list has a title", "Whether the app uses JSON", "Whether tests can be skipped"], "correctIndex": 0, "topicTags": ["mutability"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "Mutation is an ownership decision; a read-only interface is often safer at boundaries." }
+                {
+                  "id": "kt-window-invariant",
+                  "type": "multiple_choice",
+                  "prompt": "For positive numbers only, a sliding window sums to target. When can the left pointer advance safely?",
+                  "options": [
+                    "After every right-pointer move",
+                    "While the sum exceeds target",
+                    "Whenever the sum is below target",
+                    "Only when a duplicate appears"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "With nonnegative values, shrinking cannot increase the sum; negative inputs would break this monotonic reasoning.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-two-pointer-sorted",
+                  "type": "multiple_choice",
+                  "prompt": "Find two values whose sum is target in a sorted ascending array. What is the O(n) strategy?",
+                  "options": [
+                    "Start at both ends; move left up for a small sum and right down for a large sum",
+                    "Compare every pair",
+                    "Move both pointers inward on every step",
+                    "Binary search every pair of indices"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Sorted order tells which pointer can change the sum in the needed direction.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-window-negative",
+                  "type": "multiple_choice",
+                  "prompt": "Why is the usual grow/shrink window invalid when array values may be negative?",
+                  "options": [
+                    "Negative values cannot be stored in Kotlin lists",
+                    "A HashMap is mandatory for every array",
+                    "The right pointer cannot move",
+                    "Removing a negative can increase the window sum"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "The monotonic sum assumption fails. Prefix sums with a map may fit a target-sum variant.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-prefix-map",
+                  "type": "multiple_choice",
+                  "prompt": "Count subarrays with sum k when values may be negative. Which invariant supports O(n) expected time?",
+                  "options": [
+                    "Sort the original array first",
+                    "Reset the sum whenever it becomes negative",
+                    "Count prior prefix sums equal to currentPrefix minus k",
+                    "Store only the largest element so far"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Each matching earlier prefix marks a valid subarray ending at the current index; seed prefix zero with count one.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-lower-bound-guided",
+                  "type": "write_function",
+                  "prompt": "Build lower-bound search for the first value at least target.",
+                  "starterCode": "fun lowerBound(a: IntArray, target: Int): Int {\n  var lo = 0; var hi = a.size\n  while (lo < hi) {\n    val mid = ____1\n    if (a[mid] >= target) ____2\n    else ____3\n  }\n  return lo\n}",
+                  "hiddenTests": "For [1,2,2,4], target 2 returns 1; target 3 returns 3; target 5 returns 4; empty array returns 0.",
+                  "referenceSolution": "fun lowerBound(a: IntArray, target: Int): Int {\n  var lo = 0; var hi = a.size\n  while (lo < hi) {\n    val mid = lo + (hi - lo) / 2\n    if (a[mid] >= target) hi = mid\n    else lo = mid + 1\n  }\n  return lo\n}",
+                  "guided": {
+                    "template": "fun lowerBound(a: IntArray, target: Int): Int {\n  var lo = 0; var hi = a.size\n  while (lo < hi) {\n    val mid = ____1\n    if (a[mid] >= target) ____2\n    else ____3\n  }\n  return lo\n}",
+                    "blanks": [
+                      {
+                        "placeholder": "____1",
+                        "accepted": [
+                          "lo + (hi - lo) / 2"
+                        ],
+                        "options": [
+                          "lo + (hi - lo) / 2",
+                          "lo + hi / 2",
+                          "hi - lo / 2",
+                          "lo + 1"
+                        ]
+                      },
+                      {
+                        "placeholder": "____2",
+                        "accepted": [
+                          "hi = mid"
+                        ],
+                        "options": [
+                          "lo = mid",
+                          "hi = mid - 1",
+                          "return mid",
+                          "hi = mid"
+                        ]
+                      },
+                      {
+                        "placeholder": "____3",
+                        "accepted": [
+                          "lo = mid + 1"
+                        ],
+                        "options": [
+                          "lo = mid",
+                          "return -1",
+                          "lo = mid + 1",
+                          "hi = mid + 1"
+                        ]
+                      }
+                    ],
+                    "explanation": "The half-open interval [lo, hi) keeps every possible answer. A qualifying mid remains in the range; a smaller mid is excluded."
+                  },
+                  "explanation": "The half-open interval [lo, hi) keeps every possible answer. A qualifying mid remains in the range; a smaller mid is excluded.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-sorted-merge",
+                  "type": "multiple_choice",
+                  "prompt": "Two sorted event lists must be merged in chronological order. Which complexity is attainable?",
+                  "options": [
+                    "O(1) time",
+                    "O(n + m) with two indices",
+                    "O(nm) is unavoidable",
+                    "O(log(n + m)) for all elements"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Comparing the current heads emits each event once; output storage is O(n + m).",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-comparator-stability",
+                  "type": "multiple_choice",
+                  "prompt": "Transactions share a timestamp and must retain input order. What property must the chosen sort provide?",
+                  "options": [
+                    "Stability for equal keys",
+                    "Reverse ordering",
+                    "Hash-based lookup",
+                    "In-place mutation"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "A stable sort preserves relative order of values whose comparator reports equality.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-window-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the initial prefix count needed to include subarrays beginning at index zero.",
+                  "template": "val counts = mutableMapOf<Long, Int>(____1)\nvar prefix = 0L",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "0L to 1"
+                      ],
+                      "options": [
+                        "0L to 1",
+                        "0L to 0",
+                        "1L to 0",
+                        "1L to 1"
+                      ]
+                    }
+                  ],
+                  "explanation": "The empty prefix occurs once before any element; it allows a full-prefix match.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                }
               ]
             }
           ]
         },
         {
           "id": "kotlin-unit-coroutines",
-          "title": "Unit 4 · Coroutines",
-          "summary": "Read suspend functions, structured concurrency, cancellation, and UI dispatch as decisions.",
+          "title": "3 · Coroutines and Flow",
+          "summary": "Control lifetime, cancellation, state, and event delivery.",
           "lessons": [
             {
-              "id": "kotlin-coroutines-core",
-              "title": "Make asynchronous work visible",
-              "explanation": "Coroutines let code describe asynchronous work without hiding its lifecycle. The scope that starts work should own its cancellation.",
+              "id": "kotlin-coroutines-a",
+              "title": "Structured concurrency",
+              "explanation": "Tie work to ownership and make failure propagation explicit.",
               "exercises": [
-                { "id": "kotlin-a1", "type": "multiple_choice", "prompt": "What does suspend mean on a function?", "options": ["It may pause without blocking the underlying thread", "It always creates a new thread", "It can never return", "It is only for tests"], "correctIndex": 0, "topicTags": ["suspend"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "A suspend function can pause and resume within a coroutine." },
-                { "id": "kotlin-a2", "type": "multiple_choice", "prompt": "What is structured concurrency trying to preserve?", "options": ["A parent scope owns child work and its lifetime", "Every task runs forever", "Errors are ignored", "All work runs on the UI thread"], "correctIndex": 0, "topicTags": ["structured-concurrency"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Structured concurrency keeps work tied to a scope so cancellation and failures are understandable." },
-                { "id": "kotlin-a3", "type": "multiple_choice", "prompt": "What should happen when a screen is destroyed?", "options": ["Its screen-owned coroutine work should be cancelled", "Its requests should keep updating hidden UI", "It should retry forever", "It should block the main thread"], "correctIndex": 0, "topicTags": ["cancellation"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Lifecycle-aware scopes prevent stale work from writing into a screen that no longer exists." },
-                { "id": "kotlin-a4", "type": "multiple_choice", "prompt": "What is Dispatchers.Main for?", "options": ["UI work that must run on the main thread", "CPU-heavy parsing only", "Database writes only", "Random background work"], "correctIndex": 0, "topicTags": ["dispatchers"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "UI frameworks require main-thread access for view state updates." },
-                { "id": "kotlin-a5", "type": "multiple_choice", "prompt": "What does withContext usually communicate?", "options": ["Run a block in a different coroutine context", "Create a data class", "Make a value nullable", "Catch every exception"], "correctIndex": 0, "topicTags": ["dispatchers"], "difficulty": "medium", "estimatedSeconds": 25, "explanation": "withContext makes a context switch explicit and returns the block's result." },
-                { "id": "kotlin-a6", "type": "multiple_choice", "prompt": "Why should coroutine errors be handled at a meaningful boundary?", "options": ["The UI or caller can choose recovery", "It makes the exception disappear", "It avoids all tests", "It makes every call synchronous"], "correctIndex": 0, "topicTags": ["errors"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Error handling belongs where the product can decide whether to retry, show, or ignore the failure." },
-                { "id": "kotlin-a7", "type": "multiple_choice", "prompt": "What is a race between two requests?", "options": ["Results arrive in an order different from user intent", "Two values have the same type", "A list is filtered twice", "A coroutine has a name"], "correctIndex": 0, "topicTags": ["races"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Request identity or cancellation keeps older work from overwriting newer intent." },
-                { "id": "kotlin-a8", "type": "multiple_choice", "prompt": "What is a good default for network data before rendering it?", "options": ["Represent loading, success, empty, and error states", "Force unwrap every field", "Assume success", "Hide the request"], "correctIndex": 0, "topicTags": ["ui-state"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Explicit states make async UI behavior predictable for learners and users." }
+                {
+                  "id": "kt-viewmodel-scope",
+                  "type": "multiple_choice",
+                  "prompt": "A search request should stop when its ViewModel is cleared. Where should it be launched?",
+                  "options": [
+                    "viewModelScope",
+                    "GlobalScope",
+                    "A new untracked CoroutineScope for every query",
+                    "The Application scope"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "viewModelScope is canceled with the ViewModel, preventing old screens from retaining work.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-withcontext",
+                  "type": "multiple_choice",
+                  "prompt": "A suspend function parses a large file and then updates UI state. Which boundary is appropriate?",
+                  "options": [
+                    "Launch GlobalScope for parsing",
+                    "Block Dispatchers.Main until parsing ends",
+                    "Use Dispatchers.IO for every CPU-bound operation",
+                    "Run parsing with withContext(Dispatchers.Default), then update UI in the caller context"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Default is intended for CPU work. withContext returns to the parent context and preserves cancellation.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-cancel-swallow",
+                  "type": "multiple_choice",
+                  "prompt": "A broad catch(Exception) wraps a suspending request. What must happen to cancellation?",
+                  "options": [
+                    "Return stale success after cancellation",
+                    "Ignore cancellation because it is an Exception",
+                    "Rethrow CancellationException rather than convert it to a recoverable error",
+                    "Always retry cancellation"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Swallowing cancellation allows work to continue after its owner ends.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-async-failure",
+                  "type": "multiple_choice",
+                  "prompt": "Two child async operations run in a normal coroutineScope. One fails. What happens by default?",
+                  "options": [
+                    "The scope converts failure to null",
+                    "The scope cancels siblings and propagates the failure",
+                    "The other child always succeeds independently",
+                    "The exception is silently dropped"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Regular structured concurrency treats an uncaught child failure as a scope failure; supervisorScope changes that policy.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-supervisor",
+                  "type": "multiple_choice",
+                  "prompt": "Independent dashboard tiles should continue if one fetch fails. Which structure fits?",
+                  "options": [
+                    "supervisorScope with each child handling its own error",
+                    "coroutineScope with no catch",
+                    "GlobalScope for every tile",
+                    "runBlocking on the UI thread"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Supervision isolates child failures while keeping the whole operation bounded by its parent.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-race-stale",
+                  "type": "multiple_choice",
+                  "prompt": "User searches A then B; A responds last. Which design avoids showing A results?",
+                  "options": [
+                    "Use a longer timeout for A",
+                    "Render whichever response arrives last",
+                    "Put both results into one mutable list",
+                    "Cancel or identify the old request and accept only the latest query result"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Response order is not request order. Cancellation or a generation check protects the current query.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-runblocking-ui",
+                  "type": "multiple_choice",
+                  "prompt": "What is the issue with runBlocking inside an Android click handler?",
+                  "options": [
+                    "It cannot call suspend functions",
+                    "It dispatches work to Main automatically",
+                    "It blocks the main thread and can freeze UI",
+                    "It always creates a memory leak"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "runBlocking waits synchronously. Launch owned coroutine work instead of freezing the event loop.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-dispatcher-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the dispatcher for CPU-bound image analysis in a suspending function.",
+                  "template": "val result = withContext(Dispatchers.____1) { analyzePixels(bitmap) }",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "Default"
+                      ],
+                      "options": [
+                        "Default",
+                        "Main",
+                        "Unconfined",
+                        "Immediate"
+                      ]
+                    }
+                  ],
+                  "explanation": "Default is designed for CPU-bound work; Main would monopolize UI rendering.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "kotlin-coroutines-b",
+              "title": "Flow and shared state",
+              "explanation": "Choose streams with the right replay and lifecycle behavior.",
+              "exercises": [
+                {
+                  "id": "kt-stateflow-state",
+                  "type": "multiple_choice",
+                  "prompt": "A screen needs the current connection state immediately after subscription. Which stream fits?",
+                  "options": [
+                    "A callback without stored state",
+                    "StateFlow with a current value",
+                    "SharedFlow with replay zero",
+                    "A cold Flow that never emits initially"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "StateFlow always holds a latest value, which new collectors receive.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-sharedflow-event",
+                  "type": "multiple_choice",
+                  "prompt": "A one-off toast event should not replay after screen recreation. Which default is closest?",
+                  "options": [
+                    "SharedFlow with replay = 0",
+                    "StateFlow holding the last toast",
+                    "MutableStateFlow<String?> that is never cleared",
+                    "A persisted database row"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "An event stream with no replay avoids delivering a stale toast to a new collector; delivery while absent still needs a product decision.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-flow-collect-lifecycle",
+                  "type": "multiple_choice",
+                  "prompt": "A Fragment collects UI Flow. What prevents collecting while its view is stopped?",
+                  "options": [
+                    "GlobalScope.collect",
+                    "A while(true) loop in onCreate",
+                    "Collecting once without cancellation",
+                    "repeatOnLifecycle(STARTED) in the view lifecycle scope"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "repeatOnLifecycle starts and cancels collection with the view lifecycle, avoiding invisible UI work.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-flatmaplatest",
+                  "type": "multiple_choice",
+                  "prompt": "Each query should cancel the previous search stream when a new query arrives. Which operator fits?",
+                  "options": [
+                    "zip",
+                    "fold",
+                    "flatMapLatest",
+                    "flatMapConcat"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "flatMapLatest switches to the newest inner Flow and cancels the previous collection.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-debounce-order",
+                  "type": "multiple_choice",
+                  "prompt": "A typeahead should avoid requests for intermediate keystrokes and duplicate terms. Which pipeline fits?",
+                  "options": [
+                    "zip each query with itself",
+                    "debounce then distinctUntilChanged before request mapping",
+                    "Retry before every keystroke",
+                    "sort then collect"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Debounce waits for quiet input; distinctUntilChanged avoids identical consecutive terms before network work.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-flow-error",
+                  "type": "multiple_choice",
+                  "prompt": "A repository Flow emits cached rows and then network sync fails. Which error policy preserves offline content?",
+                  "options": [
+                    "Keep the cached rows and expose sync failure separately",
+                    "Delete the cache to show an empty state",
+                    "Crash the collector",
+                    "Treat the failed network result as an empty authoritative list"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "A sync failure does not invalidate previously committed local data. Keep source-of-truth state separate from refresh status.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-state-update-race",
+                  "type": "multiple_choice",
+                  "prompt": "Two coroutines increment MutableStateFlow<Int>. Which update avoids lost increments?",
+                  "options": [
+                    "counter.value = counter.value + 1 in each coroutine",
+                    "Read value once and write later",
+                    "Use a Boolean flag without synchronization",
+                    "counter.update { it + 1 }"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "update applies an atomic compare-and-set loop; read-modify-write on value can lose an increment.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-flow-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the operator that cancels a previous search when a new query arrives.",
+                  "template": "queries.____1 { q -> repository.search(q) }",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "flatMapLatest"
+                      ],
+                      "options": [
+                        "flatMapLatest",
+                        "flatMapConcat",
+                        "combine",
+                        "scan"
+                      ]
+                    }
+                  ],
+                  "explanation": "flatMapLatest switches the active inner stream to the most recent query.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-coroutines"
+                  ],
+                  "estimatedSeconds": 55
+                }
               ]
             }
           ]
         },
         {
-          "id": "kotlin-unit-testing",
-          "title": "Unit 5 · Testing and interviews",
-          "summary": "Test boundaries, explain trade-offs, and communicate the simplest correct solution.",
+          "id": "kotlin-unit-android",
+          "title": "4 · Android and Compose",
+          "summary": "Model UI state, recomposition, lifecycle, and navigation.",
           "lessons": [
             {
-              "id": "kotlin-testing-core",
-              "title": "Prove the behavior",
-              "explanation": "Good tests name a behavior and make edge cases visible. Good interviews explain the same choices out loud.",
+              "id": "kotlin-android-a",
+              "title": "Compose state and identity",
+              "explanation": "Make state ownership and list identity explicit.",
               "exercises": [
-                { "id": "kotlin-t1", "type": "multiple_choice", "prompt": "Which argument comes first in assertEquals(expected, actual)?", "options": ["expected", "actual", "message", "exception"], "correctIndex": 0, "topicTags": ["testing"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "JUnit convention places the known expected value first." },
-                { "id": "kotlin-t2", "type": "multiple_choice", "prompt": "What is a boundary test?", "options": ["A test for empty, smallest, largest, or unusual valid input", "A screenshot test only", "A test with no assertion", "A test for a private variable name"], "correctIndex": 0, "topicTags": ["testing"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "Boundary cases expose off-by-one and missing-state errors that happy paths miss." },
-                { "id": "kotlin-t3", "type": "multiple_choice", "prompt": "What makes a function easy to unit test?", "options": ["Explicit inputs, deterministic output, and few hidden dependencies", "Many globals", "Random time reads", "A giant UI hierarchy"], "correctIndex": 0, "topicTags": ["testing", "functions"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Pure or dependency-injected functions are easier to exercise and explain." },
-                { "id": "kotlin-t4", "type": "multiple_choice", "prompt": "What should you clarify before coding an interview problem?", "options": ["Input, output, constraints, and edge cases", "Only the variable names", "The shortest syntax", "Whether tests are allowed"], "correctIndex": 0, "topicTags": ["interviews"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "A clear contract prevents solving the wrong problem and provides test cases." },
-                { "id": "kotlin-t5", "type": "multiple_choice", "prompt": "What is a useful invariant?", "options": ["A fact that stays true while the algorithm progresses", "A random comment", "A UI color", "A compiler flag"], "correctIndex": 0, "topicTags": ["algorithms"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Naming the invariant explains why the algorithm remains correct after each step." },
-                { "id": "kotlin-t6", "type": "multiple_choice", "prompt": "When should you prefer a simpler algorithm?", "options": ["When constraints do not require extra complexity", "Never", "Only when it has more lines", "After removing all tests"], "correctIndex": 0, "topicTags": ["trade-offs"], "difficulty": "easy", "estimatedSeconds": 20, "explanation": "Complexity has a maintenance cost, so it should answer a real constraint." },
-                { "id": "kotlin-t7", "type": "multiple_choice", "prompt": "What is the best reason to use a sealed class for UI state?", "options": ["It makes a closed set of states explicit and exhaustively handled", "It makes every state mutable", "It skips rendering", "It replaces all tests"], "correctIndex": 0, "topicTags": ["sealed-classes", "ui-state"], "difficulty": "medium", "estimatedSeconds": 30, "explanation": "Sealed hierarchies help the compiler and reader see every supported state." },
-                { "id": "kotlin-t8", "type": "multiple_choice", "prompt": "How should you explain a Kotlin design choice in an interview?", "options": ["Connect it to correctness, readability, performance, or maintainability", "Name a keyword and stop", "Avoid edge cases", "Say Kotlin always requires it"], "correctIndex": 0, "topicTags": ["communication"], "difficulty": "easy", "estimatedSeconds": 25, "explanation": "The strongest answers connect language features to the constraint they solve." }
+                {
+                  "id": "kt-remember-rotation",
+                  "type": "multiple_choice",
+                  "prompt": "A text draft should survive activity recreation. Which local state holder fits?",
+                  "options": [
+                    "rememberSaveable for a saveable value",
+                    "remember only",
+                    "A top-level mutable variable",
+                    "A new value inside every recomposition"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "rememberSaveable persists supported values through recreation; remember only survives recomposition.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-hoist-state",
+                  "type": "multiple_choice",
+                  "prompt": "A parent owns selected filter and two children must agree on it. Where should state live?",
+                  "options": [
+                    "Separately inside each child",
+                    "In a global mutable singleton",
+                    "Inside each row composable",
+                    "In the parent, passed down as value and change callback"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Hoisting gives one source of truth and makes both children reflect the same selection.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-compose-key",
+                  "type": "multiple_choice",
+                  "prompt": "A reorderable LazyColumn keeps row-local expanded state. What avoids state appearing on the wrong row?",
+                  "options": [
+                    "Remove keys entirely",
+                    "Recreate the list on every frame",
+                    "Use stable item keys derived from item IDs",
+                    "Use row index as key"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Stable keys bind remembered row state to the item identity rather than its current position.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-derived-state",
+                  "type": "multiple_choice",
+                  "prompt": "An expensive filtered list depends only on query and source list. What avoids recalculating on unrelated recompositions?",
+                  "options": [
+                    "Always call filter in a LaunchedEffect with no keys",
+                    "remember(source, query) { filter(source, query) }",
+                    "A mutable global cache with no invalidation",
+                    "Run filter in every draw modifier"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "A keyed remember recalculates when inputs change, while avoiding unrelated work. Measure before adding caching.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-compose-sideeffect",
+                  "type": "multiple_choice",
+                  "prompt": "A composable starts a request on every recomposition. Which fix makes the effect follow itemId?",
+                  "options": [
+                    "Launch the request in LaunchedEffect(itemId)",
+                    "Launch in the composable body again",
+                    "Use remember with no keys to start a coroutine",
+                    "Block composition until the request finishes"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "LaunchedEffect scopes the task to composition and restarts it only when its key changes.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-state-holder",
+                  "type": "multiple_choice",
+                  "prompt": "A mutable list is changed in place but UI does not update. Which model makes changes observable?",
+                  "options": [
+                    "Keep mutating the same plain ArrayList",
+                    "Call Thread.sleep after mutation",
+                    "Move the list to a companion object",
+                    "Expose immutable UI state and replace the list in a StateFlow update"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Compose observes state reads; replacing immutable snapshots makes changes explicit and testable.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-preview-state",
+                  "type": "multiple_choice",
+                  "prompt": "A screen has loading, content, and recoverable error. What is the main benefit of modeling these as a sealed type?",
+                  "options": [
+                    "It removes the need for tests",
+                    "It automatically performs network retries",
+                    "It prevents showing content and loading as contradictory independent flags",
+                    "It forces every screen to be a singleton"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Distinct states make rendering and transition tests easier to reason about.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-compose-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the state holder that survives a configuration recreation for a saveable string.",
+                  "template": "var draft by ____1 { mutableStateOf(\"\") }",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "rememberSaveable"
+                      ],
+                      "options": [
+                        "rememberSaveable",
+                        "remember",
+                        "derivedStateOf",
+                        "LaunchedEffect"
+                      ]
+                    }
+                  ],
+                  "explanation": "rememberSaveable saves supported values beyond recomposition through activity recreation.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "kotlin-android-b",
+              "title": "Lifecycle and navigation",
+              "explanation": "Choose owners and back stack behavior deliberately.",
+              "exercises": [
+                {
+                  "id": "kt-vm-scope",
+                  "type": "multiple_choice",
+                  "prompt": "An activity rotates during a repository fetch. Which owner normally retains screen state across recreation?",
+                  "options": [
+                    "The old View hierarchy",
+                    "ViewModel",
+                    "The destroyed Activity instance",
+                    "A local variable in onCreate"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "ViewModel outlives configuration recreation and exposes state to the new UI owner.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-nav-id",
+                  "type": "multiple_choice",
+                  "prompt": "A details screen needs an article. What should navigation pass?",
+                  "options": [
+                    "A stable article ID, then load through the repository",
+                    "The entire mutable repository object",
+                    "A View reference",
+                    "An Activity context captured globally"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "IDs are small, serializable route inputs; the destination can restore data after process death.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-process-death",
+                  "type": "multiple_choice",
+                  "prompt": "The process dies while a screen is open. Which data must be recoverable from durable storage rather than ViewModel memory?",
+                  "options": [
+                    "The current frame animation",
+                    "A temporary shimmer phase",
+                    "A remembered scroll ripple",
+                    "Committed user progress and queued edits"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "ViewModels do not survive process death. Durable progress requires persistence.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-context-leak",
+                  "type": "multiple_choice",
+                  "prompt": "A singleton repository stores an Activity reference. What is the risk?",
+                  "options": [
+                    "The Activity is copied safely",
+                    "Only CPU usage changes",
+                    "The Activity can remain reachable after destruction",
+                    "The repository is automatically canceled"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Long-lived objects retaining short-lived Contexts can leak screens; use application context where appropriate.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-dependency-owner",
+                  "type": "multiple_choice",
+                  "prompt": "A repository is shared by several ViewModels. Which ownership best fits?",
+                  "options": [
+                    "Pass an Activity instance as global state",
+                    "Application-level dependency graph with repository abstraction",
+                    "Construct a new repository in every recomposition",
+                    "Store it in a composable local variable"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "A long-lived injected repository has a clear owner and can be replaced by a fake in tests.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-backstack-dup",
+                  "type": "multiple_choice",
+                  "prompt": "Bottom tabs recreate the same destination on each tap. What navigation option commonly avoids duplicate top copies?",
+                  "options": [
+                    "launchSingleTop with appropriate state restore behavior",
+                    "Add every tap as a new destination",
+                    "Disable the system Back button",
+                    "Clear the whole database on tab change"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Single-top navigation avoids stacking identical destinations; save/restore state handles tab switching.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-permission-timing",
+                  "type": "multiple_choice",
+                  "prompt": "A feature needs location permission. When is a request most understandable?",
+                  "options": [
+                    "On every cold launch",
+                    "After a hidden background timer",
+                    "Only after a location API throws",
+                    "When the user begins the location feature, with context for why"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Contextual permission requests align the system prompt with a user action and support a denied state.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-lifecycle-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the ViewModel scope for a request tied to this screen state.",
+                  "template": "____1.launch { repository.refresh() }",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "viewModelScope"
+                      ],
+                      "options": [
+                        "viewModelScope",
+                        "GlobalScope",
+                        "lifecycleScope",
+                        "rememberCoroutineScope"
+                      ]
+                    }
+                  ],
+                  "explanation": "viewModelScope is canceled when the ViewModel is cleared; lifecycleScope belongs to a lifecycle owner.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "kotlin-unit-production",
+          "title": "5 · Production Android scenarios",
+          "summary": "Keep local data authoritative and recover safely from failure.",
+          "lessons": [
+            {
+              "id": "kotlin-production-a",
+              "title": "Offline data and jobs",
+              "explanation": "Connect persistence, networking, and work scheduling.",
+              "exercises": [
+                {
+                  "id": "kt-offline-source",
+                  "type": "multiple_choice",
+                  "prompt": "A feed must display cached items offline and refresh when online. Which layer should the UI observe?",
+                  "options": [
+                    "A Room Flow; network writes verified updates into Room",
+                    "Only the latest Retrofit response",
+                    "An in-memory list cleared at launch",
+                    "A network call before every row draw"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "A local source of truth gives immediate offline state; sync changes it transactionally.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-room-transaction",
+                  "type": "multiple_choice",
+                  "prompt": "An order and its line items must commit together. What prevents a half-written order?",
+                  "options": [
+                    "Two independent launches",
+                    "A delay between inserts",
+                    "A UI loading spinner",
+                    "A Room transaction around related writes"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "A database transaction either commits the related records or rolls them back together.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-workmanager",
+                  "type": "multiple_choice",
+                  "prompt": "A small upload should retry after process death when network returns. Which Android tool fits?",
+                  "options": [
+                    "GlobalScope launched on button tap",
+                    "A Handler delayed callback",
+                    "WorkManager with network constraints and retry policy",
+                    "A ViewModel coroutine only"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "WorkManager persists deferrable work across process death and can enforce connectivity constraints.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-cache-version",
+                  "type": "multiple_choice",
+                  "prompt": "A server reply arrives after a newer local edit. What prevents the reply from overwriting the edit?",
+                  "options": [
+                    "Retry both requests forever",
+                    "Compare versions or timestamps and apply a defined conflict rule",
+                    "Always trust the last arriving response",
+                    "Clear local state before the reply"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Arrival order is not causal order. Versioned records let sync decide whether an update is stale.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-retrofit-errors",
+                  "type": "multiple_choice",
+                  "prompt": "A 500 response and a malformed 200 response need different diagnostics. Which handling is best?",
+                  "options": [
+                    "Separate transport/status failures from decoding failures",
+                    "Treat all failures as empty success",
+                    "Catch Throwable and discard it",
+                    "Repeat the same request infinitely"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Distinct errors help recovery and debugging; a malformed successful payload is not the same as server failure.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-idempotent-upload",
+                  "type": "multiple_choice",
+                  "prompt": "An upload can be retried after a timeout that may have occurred after server commit. What makes retry safe?",
+                  "options": [
+                    "Generate a new ID on every retry",
+                    "Assume timeout means rollback",
+                    "Disable retries permanently",
+                    "Send a stable operation ID understood by the server"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "An idempotency key allows the server to recognize repeated delivery of one logical operation.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-room-migrate",
+                  "type": "multiple_choice",
+                  "prompt": "A schema change adds a required column to saved records. What must a release provide?",
+                  "options": [
+                    "A longer network timeout",
+                    "A UI reset animation",
+                    "A migration or a deliberate documented destructive policy",
+                    "Only a new Kotlin data class"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Existing databases need a migration path; changing the entity alone does not transform stored rows.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-room-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the storage primitive for a durable offline queue that survives process death.",
+                  "template": "interface PendingEditDao { @Insert suspend fun ____1(edit: PendingEdit) }",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "insert"
+                      ],
+                      "options": [
+                        "insert",
+                        "render",
+                        "collect",
+                        "launch"
+                      ]
+                    }
+                  ],
+                  "explanation": "A Room insert persists the pending edit; UI state alone cannot survive process death.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "kotlin-production-b",
+              "title": "Reliability and payments",
+              "explanation": "Reason through retries, callbacks, and state machines.",
+              "exercises": [
+                {
+                  "id": "kt-retry-jitter",
+                  "type": "multiple_choice",
+                  "prompt": "Thousands of clients receive 503 simultaneously. Which retry policy avoids synchronized spikes?",
+                  "options": [
+                    "Retry only from a UI recomposition",
+                    "Exponential backoff with jitter and a retry cap",
+                    "Immediate retry in a tight loop",
+                    "Exactly one fixed one-second retry forever"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Jitter spreads load; caps avoid unbounded resource use. Only retry operations safe to repeat.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "kt-payment-state",
+                  "type": "multiple_choice",
+                  "prompt": "A payment request times out. Which local state is truthful before reconciliation?",
+                  "options": [
+                    "Unknown or pending verification",
+                    "Definitely failed",
+                    "Definitely paid",
+                    "Automatically refunded"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "A timeout does not prove whether the server committed. Query by stable operation ID before retrying.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-ble-state",
+                  "type": "multiple_choice",
+                  "prompt": "Bluetooth connect callbacks arrive after the user disconnects. What guards the state machine?",
+                  "options": [
+                    "Apply every callback in arrival order",
+                    "Keep only one global Boolean",
+                    "Ignore user disconnect until timeout",
+                    "A connection generation token checked before applying callbacks"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "A generation or session ID rejects stale callbacks from prior connection attempts.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-dedupe-events",
+                  "type": "multiple_choice",
+                  "prompt": "A webhook-like event may be delivered twice. What prevents two balance updates?",
+                  "options": [
+                    "Sleep between handlers",
+                    "Assume the network never duplicates events",
+                    "Transactionally record the event ID and apply the effect once",
+                    "Check only an in-memory Boolean"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Deduplication must be durable and atomic with the effect; an in-memory check races and resets.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-logging-pii",
+                  "type": "multiple_choice",
+                  "prompt": "A production crash occurs while parsing payment records. What is the safer diagnostic?",
+                  "options": [
+                    "Include the entire request body in analytics",
+                    "Log a correlation ID and sanitized error category",
+                    "Log full card and token values",
+                    "Suppress all diagnostics"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "A correlation ID lets engineers trace failures without leaking sensitive fields.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-cache-race",
+                  "type": "multiple_choice",
+                  "prompt": "Two refreshes finish out of order. What keeps local data at the newest version?",
+                  "options": [
+                    "Compare authoritative revision before committing each response",
+                    "Write whichever response arrives last",
+                    "Disable all concurrent reads forever",
+                    "Use only the UI spinner state"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Persisting a revision check ensures a late old response cannot replace newer data.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "kt-payment-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the operation identifier used unchanged across payment retries.",
+                  "template": "api.charge(order, ____1)",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "idempotencyKey"
+                      ],
+                      "options": [
+                        "idempotencyKey",
+                        "System.nanoTime()",
+                        "newRandomKey()",
+                        "viewId"
+                      ]
+                    }
+                  ],
+                  "explanation": "A stable idempotency key identifies one logical charge across network retries.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "kt-payment-multipart",
+                  "type": "multi_part_problem",
+                  "prompt": "Build a safe offline payment command",
+                  "story": "A checkout queues one charge while offline. A worker may restart and requests may time out. Complete each stage of the local command flow.",
+                  "difficulty": "hard",
+                  "parts": [
+                    {
+                      "id": "kt-payment-part-1",
+                      "prompt": "Persist a command before attempting delivery.",
+                      "starterCode": "suspend fun queue(order: Order) {\n  val id = ____1\n  dao.____2(PendingCharge(id, order))\n  scheduler.____3(id)\n}",
+                      "hiddenTests": "Queue one order; assert one pending row with a stable order ID and one scheduled job.",
+                      "referenceSolution": "suspend fun queue(order: Order) {\n  val id = order.id\n  dao.insert(PendingCharge(id, order))\n  scheduler.enqueue(id)\n}",
+                      "guided": {
+                        "template": "suspend fun queue(order: Order) {\n  val id = ____1\n  dao.____2(PendingCharge(id, order))\n  scheduler.____3(id)\n}",
+                        "blanks": [
+                          {
+                            "placeholder": "____1",
+                            "accepted": [
+                              "order.id"
+                            ],
+                            "options": [
+                              "order.id",
+                              "order.total",
+                              "order.currency",
+                              "order.items.size.toString()"
+                            ]
+                          },
+                          {
+                            "placeholder": "____2",
+                            "accepted": [
+                              "insert"
+                            ],
+                            "options": [
+                              "delete",
+                              "clear",
+                              "count",
+                              "insert"
+                            ]
+                          },
+                          {
+                            "placeholder": "____3",
+                            "accepted": [
+                              "enqueue"
+                            ],
+                            "options": [
+                              "flush",
+                              "ignore",
+                              "enqueue",
+                              "cancel"
+                            ]
+                          }
+                        ],
+                        "explanation": "Use the stable order ID, persist the pending charge, then enqueue delivery."
+                      },
+                      "expected": "Use the stable order ID, persist the pending charge, then enqueue delivery."
+                    },
+                    {
+                      "id": "kt-payment-part-2",
+                      "prompt": "Retry without issuing a second logical charge.",
+                      "starterCode": "suspend fun deliver(cmd: PendingCharge) {\n  val result = api.____1(cmd.order, cmd.id)\n  if (result.confirmed) dao.____2(cmd.id)\n  else scheduler.____3(cmd.id)\n}",
+                      "hiddenTests": "After a timeout, retry with the same command ID; a confirmed response marks the row complete exactly once.",
+                      "referenceSolution": "suspend fun deliver(cmd: PendingCharge) {\n  val result = api.charge(cmd.order, cmd.id)\n  if (result.confirmed) dao.markComplete(cmd.id)\n  else scheduler.retryLater(cmd.id)\n}",
+                      "guided": {
+                        "template": "suspend fun deliver(cmd: PendingCharge) {\n  val result = api.____1(cmd.order, cmd.id)\n  if (result.confirmed) dao.____2(cmd.id)\n  else scheduler.____3(cmd.id)\n}",
+                        "blanks": [
+                          {
+                            "placeholder": "____1",
+                            "accepted": [
+                              "charge"
+                            ],
+                            "options": [
+                              "charge",
+                              "refund",
+                              "delete",
+                              "preview"
+                            ]
+                          },
+                          {
+                            "placeholder": "____2",
+                            "accepted": [
+                              "markComplete"
+                            ],
+                            "options": [
+                              "insertAgain",
+                              "clearAll",
+                              "forget",
+                              "markComplete"
+                            ]
+                          },
+                          {
+                            "placeholder": "____3",
+                            "accepted": [
+                              "retryLater"
+                            ],
+                            "options": [
+                              "forget",
+                              "refund",
+                              "retryLater",
+                              "markComplete"
+                            ]
+                          }
+                        ],
+                        "explanation": "Send the original ID as the idempotency key, mark confirmed commands complete, and retry uncertain outcomes later."
+                      },
+                      "expected": "Send the original ID as the idempotency key, mark confirmed commands complete, and retry uncertain outcomes later."
+                    }
+                  ],
+                  "topicTags": [
+                    "kotlin",
+                    "kotlin-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                }
               ]
             }
           ]

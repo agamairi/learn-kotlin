@@ -1,5 +1,4 @@
 import type {
-  Blank,
   ClozeBlank,
   CodePuzzle,
   CourseDefinition,

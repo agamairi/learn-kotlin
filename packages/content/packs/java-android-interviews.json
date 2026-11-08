@@ -1,0 +1,1880 @@
+{
+  "schemaVersion": "1.0",
+  "packId": "java-android-interviews",
+  "version": "2.0.0",
+  "title": "Java for Android Interviews",
+  "description": "Java semantics, collections, concurrency, Android lifecycle, and production reliability.",
+  "language": "java",
+  "level": "intermediate",
+  "publisher": {
+    "name": "Learn Code"
+  },
+  "license": "CC BY 4.0",
+  "source": {
+    "url": "https://github.com/agamairi/learn-kotlin",
+    "path": "packages/content/packs/java-android-interviews.json"
+  },
+  "contentHash": "sha256:c7582504c5617913ad251fd11c82f891bdab32ba54bd474f45f19ed02a685f03",
+  "updatedAt": "2026-11-06T00:00:00Z",
+  "minimumClientVersion": "0.1.0",
+  "capabilities": [
+    "mobile",
+    "interview-reasoning",
+    "guided-puzzles"
+  ],
+  "tags": [
+    "interviews",
+    "mobile",
+    "java"
+  ],
+  "courses": [
+    {
+      "id": "java-android-core",
+      "title": "Java for Android Interviews",
+      "description": "Java semantics, collections, concurrency, Android lifecycle, and production reliability.",
+      "language": "java",
+      "chapters": [
+        {
+          "id": "java-unit-core",
+          "title": "1 · Core Java",
+          "summary": "Reason about equality, immutability, generics, and exceptions.",
+          "lessons": [
+            {
+              "id": "java-core-a",
+              "title": "Values and equality",
+              "explanation": "Trace Java behavior beyond surface syntax.",
+              "exercises": [
+                {
+                  "id": "ja-string-equals",
+                  "type": "multiple_choice",
+                  "prompt": "Two strings have the same characters but may be different objects. Which comparison checks content?",
+                  "code": "String a = new String(\"ok\");\nString b = new String(\"ok\");",
+                  "options": [
+                    "a.equals(b)",
+                    "a == b",
+                    "a.hashCode() == b.hashCode() only",
+                    "System.identityHashCode(a) == System.identityHashCode(b)"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "equals compares String content; == compares references. Matching hashes alone do not prove equality.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-boxed-equality",
+                  "type": "multiple_choice",
+                  "prompt": "What is the safe way to compare two nullable Integer values by numeric value?",
+                  "options": [
+                    "left == right for every boxed value",
+                    "left.intValue() == right.intValue() without checks",
+                    "left.hashCode() == right.hashCode()",
+                    "Objects.equals(left, right)"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Objects.equals handles null and value equality without relying on reference caching or unboxing null.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-hash-contract",
+                  "type": "multiple_choice",
+                  "prompt": "A class overrides equals by transaction ID but not hashCode. What can fail?",
+                  "options": [
+                    "The compiler rejects every class instance",
+                    "Array indexing",
+                    "HashMap and HashSet lookup or deduplication",
+                    "Only toString output"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Equal objects must produce equal hashes; hash collections use both methods.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-mutable-key",
+                  "type": "multiple_choice",
+                  "prompt": "A mutable key changes a field used by hashCode after insertion. What is a likely symptom?",
+                  "options": [
+                    "The key becomes final automatically",
+                    "The same key may no longer be found in its original hash bucket",
+                    "HashMap rehashes the key automatically",
+                    "Only iteration order changes"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Mutating hash-relevant state breaks the bucket invariant. Prefer immutable keys.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-final-object",
+                  "type": "multiple_choice",
+                  "prompt": "A final List reference points to an ArrayList. What does final prevent?",
+                  "options": [
+                    "Reassigning the reference, not mutating the list",
+                    "Calling add on the list",
+                    "Other aliases from changing the list",
+                    "Garbage collection of the list"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "final applies to the variable binding. Wrap or copy the collection for stronger immutability.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-overload-null",
+                  "type": "multiple_choice",
+                  "prompt": "Two overloads accept String and Integer. What happens when calling method(null) with no cast?",
+                  "options": [
+                    "String always wins",
+                    "Integer always wins",
+                    "It calls both overloads",
+                    "Compilation is ambiguous"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Neither parameter type is more specific than the other, so overload resolution cannot choose.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-exception-boundary",
+                  "type": "multiple_choice",
+                  "prompt": "A parser receives malformed external text. Which design makes failure explicit to callers?",
+                  "options": [
+                    "Use a null pointer to signal failure",
+                    "Print a stack trace and continue as success",
+                    "Return a result or throw a documented parsing exception with context",
+                    "Catch Exception and return an unrelated valid value"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "A clear failure contract lets callers reject invalid records or report the offending row.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-equality-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the value comparison safe for nullable boxed integers.",
+                  "template": "boolean same = ____1(left, right);",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "Objects.equals"
+                      ],
+                      "options": [
+                        "Objects.equals",
+                        "left ==",
+                        "System.identityHashCode",
+                        "Integer.parseInt"
+                      ]
+                    }
+                  ],
+                  "explanation": "Objects.equals handles null and invokes value equality for non-null values.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "java-core-b",
+              "title": "Types and contracts",
+              "explanation": "Avoid unsafe variance and hidden mutation.",
+              "exercises": [
+                {
+                  "id": "ja-list-generic",
+                  "type": "multiple_choice",
+                  "prompt": "Why cannot List<Dog> be passed where List<Animal> is expected?",
+                  "options": [
+                    "Generics are always covariant at runtime",
+                    "Java generics are invariant; List<Animal> could accept a Cat",
+                    "Dog is unrelated to Animal",
+                    "Lists cannot be read"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Invariant generic types protect writes. Use a bounded wildcard for read-only consumption.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-extends-wildcard",
+                  "type": "multiple_choice",
+                  "prompt": "A method only reads Animal values from a list. Which parameter accepts List<Dog>?",
+                  "options": [
+                    "List<? extends Animal>",
+                    "List<Animal>",
+                    "List<? super Dog> when reading Animal safely",
+                    "List<Object>"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "An extends wildcard is a producer of Animal values; it does not permit adding arbitrary Animals.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-super-wildcard",
+                  "type": "multiple_choice",
+                  "prompt": "A method inserts Dog values into a caller-supplied list. Which parameter permits List<Dog> and List<Animal>?",
+                  "options": [
+                    "List<? extends Dog>",
+                    "List<Animal> only",
+                    "List<?> and add any Dog",
+                    "List<? super Dog>"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "A super wildcard is a consumer of Dog; reads return Object unless narrowed.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-immutable-class",
+                  "type": "multiple_choice",
+                  "prompt": "A final class stores a mutable Date passed to its constructor and returns it from a getter. Why is it not immutable?",
+                  "options": [
+                    "Date is always copied automatically",
+                    "Getters make fields static",
+                    "Callers can mutate the same Date through aliases",
+                    "final classes cannot have fields"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Defensive copies or immutable value types are needed at both ingress and egress.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-override-equals",
+                  "type": "multiple_choice",
+                  "prompt": "A subclass adds a new field to equality while its parent equality ignores it. What risk arises?",
+                  "options": [
+                    "Only serialization changes",
+                    "Symmetry or transitivity can break across parent and child comparisons",
+                    "hashCode becomes optional",
+                    "The JVM automatically compares all fields"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Equality across inheritance is subtle; value objects are often safer as final classes.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-try-resource",
+                  "type": "multiple_choice",
+                  "prompt": "A file stream must close if parsing throws. Which construct expresses the lifetime?",
+                  "options": [
+                    "try-with-resources",
+                    "A catch block without finally",
+                    "System.gc after parsing",
+                    "A global static stream"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "try-with-resources closes AutoCloseable values on normal and exceptional exits.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-checked-exception",
+                  "type": "multiple_choice",
+                  "prompt": "A method declares throws IOException. What must a caller generally do?",
+                  "options": [
+                    "Ignore it because all exceptions are unchecked",
+                    "Convert it to a String",
+                    "Call finalize first",
+                    "Catch it or declare it in its own signature"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Checked exceptions are enforced by the compiler at call sites.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-variance-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the read-only producer bound for animal subtypes.",
+                  "template": "void render(List<? ____1 Animal> animals) { /* read */ }",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "extends"
+                      ],
+                      "options": [
+                        "extends",
+                        "super",
+                        "implements",
+                        "instanceof"
+                      ]
+                    }
+                  ],
+                  "explanation": "extends allows reading subtype values as Animal without permitting unsafe insertion.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-core"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "java-unit-algorithms",
+          "title": "2 · Collections and algorithms",
+          "summary": "Choose structures and verify complexity and boundaries.",
+          "lessons": [
+            {
+              "id": "java-algorithms-a",
+              "title": "Maps, sets, and heaps",
+              "explanation": "Make large input handling efficient and correct.",
+              "exercises": [
+                {
+                  "id": "ja-dedupe",
+                  "type": "multiple_choice",
+                  "prompt": "A million event IDs must be deduplicated in arrival order. Which expected O(n) strategy works?",
+                  "options": [
+                    "Track HashSet membership while appending unseen IDs to an ArrayList",
+                    "Use ArrayList.contains for every ID",
+                    "Sort first and return that order",
+                    "Compare each pair with nested loops"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "A set supports expected constant-time membership; the output list preserves first appearance.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-frequency",
+                  "type": "multiple_choice",
+                  "prompt": "Count transaction types. Which update handles a missing key?",
+                  "code": "Map<String, Integer> counts = new HashMap<>();",
+                  "options": [
+                    "counts.get(type) + 1 without a null check",
+                    "counts.put(type, 1) on every event",
+                    "counts.remove(type)",
+                    "counts.merge(type, 1, Integer::sum);"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "merge initializes an absent count to 1 and adds for an existing count.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-frequency-guided",
+                  "type": "write_function",
+                  "prompt": "A payment log has repeated event IDs. Complete a frequency map that retains all counts.",
+                  "starterCode": "Map<String, Integer> countIds(List<String> ids) {\n  Map<String, Integer> counts = ____1;\n  for (String id : ids) counts.____2;\n  return ____3;\n}",
+                  "hiddenTests": "For [a,b,a], return {a:2,b:1}; empty input returns an empty map.",
+                  "referenceSolution": "Map<String, Integer> countIds(List<String> ids) {\n  Map<String, Integer> counts = new HashMap<>();\n  for (String id : ids) counts.merge(id, 1, Integer::sum);\n  return counts;\n}",
+                  "guided": {
+                    "template": "Map<String, Integer> countIds(List<String> ids) {\n  Map<String, Integer> counts = ____1;\n  for (String id : ids) counts.____2;\n  return ____3;\n}",
+                    "blanks": [
+                      {
+                        "placeholder": "____1",
+                        "accepted": [
+                          "new HashMap<>()"
+                        ],
+                        "options": [
+                          "new HashMap<>()",
+                          "new ArrayList<>()",
+                          "new HashSet<>()",
+                          "null"
+                        ]
+                      },
+                      {
+                        "placeholder": "____2",
+                        "accepted": [
+                          "merge(id, 1, Integer::sum)"
+                        ],
+                        "options": [
+                          "put(id, 1)",
+                          "remove(id)",
+                          "get(id)",
+                          "merge(id, 1, Integer::sum)"
+                        ]
+                      },
+                      {
+                        "placeholder": "____3",
+                        "accepted": [
+                          "counts"
+                        ],
+                        "options": [
+                          "null",
+                          "new HashMap<>()",
+                          "counts",
+                          "ids"
+                        ]
+                      }
+                    ],
+                    "explanation": "HashMap stores one counter per ID. merge initializes the first occurrence and adds later ones."
+                  },
+                  "explanation": "HashMap stores one counter per ID. merge initializes the first occurrence and adds later ones.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-topk",
+                  "type": "multiple_choice",
+                  "prompt": "Keep the largest 100 values from a stream of one million using limited memory. Which structure fits?",
+                  "options": [
+                    "A HashSet with no size bound",
+                    "A stack containing all values",
+                    "A min-heap PriorityQueue capped at 100",
+                    "An ArrayList of all values then sort"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "A min-heap keeps the current threshold at its head with O(n log k) time and O(k) space.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-iterator-remove",
+                  "type": "multiple_choice",
+                  "prompt": "Remove matching entries while iterating an ArrayList with an Iterator. Which action is safe?",
+                  "options": [
+                    "Call clear() from another thread",
+                    "Call iterator.remove() after next()",
+                    "Call list.remove(value) during the same iteration",
+                    "Replace the list reference with null"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Iterator.remove follows the iterator modification protocol; direct structural changes can cause ConcurrentModificationException.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-comparator-overflow",
+                  "type": "multiple_choice",
+                  "prompt": "A comparator returns a.score - b.score for arbitrary int scores. What bug can occur?",
+                  "options": [
+                    "Subtraction can overflow and violate comparator ordering",
+                    "Scores are automatically widened to long",
+                    "All equal scores become unequal",
+                    "Only memory usage grows"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Integer.compare(a.score, b.score) avoids overflow and preserves comparator consistency.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-priority-queue-order",
+                  "type": "multiple_choice",
+                  "prompt": "A PriorityQueue is iterated directly. Can that traversal be assumed sorted?",
+                  "options": [
+                    "Yes; iterator always yields sorted order",
+                    "Only when size is prime",
+                    "It is sorted by insertion time",
+                    "No; only head removal follows priority order"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "The heap invariant governs peek/poll, not iterator traversal order.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-heap-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the queue operation that removes the smallest head of a min-heap.",
+                  "template": "while (heap.size() > k) heap.____1();",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "poll"
+                      ],
+                      "options": [
+                        "poll",
+                        "peek",
+                        "add",
+                        "contains"
+                      ]
+                    }
+                  ],
+                  "explanation": "poll removes the head, keeping only the largest k values. peek would read without shrinking the heap.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "java-algorithms-b",
+              "title": "Search and windows",
+              "explanation": "State invariants that justify each pointer move.",
+              "exercises": [
+                {
+                  "id": "ja-two-pointer",
+                  "type": "multiple_choice",
+                  "prompt": "A sorted array must yield two numbers summing to target. What is the O(n) approach?",
+                  "options": [
+                    "Move both pointers on every step",
+                    "Sort the array repeatedly",
+                    "Start at both ends and move the side that changes the sum toward target",
+                    "Compare every pair"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Sorted order proves that moving the low pointer raises the sum and moving the high pointer lowers it.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-window-negative",
+                  "type": "multiple_choice",
+                  "prompt": "Why does a standard grow/shrink sum window fail with negative numbers?",
+                  "options": [
+                    "The right pointer becomes null",
+                    "Removing a negative can increase the sum",
+                    "Java arrays cannot contain negatives",
+                    "HashMap cannot store negative keys"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "The monotonic sum argument requires nonnegative values; use a different technique for signed input.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-prefix-count",
+                  "type": "multiple_choice",
+                  "prompt": "Count subarrays summing to k with signed values. Which prefix map entry must be seeded?",
+                  "options": [
+                    "sum 0 with count 1",
+                    "sum k with count 0",
+                    "first element with count 0",
+                    "No seed entry"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "The empty prefix represents subarrays beginning at index zero.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-binary-mid",
+                  "type": "multiple_choice",
+                  "prompt": "A binary search computes mid = (low + high) / 2 for very large nonnegative indices. What is safer?",
+                  "options": [
+                    "(low * high) / 2",
+                    "high - low / 2",
+                    "Convert mid to float",
+                    "low + (high - low) / 2"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "The safer form avoids overflow in low + high while keeping the same midpoint.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-lowerbound",
+                  "type": "multiple_choice",
+                  "prompt": "Find first value >= x. If a[mid] qualifies, what happens to the upper bound?",
+                  "options": [
+                    "Return immediately even if earlier values qualify",
+                    "Move both bounds past mid",
+                    "Set high = mid so mid remains a candidate",
+                    "Set low = mid + 1"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Lower bound keeps a qualifying mid while searching for an earlier one.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-recursive-stack",
+                  "type": "multiple_choice",
+                  "prompt": "Recursive DFS follows a chain of 200,000 nodes. What non-time complexity risk appears?",
+                  "options": [
+                    "Only the number of edges doubles",
+                    "StackOverflowError from O(n) call depth",
+                    "HashMap entries disappear",
+                    "The array becomes immutable"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "A deep chain uses one call frame per node; an explicit stack can avoid call-stack exhaustion.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-sliding-overflow",
+                  "type": "multiple_choice",
+                  "prompt": "Window sums of int amounts may overflow. What should the accumulator use?",
+                  "options": [
+                    "long, converting before addition where needed",
+                    "int because each element is int",
+                    "float for exact cents",
+                    "String concatenation"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "The aggregate range can exceed each element range; long prevents common int overflow cases.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-prefix-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the initial prefix frequency for subarrays that begin at zero.",
+                  "template": "Map<Long, Integer> counts = new HashMap<>();\ncounts.put(____1);",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "0L, 1"
+                      ],
+                      "options": [
+                        "0L, 1",
+                        "0L, 0",
+                        "1L, 0",
+                        "1L, 1"
+                      ]
+                    }
+                  ],
+                  "explanation": "The empty prefix sum zero appears once before reading any element.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-algorithms"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "java-unit-concurrency",
+          "title": "3 · Concurrency and JVM behavior",
+          "summary": "Protect shared state and task lifetime.",
+          "lessons": [
+            {
+              "id": "java-concurrency-a",
+              "title": "Visibility and atomicity",
+              "explanation": "Distinguish seeing a value from updating it safely.",
+              "exercises": [
+                {
+                  "id": "ja-volatile-flag",
+                  "type": "multiple_choice",
+                  "prompt": "A worker polls a stop flag written by another thread. What does volatile provide?",
+                  "options": [
+                    "Visibility of writes and reads of the flag",
+                    "Atomicity for counter++",
+                    "Mutual exclusion for every field",
+                    "Automatic interruption of blocking I/O"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "volatile gives visibility and ordering guarantees for the field; it does not make compound updates atomic.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-counter-race",
+                  "type": "multiple_choice",
+                  "prompt": "Two threads each execute count++ 10,000 times on a volatile int. Why may the result be less than 20,000?",
+                  "options": [
+                    "volatile caps integers at 10,000",
+                    "The JVM skips all loops",
+                    "int cannot be shared between threads",
+                    "Increment is read-modify-write, not one atomic operation"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Both threads can read the same old value and overwrite one increment.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-atomic-counter",
+                  "type": "multiple_choice",
+                  "prompt": "Which type supports atomic increment without a synchronized block?",
+                  "options": [
+                    "Integer with ++",
+                    "StringBuilder",
+                    "AtomicInteger with incrementAndGet()",
+                    "volatile int with ++"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "AtomicInteger implements the update atomically, avoiding lost increments.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-lock-order",
+                  "type": "multiple_choice",
+                  "prompt": "Thread A holds lock X then wants Y; B holds Y then wants X. What is the failure mode?",
+                  "options": [
+                    "A compile error",
+                    "Deadlock",
+                    "Only stale reads",
+                    "Guaranteed successful swap"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Circular wait prevents either thread from progressing. Consistent lock order can prevent it.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-sync-map",
+                  "type": "multiple_choice",
+                  "prompt": "A HashMap is mutated concurrently without coordination. What is a sound replacement when independent operations need thread safety?",
+                  "options": [
+                    "ConcurrentHashMap, while still designing multi-step atomicity separately",
+                    "A larger HashMap capacity only",
+                    "volatile HashMap reference with same unsynchronized mutations",
+                    "ArrayList around the map"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "ConcurrentHashMap supports concurrent basic operations; compound invariants still need compute or other coordination.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-compute-race",
+                  "type": "multiple_choice",
+                  "prompt": "Two threads update one map counter using get then put. Which operation can make that per-key update atomic?",
+                  "options": [
+                    "containsKey followed by put",
+                    "A sleep before put",
+                    "Reassigning the map reference",
+                    "ConcurrentHashMap.compute for the key"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "compute applies a remapping operation atomically for a key; separate get/put can lose updates.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-happens-before",
+                  "type": "multiple_choice",
+                  "prompt": "A thread reads a field after another thread writes it with no synchronization. What can be assumed?",
+                  "options": [
+                    "The JVM automatically locks every read",
+                    "Only 64-bit phones are affected",
+                    "No guaranteed visibility or ordering for that data race",
+                    "The latest write is always visible"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "The Java memory model requires a happens-before relationship for reliable cross-thread observation.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-atomic-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the atomic counter operation.",
+                  "template": "AtomicInteger count = new AtomicInteger();\nint next = count.____1();",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "incrementAndGet"
+                      ],
+                      "options": [
+                        "incrementAndGet",
+                        "getAndForget",
+                        "countPlusOne",
+                        "volatileIncrement"
+                      ]
+                    }
+                  ],
+                  "explanation": "incrementAndGet performs a single atomic increment and returns the new value.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "java-concurrency-b",
+              "title": "Executors and cancellation",
+              "explanation": "Bound work and clean up tasks explicitly.",
+              "exercises": [
+                {
+                  "id": "ja-executor-owner",
+                  "type": "multiple_choice",
+                  "prompt": "An Android screen creates an ExecutorService for requests. What should happen when its owner ends?",
+                  "options": [
+                    "Start another executor in onDestroy",
+                    "Cancel or transfer owned tasks and shut down an owned executor appropriately",
+                    "Leave it running forever",
+                    "Call System.gc"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Task and executor ownership must be explicit to avoid work outliving the feature.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-future-cancel",
+                  "type": "multiple_choice",
+                  "prompt": "What does Future.cancel(true) request?",
+                  "options": [
+                    "Interruption of a running task, which must cooperate",
+                    "Guaranteed immediate termination of every operation",
+                    "Deletion of all task results from disk",
+                    "A new thread for retry"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Interruption is cooperative; blocking operations and code must handle it appropriately.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-interrupted",
+                  "type": "multiple_choice",
+                  "prompt": "A blocking worker catches InterruptedException and cannot complete. What is a good default?",
+                  "options": [
+                    "Ignore it and spin forever",
+                    "Clear every queue",
+                    "Convert it to a successful result",
+                    "Stop work or restore interrupt status when propagating through an API that cannot throw it"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Interruption is a cancellation signal. Swallowing it can keep canceled work alive.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-thread-pool",
+                  "type": "multiple_choice",
+                  "prompt": "A network feature submits unlimited tasks to an unbounded queue. What production risk appears?",
+                  "options": [
+                    "Automatic request deduplication",
+                    "The JVM rejects every new task immediately",
+                    "Backlog and memory growth under sustained load",
+                    "Guaranteed improved latency"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Concurrency and queue limits are resource policies; unbounded work can exhaust memory.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-main-thread",
+                  "type": "multiple_choice",
+                  "prompt": "A button handler performs synchronous network I/O on Android main thread. What should be changed?",
+                  "options": [
+                    "Wrap the call in synchronized on the UI view",
+                    "Move I/O to owned background work and post state changes to main",
+                    "Add Thread.sleep before the call",
+                    "Increase button size only"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Blocking the main thread freezes input and rendering and can trigger ANR.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-race-stale",
+                  "type": "multiple_choice",
+                  "prompt": "Search A starts, then B; A completes last. How can a Java UI reject A?",
+                  "options": [
+                    "Track a request generation or cancel A, checking before UI application",
+                    "Always show the last completion",
+                    "Increase A timeout",
+                    "Make the Activity static"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Response order differs from user intent; compare results with the current query.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-immutable-share",
+                  "type": "multiple_choice",
+                  "prompt": "Why are immutable DTO snapshots useful between worker and UI threads?",
+                  "options": [
+                    "They automatically replace the need for main-thread UI rules",
+                    "They guarantee zero allocations",
+                    "They cancel old requests",
+                    "They avoid shared mutable aliases and simplify visibility reasoning at the handoff"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Owned immutable values reduce data races; the handoff mechanism still matters.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-interrupt-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the method used to restore interrupt status after catching InterruptedException.",
+                  "template": "catch (InterruptedException e) { Thread.currentThread().____1(); return; }",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "interrupt"
+                      ],
+                      "options": [
+                        "interrupt",
+                        "start",
+                        "stop",
+                        "sleep"
+                      ]
+                    }
+                  ],
+                  "explanation": "Restoring the interrupt flag lets upstream code observe the cancellation signal.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-concurrency"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "java-unit-android",
+          "title": "4 · Android with Java",
+          "summary": "Apply lifecycle, background work, and interoperability safely.",
+          "lessons": [
+            {
+              "id": "java-android-a",
+              "title": "Lifecycle and UI",
+              "explanation": "Keep screen state and work tied to the right owner.",
+              "exercises": [
+                {
+                  "id": "ja-activity-rotation",
+                  "type": "multiple_choice",
+                  "prompt": "An Activity recreates during rotation. Where should ongoing screen data normally live?",
+                  "options": [
+                    "A ViewModel or repository, with durable data persisted separately",
+                    "Only an Activity field",
+                    "Only a local onCreate variable",
+                    "A static View reference"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "The Activity instance is recreated; a ViewModel retains screen state across configuration changes.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-process-death",
+                  "type": "multiple_choice",
+                  "prompt": "A ViewModel holds an unsent edit. The process dies. What must have happened for the edit to survive?",
+                  "options": [
+                    "The ViewModel used final fields",
+                    "The Activity was not rotated",
+                    "A static field held it",
+                    "It was committed to durable local storage"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "ViewModels do not survive process death. Durable edits require persistence.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-recycler-id",
+                  "type": "multiple_choice",
+                  "prompt": "RecyclerView rows reorder after refresh. What helps keep item-specific UI state matched?",
+                  "options": [
+                    "Random IDs on each bind",
+                    "Disabling recycling",
+                    "Stable domain IDs with correct DiffUtil identity comparison",
+                    "Adapter positions as permanent IDs"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Item IDs describe identity across reorder; positions are transient.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-recycler-async",
+                  "type": "multiple_choice",
+                  "prompt": "A recycled ViewHolder receives an image from its prior item request. What should binding do?",
+                  "options": [
+                    "Store the image in a global static field",
+                    "Cancel or validate the old request against the current item ID",
+                    "Assume the old request finishes first",
+                    "Turn off scrolling"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Recycling reuses views, so a late callback must verify it still belongs to the bound item.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-context-leak",
+                  "type": "multiple_choice",
+                  "prompt": "A singleton stores an Activity Context. What can happen?",
+                  "options": [
+                    "The destroyed Activity remains reachable and leaks",
+                    "The Context becomes immutable automatically",
+                    "Only its theme changes",
+                    "Java forbids storing Context"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Long-lived objects should not retain short-lived Activity instances; use an appropriate application context.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-interop-null",
+                  "type": "multiple_choice",
+                  "prompt": "A Java API has no nullability annotations and Kotlin calls it. What danger appears?",
+                  "options": [
+                    "Kotlin always rejects the API",
+                    "Java returns Optional automatically",
+                    "The JVM validates every value",
+                    "Kotlin sees a platform type and may assume non-null incorrectly"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Annotating Java contracts and checking at boundaries reduces platform-type null hazards.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-permission",
+                  "type": "multiple_choice",
+                  "prompt": "A location permission is denied. What should the feature do?",
+                  "options": [
+                    "Prompt continuously on every frame",
+                    "Pretend location succeeded",
+                    "Render a clear denied path and offer a contextual retry or alternative",
+                    "Crash on the first null location"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Permission denial is a normal user choice and needs an explicit UI state.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-ui-thread-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the Activity method used to post a small view update to the main thread.",
+                  "template": "activity.____1(() -> statusView.setText(label));",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "runOnUiThread"
+                      ],
+                      "options": [
+                        "runOnUiThread",
+                        "startService",
+                        "finish",
+                        "getFilesDir"
+                      ]
+                    }
+                  ],
+                  "explanation": "Android views should be updated on the main thread.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "java-android-b",
+              "title": "Persistence and jobs",
+              "explanation": "Use durable data and bounded Android work.",
+              "exercises": [
+                {
+                  "id": "ja-room-offline",
+                  "type": "multiple_choice",
+                  "prompt": "A screen must show cached feed rows offline. What should it observe?",
+                  "options": [
+                    "A fetch inside every row bind",
+                    "Room-backed local data; network refresh writes updates to Room",
+                    "Only a Retrofit callback",
+                    "A static Activity list"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Local storage provides an offline source of truth while sync updates it.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-room-transaction",
+                  "type": "multiple_choice",
+                  "prompt": "An order header and items must persist together. What prevents half-written orders?",
+                  "options": [
+                    "A database transaction around both writes",
+                    "Two separate executor tasks",
+                    "A UI loading indicator",
+                    "A delay after the first insert"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "A transaction commits or rolls back the related writes as one unit.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-workmanager",
+                  "type": "multiple_choice",
+                  "prompt": "A deferrable upload must run after process death when network returns. What Android API fits?",
+                  "options": [
+                    "An Activity Handler callback only",
+                    "A ViewHolder timer",
+                    "A thread started from a destroyed Activity",
+                    "WorkManager with network constraints"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "WorkManager persists scheduled deferrable work and can wait for connectivity.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-retrofit-error",
+                  "type": "multiple_choice",
+                  "prompt": "A Retrofit call receives HTTP 500. Which states should the repository distinguish?",
+                  "options": [
+                    "500 as a valid empty list",
+                    "Every exception as a permission denial",
+                    "HTTP failure from transport failure and malformed success payload",
+                    "All failures as empty success"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Distinct failure categories support correct retry and debugging decisions.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-db-migration",
+                  "type": "multiple_choice",
+                  "prompt": "An app update adds a non-null database column. What is required for existing users?",
+                  "options": [
+                    "A new app icon",
+                    "A migration or deliberate documented destructive strategy",
+                    "Only a new Java field",
+                    "A ProGuard rule"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Existing rows and schema need a migration path; entity code alone does not transform stored data.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-job-idempotent",
+                  "type": "multiple_choice",
+                  "prompt": "A WorkManager job retries after a timeout; the server may have already applied a payment. What is needed?",
+                  "options": [
+                    "A stable idempotency key attached to the logical operation",
+                    "A new random key per retry",
+                    "Assume timeout means no commit",
+                    "Disable every retry forever"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "A stable operation ID lets the server deduplicate repeated delivery.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-android-java-api",
+                  "type": "multiple_choice",
+                  "prompt": "A modern Java language syntax feature compiles locally but fails on an older Android target. What should be checked?",
+                  "options": [
+                    "Only the source file extension",
+                    "Whether the class name is short",
+                    "Only RecyclerView version",
+                    "Android toolchain desugaring support and device API availability separately"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Language desugaring and platform APIs are distinct compatibility questions for Android builds.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-work-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the WorkManager constraint that waits for connectivity.",
+                  "template": "Constraints constraints = new Constraints.Builder().setRequiredNetworkType(NetworkType.____1).build();",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "CONNECTED"
+                      ],
+                      "options": [
+                        "CONNECTED",
+                        "NEVER",
+                        "MAIN",
+                        "IMMEDIATE"
+                      ]
+                    }
+                  ],
+                  "explanation": "CONNECTED runs the deferrable work only when network is available.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-android"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "java-unit-production",
+          "title": "5 · Real-world Java scenarios",
+          "summary": "Handle duplicate events, parsing, payments, and recovery.",
+          "lessons": [
+            {
+              "id": "java-production-a",
+              "title": "Parsing and caches",
+              "explanation": "Make failures and capacity rules explicit.",
+              "exercises": [
+                {
+                  "id": "ja-csv-quoted",
+                  "type": "multiple_choice",
+                  "prompt": "A CSV parser splits lines with String.split(\",\") but fields may contain quoted commas. What is wrong?",
+                  "options": [
+                    "A comma inside quotes is not a field separator",
+                    "Java String cannot contain commas",
+                    "split automatically honors CSV quoting",
+                    "Only integer fields are affected"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "CSV quoting requires a parser aware of quote and escape rules; naive splitting corrupts records.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-money",
+                  "type": "multiple_choice",
+                  "prompt": "Amounts are decimal currency values. Which representation avoids binary floating-point rounding?",
+                  "options": [
+                    "double for every exact money operation",
+                    "float with repeated rounding",
+                    "String concatenation",
+                    "Integer minor units or BigDecimal with an explicit scale policy"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Exact decimal or minor-unit arithmetic avoids binary representation surprises.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-lru",
+                  "type": "multiple_choice",
+                  "prompt": "A bounded in-memory cache evicts the least recently used item. Which Java collection can support this with access ordering?",
+                  "options": [
+                    "ArrayDeque with no key lookup",
+                    "TreeSet sorted by key",
+                    "LinkedHashMap configured for access order with eviction policy",
+                    "HashSet only"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Access-ordered LinkedHashMap tracks recent use; thread safety requires separate coordination if shared.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-cache-concurrent",
+                  "type": "multiple_choice",
+                  "prompt": "Multiple threads access a LinkedHashMap LRU cache and mutate access order. What is required?",
+                  "options": [
+                    "No action because get is always read-only",
+                    "Synchronization or a proven concurrent cache implementation",
+                    "Only a volatile reference to the map",
+                    "A larger initial capacity"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Access-ordered get mutates ordering; unsynchronized concurrent use is unsafe.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-parse-overflow",
+                  "type": "multiple_choice",
+                  "prompt": "A numeric field may exceed long range. What should parsing do?",
+                  "options": [
+                    "Catch or represent overflow as invalid input with row context",
+                    "Wrap into a negative value silently",
+                    "Convert through double and assume exactness",
+                    "Ignore the field"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Overflow is malformed data for a bounded integer contract; report it explicitly.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-resource-leak",
+                  "type": "multiple_choice",
+                  "prompt": "A parser opens a BufferedReader for each file and occasionally throws. What pattern prevents leaks?",
+                  "options": [
+                    "Call System.gc after each file",
+                    "Hold every reader in a static list",
+                    "Close only on success",
+                    "try-with-resources around the reader"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "try-with-resources closes on both success and exceptions.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-cache-ttl",
+                  "type": "multiple_choice",
+                  "prompt": "A cache uses System.currentTimeMillis for expiry and the wall clock changes. What clock suits elapsed TTL checks?",
+                  "options": [
+                    "The order of HashMap iteration",
+                    "A new random number on each read",
+                    "A monotonic elapsed-time clock for in-process TTL comparisons",
+                    "A formatted local date string"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Elapsed time should not jump with wall-clock changes; durable expiry across restarts needs a separate policy.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-csv-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the exact arithmetic type for a decimal amount parsed from text.",
+                  "template": "BigDecimal amount = new ____1(rawAmount);",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "BigDecimal"
+                      ],
+                      "options": [
+                        "BigDecimal",
+                        "Double",
+                        "Float",
+                        "AtomicInteger"
+                      ]
+                    }
+                  ],
+                  "explanation": "BigDecimal constructed from the decimal string preserves the stated decimal value.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                }
+              ]
+            },
+            {
+              "id": "java-production-b",
+              "title": "Reliable event processing",
+              "explanation": "Settle effects exactly once despite retries and unknown outcomes.",
+              "exercises": [
+                {
+                  "id": "ja-event-dedupe",
+                  "type": "multiple_choice",
+                  "prompt": "The same payment event may be delivered twice. What prevents two balance updates?",
+                  "options": [
+                    "Assume the sender never retries",
+                    "Atomically record event ID and apply the effect in one transaction",
+                    "A non-durable Boolean flag",
+                    "A fixed delay between callbacks"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Deduplication must be durable and atomic with the effect; a check outside the transaction can race.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-payment-unknown",
+                  "type": "multiple_choice",
+                  "prompt": "A payment POST times out after request bytes were sent. What is its correct client state?",
+                  "options": [
+                    "Unknown until reconciled by stable operation ID",
+                    "Definitely failed",
+                    "Definitely committed",
+                    "Automatically refunded"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "The response may be lost after commit; a timeout is not evidence of rollback.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-retry-backoff",
+                  "type": "multiple_choice",
+                  "prompt": "An outage causes thousands of clients to retry. Which policy spreads demand?",
+                  "options": [
+                    "Immediate infinite retries",
+                    "A fixed one-millisecond retry",
+                    "Retry from every view redraw",
+                    "Capped exponential backoff with jitter for safe requests"
+                  ],
+                  "correctIndex": 3,
+                  "explanation": "Jitter spreads synchronized clients and a cap bounds resource use.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-deadletter",
+                  "type": "multiple_choice",
+                  "prompt": "An event fails validation on every retry because required data is missing. What should the worker do?",
+                  "options": [
+                    "Mark it successful",
+                    "Delete all events",
+                    "Move it to a dead-letter or explicit failure state with diagnostics",
+                    "Retry forever without limit"
+                  ],
+                  "correctIndex": 2,
+                  "explanation": "Permanent failures need a bounded terminal path so the queue can progress and operators can investigate.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-state-machine",
+                  "type": "multiple_choice",
+                  "prompt": "A connection receives Connected callback after a newer Disconnect command. What prevents stale state?",
+                  "options": [
+                    "Ignore Disconnect until timeout",
+                    "Check a connection generation/session ID before applying callbacks",
+                    "Trust callback arrival order",
+                    "Use one global Boolean without ownership"
+                  ],
+                  "correctIndex": 1,
+                  "explanation": "Generation tokens reject callbacks from superseded connection attempts.",
+                  "difficulty": "hard",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                },
+                {
+                  "id": "ja-log-safety",
+                  "type": "multiple_choice",
+                  "prompt": "A production payment parser throws. What should a diagnostic record contain?",
+                  "options": [
+                    "A correlation ID and sanitized error category",
+                    "Full card and access-token fields",
+                    "The entire request body",
+                    "No context at all"
+                  ],
+                  "correctIndex": 0,
+                  "explanation": "Sanitized context lets engineers trace failures without exposing sensitive data.",
+                  "difficulty": "easy",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 35
+                },
+                {
+                  "id": "ja-idempotency-cloze",
+                  "type": "cloze",
+                  "prompt": "Fill the same logical ID on every retry of a charge.",
+                  "template": "api.charge(order, ____1);",
+                  "blanks": [
+                    {
+                      "placeholder": "____1",
+                      "accepted": [
+                        "command.idempotencyKey"
+                      ],
+                      "options": [
+                        "command.idempotencyKey",
+                        "UUID.randomUUID().toString()",
+                        "Long.toString(System.nanoTime())",
+                        "activity.toString()"
+                      ]
+                    }
+                  ],
+                  "explanation": "A stable idempotency key connects repeated delivery to one charge command.",
+                  "difficulty": "medium",
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 55
+                },
+                {
+                  "id": "ja-payment-multipart",
+                  "type": "multi_part_problem",
+                  "prompt": "Build a safe payment command pipeline",
+                  "story": "A mobile checkout queues a charge while offline. A worker can restart and the server response can be lost. Complete each stage.",
+                  "difficulty": "hard",
+                  "parts": [
+                    {
+                      "id": "ja-payment-part-1",
+                      "prompt": "Persist a stable command before work is scheduled.",
+                      "starterCode": "void queue(Order order) {\n  String id = ____1;\n  store.____2(new ChargeCommand(id, order));\n  jobs.____3(id);\n}",
+                      "hiddenTests": "One order yields one durable command keyed by its stable ID before a job is scheduled.",
+                      "referenceSolution": "void queue(Order order) {\n  String id = order.getId();\n  store.insert(new ChargeCommand(id, order));\n  jobs.schedule(id);\n}",
+                      "guided": {
+                        "template": "void queue(Order order) {\n  String id = ____1;\n  store.____2(new ChargeCommand(id, order));\n  jobs.____3(id);\n}",
+                        "blanks": [
+                          {
+                            "placeholder": "____1",
+                            "accepted": [
+                              "order.getId()"
+                            ],
+                            "options": [
+                              "order.getId()",
+                              "UUID.randomUUID().toString()",
+                              "order.getCurrency()",
+                              "order.toString()"
+                            ]
+                          },
+                          {
+                            "placeholder": "____2",
+                            "accepted": [
+                              "insert"
+                            ],
+                            "options": [
+                              "delete",
+                              "clear",
+                              "count",
+                              "insert"
+                            ]
+                          },
+                          {
+                            "placeholder": "____3",
+                            "accepted": [
+                              "schedule"
+                            ],
+                            "options": [
+                              "forget",
+                              "complete",
+                              "schedule",
+                              "cancel"
+                            ]
+                          }
+                        ],
+                        "explanation": "Use the order ID, insert the command, then schedule its delivery."
+                      },
+                      "expected": "Use the order ID, insert the command, then schedule its delivery."
+                    },
+                    {
+                      "id": "ja-payment-part-2",
+                      "prompt": "Complete only confirmed commands.",
+                      "starterCode": "void deliver(ChargeCommand cmd) {\n  Receipt receipt = api.____1(cmd.order(), cmd.id());\n  if (receipt.confirmed()) store.____2(cmd.id());\n  else jobs.____3(cmd.id());\n}",
+                      "hiddenTests": "Confirmed receipt completes once; uncertain receipt retains same-key command for retry.",
+                      "referenceSolution": "void deliver(ChargeCommand cmd) {\n  Receipt receipt = api.charge(cmd.order(), cmd.id());\n  if (receipt.confirmed()) store.markComplete(cmd.id());\n  else jobs.retryLater(cmd.id());\n}",
+                      "guided": {
+                        "template": "void deliver(ChargeCommand cmd) {\n  Receipt receipt = api.____1(cmd.order(), cmd.id());\n  if (receipt.confirmed()) store.____2(cmd.id());\n  else jobs.____3(cmd.id());\n}",
+                        "blanks": [
+                          {
+                            "placeholder": "____1",
+                            "accepted": [
+                              "charge"
+                            ],
+                            "options": [
+                              "charge",
+                              "refund",
+                              "delete",
+                              "preview"
+                            ]
+                          },
+                          {
+                            "placeholder": "____2",
+                            "accepted": [
+                              "markComplete"
+                            ],
+                            "options": [
+                              "insertAgain",
+                              "clearAll",
+                              "duplicate",
+                              "markComplete"
+                            ]
+                          },
+                          {
+                            "placeholder": "____3",
+                            "accepted": [
+                              "retryLater"
+                            ],
+                            "options": [
+                              "forget",
+                              "refund",
+                              "retryLater",
+                              "markComplete"
+                            ]
+                          }
+                        ],
+                        "explanation": "Charge using the stable ID, complete only confirmed work, and retry uncertain outcomes."
+                      },
+                      "expected": "Charge using the stable ID, complete only confirmed work, and retry uncertain outcomes."
+                    }
+                  ],
+                  "topicTags": [
+                    "java",
+                    "java-unit-production"
+                  ],
+                  "estimatedSeconds": 85
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

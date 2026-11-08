@@ -5,6 +5,5 @@ export type ScreenMode = 'onboarding' | 'main' | 'lesson';
 export interface LessonParams {
   chapterId: string;
   lessonId: string;
+  runId?: string;
 }
-
-export type SyncStatus = 'synced' | 'syncing' | 'pending' | 'guest' | 'offline';

@@ -35,6 +35,8 @@ export interface ProblemPartAttempt {
   problemId: string;
   partId: string;
   correct: boolean;
+  /** A retry within a lesson's mistake round. */
+  isLessonRetry?: boolean;
   lessonRunId?: string | null;
 }
 
@@ -230,11 +232,25 @@ export class ProgressRecorder {
       return { type: 'rejected', reason: 'Lesson not found in curriculum' };
     }
 
-    const requiredExerciseIds = new Set(targetLesson.exercises.map((e) => e.id));
+    // A new run may be opened for practice, but a completed lesson must not
+    // mint its completion XP a second time. The caller can still inspect the
+    // lesson and use the separate review flow for additional practice.
+    if (await this.progressRepository.isLessonCompleted(lessonId)) {
+      session.settled = true;
+      return { type: 'duplicate' };
+    }
+
+    const requiredExerciseIds = new Set(
+      targetLesson.exercises.flatMap((exercise) =>
+        exercise.type === 'multi_part_problem'
+          ? exercise.parts.map((part) => `${exercise.id}:${part.id}`)
+          : [exercise.id]
+      )
+    );
     const passedExerciseIds = new Set(
       session.attempts
         .filter((a) => a.result.correct && a.result.lessonId === lessonId)
-        .map((a) => a.result.exerciseId)
+        .map((a) => a.result.problemId ? `${a.result.problemId}:${a.result.exerciseId}` : a.result.exerciseId)
     );
 
     const hasForeignAttempts = session.attempts.some(
@@ -435,11 +451,16 @@ export class ProgressRecorder {
     }
 
     if (exercise.type === 'multi_part_problem' && attempt.correct && !attempt.review) {
+      const multiPart = exercise as MultiPartProblemExercise;
+      const allPartsPassed = await this.allProblemPartsPassed(multiPart, session);
+      if (!allPartsPassed) {
+        return { type: 'rejected', reason: 'Complete every problem part first' };
+      }
       return this.acceptAttempt(
         session,
         attempt.attemptId,
         this.createResult(placed, exercise.id, true, 0, nowMillis),
-        !alreadyPassed,
+        !alreadyPassed && !allPartsPassed,
         null,
         dayEpoch
       );
@@ -475,7 +496,7 @@ export class ProgressRecorder {
       session,
       attempt.attemptId,
       this.createResult(placed, exercise.id, attempt.correct, xp, nowMillis),
-      !attempt.isLessonRetry,
+      attempt.correct,
       seedCard,
       dayEpoch
     );
@@ -534,11 +555,23 @@ export class ProgressRecorder {
         ? this.xpPolicy.xpForMultiPartPart(true)
         : 0;
 
+    const allOtherPartsPassed = (
+      await Promise.all(
+        multiPart.parts
+          .filter((part) => part.id !== attempt.partId)
+          .map(async (part) => {
+            const history = await this.exerciseHistory(part.id, session);
+            return history.some((result) => result.correct);
+          })
+      )
+    ).every(Boolean);
+    const allPartsPassed = attempt.correct && allOtherPartsPassed;
+
     return this.acceptAttempt(
       session,
       attempt.attemptId,
-      this.createResult(problem, attempt.partId, attempt.correct, xp, nowMillis),
-      false,
+      this.createResult(problem, attempt.partId, attempt.correct, xp, nowMillis, attempt.problemId),
+      allPartsPassed,
       null,
       dayEpoch
     );
@@ -636,16 +669,31 @@ export class ProgressRecorder {
     exerciseId: string,
     correct: boolean,
     xpAwarded: number,
-    epochMillis: number
+    epochMillis: number,
+    problemId?: string | null
   ): ExerciseResult {
     return {
       exerciseId,
+      problemId: problemId ?? null,
       correct,
       xpAwarded,
       epochMillis,
       lessonId: placed.lessonId,
       chapterId: placed.chapterId,
     };
+  }
+
+  private async allProblemPartsPassed(
+    problem: MultiPartProblemExercise,
+    session: LessonRunSession | null
+  ): Promise<boolean> {
+    const results = await Promise.all(
+      problem.parts.map(async (part) => {
+        const history = await this.exerciseHistory(part.id, session);
+        return history.some((result) => result.correct);
+      })
+    );
+    return results.every(Boolean);
   }
 
   private async placedExercises(): Promise<Map<string, PlacedExercise>> {

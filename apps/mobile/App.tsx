@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  SafeAreaView,
+  Alert,
+  ActivityIndicator,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,10 +11,9 @@ import {
   View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
-  CARD_XP,
   DefaultAnswerGrader,
-  DefaultXpPolicy,
   type ClozeExercise,
   type CodePuzzle,
   type Exercise,
@@ -22,7 +23,7 @@ import {
   type PredictOutputExercise,
   type WriteFunctionExercise,
 } from '@learn/core';
-import { AppProvider, useApp, type ByokProvider } from './src/domain/state/AppContext';
+import { AppProvider, useApp } from './src/domain/state/AppContext';
 import { getCourse, getLanguageOption, LANGUAGE_OPTIONS } from './src/data/courseCatalog';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -38,6 +39,8 @@ import { Colors } from './src/theme/colors';
 import { Radius, Spacing } from './src/theme/spacing';
 import { Typography } from './src/theme/typography';
 import type { TabRoute } from './src/types/navigation';
+import { AdBanner, isAdsFeatureConfigured, showAdPrivacyOptions } from './src/services/ads';
+import { isBillingConfigured } from './src/services/billing';
 
 function ScreenHeader({ title, eyebrow }: { title: string; eyebrow?: string }) {
   return (
@@ -165,7 +168,7 @@ function ReviewCard({
 }
 
 function StatsScreen() {
-  const { totalXp, xpToday, currentStreak, longestStreak, completedLessonIds, reviewCards } = useApp();
+  const { totalXp, xpToday, currentStreak, longestStreak, completedLessonIds, reviewCards, isAdFree } = useApp();
   const dueCount = reviewCards.filter((card) => card.dueToday).length;
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -183,6 +186,7 @@ function StatsScreen() {
         <Text style={styles.bodyText}>Finish a lesson faster than its baseline to unlock a capped pace bonus.</Text>
       </Card>
       <KodaBubble message="Consistency beats intensity. Come back for one focused lesson tomorrow." />
+      <AdBanner isAdFree={isAdFree} />
     </ScrollView>
   );
 }
@@ -197,102 +201,129 @@ function StatTile({ value, label, accent }: { value: string; label: string; acce
 }
 
 function SettingsScreen() {
-  const { user, syncStatus, lastSyncedAt, triggerManualSync, signOut, resetProgress, selectedLanguage, setSelectedLanguage, byokProvider, byokKeyConfigured, saveByokConfig, clearByokConfig } = useApp();
-  const [syncing, setSyncing] = useState(false);
-  const [byokOpen, setByokOpen] = useState(false);
-  const [byokKey, setByokKey] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState<ByokProvider>(byokProvider);
-  const [byokSaved, setByokSaved] = useState(false);
-  useEffect(() => {
-    setSelectedProvider(byokProvider);
-  }, [byokProvider]);
-  const handleSync = async () => {
-    setSyncing(true);
-    await triggerManualSync();
-    setSyncing(false);
-  };
-  const handleSaveByok = async () => {
-    const saved = await saveByokConfig(selectedProvider, byokKey);
-    if (saved) {
-      setByokKey('');
-      setByokSaved(true);
+  const { selectedLanguage, setSelectedLanguage, dailyTargetXp, setDailyGoalTarget, hearts, maxHearts, nextHeartRefillAt, createBackup, restoreBackup, resetProgress, isAdFree, purchaseRemoveAds, restorePurchases, recoverHeartFromRewardedAd } = useApp();
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupMessage, setBackupMessage] = useState<string | null>(null);
+  const [goalBusy, setGoalBusy] = useState(false);
+  const [storageError, setStorageError] = useState<string | null>(null);
+  const [purchaseBusy, setPurchaseBusy] = useState(false);
+  const privacyUrl = process.env.EXPO_PUBLIC_PRIVACY_URL;
+  const termsUrl = process.env.EXPO_PUBLIC_TERMS_URL;
+  const saveBackup = async () => {
+    setBackupBusy(true);
+    setBackupMessage(null);
+    try {
+      await createBackup();
+      setBackupMessage('Backup created. Choose a destination in the system share sheet.');
+    } catch (error) {
+      setStorageError(error instanceof Error ? error.message : 'Backup could not be created.');
+    } finally {
+      setBackupBusy(false);
     }
   };
-  const providerOptions: Array<{ id: ByokProvider; label: string }> = [
-    { id: 'openai-compatible', label: 'OpenAI-compatible' },
-    { id: 'anthropic-compatible', label: 'Anthropic-compatible' },
-    { id: 'custom', label: 'Custom endpoint' },
-  ];
+  const importBackup = async () => {
+    setBackupBusy(true);
+    setBackupMessage(null);
+    try {
+      const confirmed = await new Promise<boolean>((resolve) => {
+        Alert.alert('Replace local progress?', 'Restore replaces progress on this device. Create a backup first if you may need to undo it.', [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Restore', style: 'destructive', onPress: () => resolve(true) },
+        ]);
+      });
+      if (!confirmed) {
+        setBackupMessage('Restore canceled.');
+        return;
+      }
+      await restoreBackup();
+      setBackupMessage('Backup restored. Your learning path has been refreshed.');
+    } catch (error) {
+      setStorageError(error instanceof Error ? error.message : 'Backup could not be restored.');
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+  const changeGoal = async (target: number) => {
+    setGoalBusy(true);
+    try { await setDailyGoalTarget(target); } finally { setGoalBusy(false); }
+  };
+  const buyAdFree = async () => {
+    setPurchaseBusy(true);
+    const active = await purchaseRemoveAds();
+    setBackupMessage(active ? 'Ad removal is active on this device.' : 'The store offering is unavailable. Configure RevenueCat before testing purchases.');
+    setPurchaseBusy(false);
+  };
+  const restoreAdFree = async () => {
+    setPurchaseBusy(true);
+    const active = await restorePurchases();
+    setBackupMessage(active ? 'Your ad-removal purchase was restored.' : 'No verified ad-removal entitlement was found.');
+    setPurchaseBusy(false);
+  };
+  const recoverHeart = async () => {
+    setPurchaseBusy(true);
+    const recovered = await recoverHeartFromRewardedAd();
+    setBackupMessage(recovered ? 'One heart restored.' : 'No rewarded ad was available. Try again later or complete a review.');
+    setPurchaseBusy(false);
+  };
+  const openPolicy = async (url: string | undefined, title: string) => {
+    if (!url) {
+      Alert.alert(`${title} not published`, `Set EXPO_PUBLIC_${title === 'Privacy Policy' ? 'PRIVACY' : 'TERMS'}_URL before distributing the beta.`);
+      return;
+    }
+    await Linking.openURL(url);
+  };
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <ScreenHeader title="Settings" eyebrow="Your learning space" />
+      <ScreenHeader title="Settings" eyebrow="Private learning space" />
       <Card>
         <View style={styles.accountRow}>
           <OctopusMascot mood="greeting" size={52} animate={false} />
-          <View style={styles.flexOne}>
-            <Text style={styles.cardTitle}>{user.displayName}</Text>
-            <Text style={styles.mutedText}>{user.type === 'guest' ? 'Guest account · device only' : user.email}</Text>
-          </View>
-          <Badge label={user.type === 'guest' ? 'Guest' : 'Account'} variant={user.type === 'guest' ? 'neutral' : 'success'} />
+          <View style={styles.flexOne}><Text style={styles.cardTitle}>Guest learner</Text><Text style={styles.mutedText}>Progress stays on this device in the beta.</Text></View>
+          <Badge label="Local" variant="success" />
         </View>
       </Card>
       <Card>
-        <Text style={styles.cardTitle}>Cloud sync</Text>
-        <Text style={styles.mutedText}>Progress is staged locally first, then pushed through the sync boundary when you are online.</Text>
-        <Text style={styles.syncLine}>Status: {syncStatus}</Text>
-        <Text style={styles.syncLine}>Last sync: {lastSyncedAt ? new Date(lastSyncedAt).toLocaleString() : 'Not yet synced'}</Text>
-        <Button title={syncing ? 'Syncing…' : 'Sync now'} onPress={handleSync} disabled={syncing || user.type === 'guest'} loading={syncing} />
+        <Text style={styles.cardTitle}>Ads & purchases</Text>
+        <Text style={styles.mutedText}>{isAdFree ? 'Lifetime ad removal is active from a verified store entitlement.' : isBillingConfigured() ? 'Remove ads once, forever. The store verifies the entitlement.' : 'Ad removal is not configured for this beta build.'}</Text>
+        {!isAdFree && isBillingConfigured() ? <Button title={purchaseBusy ? 'Working…' : 'Remove ads forever'} onPress={() => void buyAdFree()} disabled={purchaseBusy} /> : null}
+        {isBillingConfigured() ? <Button title="Restore purchases" onPress={() => void restoreAdFree()} disabled={purchaseBusy} variant="outline" /> : null}
+        {isAdsFeatureConfigured() && !isAdFree ? <Button title="Watch an ad to restore 1 heart" onPress={() => void recoverHeart()} disabled={purchaseBusy || hearts >= maxHearts} variant="outline" /> : null}
+        {isAdsFeatureConfigured() ? <Button title="Ad privacy choices" onPress={() => void showAdPrivacyOptions()} disabled={purchaseBusy} variant="ghost" /> : null}
       </Card>
       <Card>
         <Text style={styles.cardTitle}>Learning track</Text>
-        <Text style={styles.mutedText}>Switch your active course without losing your account, streak, or review queue.</Text>
+        <Text style={styles.mutedText}>Switch courses without mixing their stable lesson and exercise IDs.</Text>
         <View style={styles.settingsLanguageGrid}>
           {LANGUAGE_OPTIONS.map((option) => {
             const selected = option.id === selectedLanguage;
-            return (
-              <TouchableOpacity key={option.id} onPress={() => setSelectedLanguage(option.id)} style={[styles.settingsLanguageButton, selected && styles.settingsLanguageButtonSelected]} activeOpacity={0.8} accessibilityRole="radio" accessibilityState={{ selected }}>
-                <Text style={[styles.settingsLanguageIcon, selected && styles.settingsLanguageIconSelected]}>{option.icon}</Text>
-                <Text style={[styles.settingsLanguageLabel, selected && styles.settingsLanguageLabelSelected]}>{option.label}</Text>
-                {selected ? <Text style={styles.settingsLanguageCheck}>✓</Text> : null}
-              </TouchableOpacity>
-            );
+            return <TouchableOpacity key={option.id} onPress={() => setSelectedLanguage(option.id)} style={[styles.settingsLanguageButton, selected && styles.settingsLanguageButtonSelected]} activeOpacity={0.8} accessibilityRole="radio" accessibilityState={{ selected }}><Text style={[styles.settingsLanguageIcon, selected && styles.settingsLanguageIconSelected]}>{option.icon}</Text><Text style={[styles.settingsLanguageLabel, selected && styles.settingsLanguageLabelSelected]}>{option.label}</Text>{selected ? <Text style={styles.settingsLanguageCheck}>✓</Text> : null}</TouchableOpacity>;
           })}
         </View>
       </Card>
-      <Card variant="muted">
-        <View style={styles.rowBetween}>
-          <View style={styles.flexOne}>
-            <Text style={styles.cardTitle}>BYOK · AI Coach</Text>
-            <Text style={styles.mutedText}>Bring your own API key for optional explanations and hint generation.</Text>
-          </View>
-          <Badge label={byokKeyConfigured ? 'Configured' : 'Optional'} variant={byokKeyConfigured ? 'success' : 'neutral'} />
-        </View>
-        <Text style={styles.byokNotice}>Prototype storage: local device only. The key is not added to cloud sync events. Use a secure storage adapter before production.</Text>
-        <Button title={byokOpen ? 'Hide BYOK setup' : byokKeyConfigured ? 'Update BYOK key' : 'Add a BYOK key'} onPress={() => setByokOpen((current) => !current)} variant="outline" />
-        {byokOpen ? (
-          <View style={styles.byokForm}>
-            <Text style={styles.inputLabel}>Provider</Text>
-            <View style={styles.providerRow}>
-              {providerOptions.map((provider) => (
-                <TouchableOpacity key={provider.id} onPress={() => setSelectedProvider(provider.id)} style={[styles.providerChip, selectedProvider === provider.id && styles.providerChipSelected]} activeOpacity={0.8}>
-                  <Text style={[styles.providerChipText, selectedProvider === provider.id && styles.providerChipTextSelected]}>{provider.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={styles.inputLabel}>API key</Text>
-            <TextInput style={styles.input} value={byokKey} onChangeText={(value) => { setByokKey(value); setByokSaved(false); }} placeholder="Paste a key for this device" placeholderTextColor={Colors.textSecondary} secureTextEntry autoCapitalize="none" autoCorrect={false} />
-            {byokSaved ? <Text style={styles.byokSavedText}>Saved locally on this device.</Text> : null}
-            <Button title="Save key locally" onPress={handleSaveByok} disabled={!byokKey.trim()} variant="primary" />
-            {byokKeyConfigured ? <Button title="Clear stored key" onPress={() => { void clearByokConfig(); setByokKey(''); setByokSaved(false); }} variant="ghost" size="sm" /> : null}
-          </View>
-        ) : null}
+      <Card>
+        <View style={styles.rowBetween}><Text style={styles.cardTitle}>Daily goal</Text><Text style={styles.goalNumbers}>{dailyTargetXp} XP</Text></View>
+        <Text style={styles.mutedText}>A goal day keeps your streak alive. Choose a pace that fits a five-minute session.</Text>
+        <View style={styles.goalChoices}>{[20, 30, 50].map((goal) => <TouchableOpacity key={goal} onPress={() => void changeGoal(goal)} disabled={goalBusy} style={[styles.goalChoice, dailyTargetXp === goal && styles.goalChoiceSelected]}><Text style={[styles.goalChoiceText, dailyTargetXp === goal && styles.goalChoiceTextSelected]}>{goal} XP</Text></TouchableOpacity>)}</View>
+      </Card>
+      <Card>
+        <View style={styles.rowBetween}><Text style={styles.cardTitle}>Hearts</Text><Badge label={`${hearts}/${maxHearts}`} variant={hearts === 0 ? 'clay' : 'success'} /></View>
+        <Text style={styles.mutedText}>{hearts === maxHearts ? 'Full hearts. Incorrect answers teach you and use one heart.' : nextHeartRefillAt ? `One heart returns around ${new Date(nextHeartRefillAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. Complete a review to recover one sooner.` : 'Complete a review to recover one heart.'}</Text>
+      </Card>
+      <Card>
+        <Text style={styles.cardTitle}>Data & backup</Text>
+        <Text style={styles.mutedText}>Export a versioned .learncode file before moving devices or reinstalling. Backups never include purchase entitlements, API keys, or ad identifiers.</Text>
+        <Button title={backupBusy ? 'Working…' : 'Create backup'} onPress={() => void saveBackup()} disabled={backupBusy} loading={backupBusy} />
+        <Button title="Restore backup" onPress={() => void importBackup()} disabled={backupBusy} variant="outline" />
+        {backupMessage ? <Text style={styles.byokSavedText}>{backupMessage}</Text> : null}
+        {storageError ? <Text style={styles.errorText}>{storageError}</Text> : null}
       </Card>
       <Card variant="muted">
-        <Text style={styles.cardTitle}>Community packs</Text>
-        <Text style={styles.mutedText}>The versioned schema and GitHub source lifecycle are ready in the shared layer. Moderated marketplace discovery is next.</Text>
+        <Text style={styles.cardTitle}>Legal</Text>
+        <Text style={styles.mutedText}>The beta has no mandatory account and no custom cloud progress service. Publish the drafts before public distribution.</Text>
+        <Button title="Privacy Policy" onPress={() => void openPolicy(privacyUrl, 'Privacy Policy')} variant="outline" />
+        <Button title="Terms of Service" onPress={() => void openPolicy(termsUrl, 'Terms of Service')} variant="outline" />
       </Card>
-      <Button title="Reset demo progress" onPress={resetProgress} variant="outline" />
-      {user.type === 'account' ? <Button title="Sign out" onPress={signOut} variant="ghost" /> : null}
+      <Button title="Reset local progress" onPress={() => Alert.alert('Reset progress?', 'This permanently removes local learning progress. Export a backup first if you may need it.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Reset', style: 'destructive', onPress: () => void resetProgress() }])} variant="ghost" />
     </ScrollView>
   );
 }
@@ -342,6 +373,7 @@ function PuzzleEditor({
 
 function ExerciseInput({
   exercise,
+  partIndex,
   selectedIndex,
   answers,
   submitted,
@@ -350,6 +382,7 @@ function ExerciseInput({
   onText,
 }: {
   exercise: Exercise;
+  partIndex: number;
   selectedIndex: number | null;
   answers: Record<string, string>;
   submitted: boolean;
@@ -399,7 +432,7 @@ function ExerciseInput({
     );
   }
   const current = exercise as MultiPartProblemExercise;
-  const part = current.parts[0];
+  const part = current.parts[partIndex] ?? current.parts[0];
   return (
     <View style={styles.puzzleEditor}>
       <Text style={styles.bodyText}>{current.story}</Text>
@@ -409,32 +442,32 @@ function ExerciseInput({
   );
 }
 
-function exerciseHasAnswer(exercise: Exercise, selectedIndex: number | null, answers: Record<string, string>): boolean {
+function exerciseHasAnswer(exercise: Exercise, selectedIndex: number | null, answers: Record<string, string>, partIndex = 0): boolean {
   if (exercise.type === 'multiple_choice') return selectedIndex !== null;
   if (exercise.type === 'predict_output') return Boolean(answers.output?.trim());
   if (exercise.type === 'write_function') return Boolean(exercise.guided ? exercise.guided.blanks.every((blank) => answers[blank.placeholder]?.trim()) : answers.code?.trim());
   if (exercise.type === 'multi_part_problem') {
-    const part = exercise.parts[0];
+    const part = exercise.parts[partIndex] ?? exercise.parts[0];
     return Boolean(part?.guided ? part.guided.blanks.every((blank) => answers[blank.placeholder]?.trim()) : answers.part?.trim());
   }
   return exercise.blanks.every((blank) => answers[blank.placeholder]?.trim());
 }
 
-function gradeExercise(grader: DefaultAnswerGrader, exercise: Exercise, selectedIndex: number | null, answers: Record<string, string>): boolean {
+function gradeExercise(grader: DefaultAnswerGrader, exercise: Exercise, selectedIndex: number | null, answers: Record<string, string>, partIndex = 0): boolean {
   switch (exercise.type) {
     case 'multiple_choice': return selectedIndex !== null && grader.gradeMultipleChoice(exercise, selectedIndex);
     case 'cloze': return grader.gradeCloze(exercise, answers);
     case 'predict_output': return grader.gradePredictOutput(exercise, answers.output || '');
-    case 'write_function': return exercise.guided ? grader.gradeCodePuzzle(exercise.guided, answers) : Boolean(answers.code?.trim());
+    case 'write_function': return exercise.guided ? grader.gradeCodePuzzle(exercise.guided, answers) : false;
     case 'multi_part_problem': {
-      const part = exercise.parts[0];
-      return Boolean(part?.guided ? grader.gradeCodePuzzle(part.guided, answers) : answers.part?.trim() === part?.expected.trim());
+      const part = exercise.parts[partIndex] ?? exercise.parts[0];
+      return Boolean(part?.guided ? grader.gradeCodePuzzle(part.guided, answers) : false);
     }
   }
 }
 
-function exerciseExplanation(exercise: Exercise): string {
-  if (exercise.type === 'multi_part_problem') return exercise.parts[0]?.expected || 'Break the problem into one small, testable decision at a time.';
+function exerciseExplanation(exercise: Exercise, partIndex = 0): string {
+  if (exercise.type === 'multi_part_problem') return exercise.parts[partIndex]?.expected || 'Break the problem into one small, testable decision at a time.';
   return exercise.explanation || 'Review the example and connect the choice to the underlying rule.';
 }
 
@@ -447,6 +480,7 @@ interface LessonSummaryData {
 }
 
 function LessonSummary({ lesson, summary, onContinue }: { lesson: Lesson; summary: LessonSummaryData; onContinue: () => void }) {
+  const { isAdFree } = useApp();
   return (
     <ScrollView contentContainerStyle={styles.summaryContent} showsVerticalScrollIndicator={false}>
       <View style={styles.summaryConfetti}>
@@ -456,7 +490,7 @@ function LessonSummary({ lesson, summary, onContinue }: { lesson: Lesson; summar
       </View>
       <OctopusMascot mood="celebrating" size={132} showBadge={true} message={summary.perfect ? 'Every decision landed.' : 'You kept going — that is how skill sticks.'} />
       <Text style={styles.summaryEyebrow}>{summary.perfect ? 'Perfect lesson' : 'Lesson complete'}</Text>
-      <Text style={styles.summaryTitle}>{summary.perfect ? 'You are thinking like a Kotlin engineer.' : 'Nice work showing up.'}</Text>
+      <Text style={styles.summaryTitle}>{summary.perfect ? 'You are thinking like an interview engineer.' : 'Nice work showing up.'}</Text>
       <Text style={styles.summaryLesson}>{lesson.title}</Text>
       <View style={styles.summaryBadges}>
         {summary.perfect ? <Badge label="Perfect run" variant="success" /> : <Badge label="Lesson complete" variant="sage" />}
@@ -474,6 +508,7 @@ function LessonSummary({ lesson, summary, onContinue }: { lesson: Lesson; summar
           <Text style={styles.summaryXpValue}>+{summary.paceBonusXp} XP</Text>
         </View>
       </Card>
+      <AdBanner isAdFree={isAdFree} />
       <KodaBubble
         variant="sage"
         title={summary.perfect ? 'Octo Coach says' : 'Keep the tentacles moving'}
@@ -485,26 +520,41 @@ function LessonSummary({ lesson, summary, onContinue }: { lesson: Lesson; summar
 }
 
 function LessonScreen({ lesson }: { lesson: Lesson }) {
-  const { recordExerciseGrade, finishLesson, exitLesson } = useApp();
+  const { recordExerciseGrade, recordProblemPartGrade, finishLesson, exitLesson, hearts, maxHearts } = useApp();
   const grader = useMemo(() => new DefaultAnswerGrader(), []);
-  const xpPolicy = useMemo(() => new DefaultXpPolicy(), []);
   const [exerciseQueue, setExerciseQueue] = useState<Exercise[]>(() => lesson.exercises);
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [partIndex, setPartIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [passedExerciseIds, setPassedExerciseIds] = useState<string[]>([]);
   const [answerStreak, setAnswerStreak] = useState(0);
+  const [hadMistake, setHadMistake] = useState(false);
+  const [attemptedExerciseIds, setAttemptedExerciseIds] = useState<string[]>([]);
+  const [checking, setChecking] = useState(false);
   const [milestone, setMilestone] = useState<number | null>(null);
   const [summary, setSummary] = useState<LessonSummaryData | null>(null);
   const [startedAt] = useState(() => Date.now());
   const exercise = exerciseQueue[exerciseIndex];
-  const hasAnswer = exerciseHasAnswer(exercise, selectedIndex, answers);
+  const hasAnswer = exerciseHasAnswer(exercise, selectedIndex, answers, partIndex);
 
-  const submitAnswer = () => {
-    if (!hasAnswer) return;
-    const correct = gradeExercise(grader, exercise, selectedIndex, answers);
+  const submitAnswer = async () => {
+    if (!hasAnswer || checking) return;
+    setChecking(true);
+    const correct = gradeExercise(grader, exercise, selectedIndex, answers, partIndex);
+    const part = exercise.type === 'multi_part_problem' ? (exercise.parts[partIndex] ?? exercise.parts[0]) : null;
+    const attemptKey = part ? `${exercise.id}:${part.id}` : exercise.id;
+    const isRetry = attemptedExerciseIds.includes(attemptKey);
+    const recorded = part
+      ? await recordProblemPartGrade(exercise.id, part.id, correct, isRetry)
+      : await recordExerciseGrade(exercise.id, correct, selectedIndex ?? 0, isRetry);
+    if (!recorded) {
+      setChecking(false);
+      return;
+    }
+    setAttemptedExerciseIds((previous) => previous.includes(attemptKey) ? previous : [...previous, attemptKey]);
     setIsCorrect(correct);
     setSubmitted(true);
     const nextStreak = correct ? answerStreak + 1 : 0;
@@ -512,18 +562,25 @@ function LessonScreen({ lesson }: { lesson: Lesson }) {
     if (correct && (nextStreak === 3 || nextStreak === 5 || nextStreak === 10)) {
       setMilestone(nextStreak);
     }
-    if (correct && !passedExerciseIds.includes(exercise.id)) {
+    if (!correct) setHadMistake(true);
+    const completedCurrentExercise = exercise.type !== 'multi_part_problem' || partIndex === exercise.parts.length - 1;
+    if (correct && completedCurrentExercise && !passedExerciseIds.includes(exercise.id)) {
       setPassedExerciseIds((previous) => [...previous, exercise.id]);
-      const xpAwarded = xpPolicy.xpForExercise(exercise, true, true);
-      recordExerciseGrade(exercise.id, true, selectedIndex ?? 0, xpAwarded);
-    } else if (!correct) {
-      recordExerciseGrade(exercise.id, false, selectedIndex ?? 0);
     }
+    setChecking(false);
   };
 
   const nextStep = () => {
     if (!isCorrect) {
       setExerciseQueue((previous) => [...previous, exercise]);
+    }
+    if (exercise.type === 'multi_part_problem' && isCorrect && partIndex < exercise.parts.length - 1) {
+      setPartIndex((previous) => previous + 1);
+      setSelectedIndex(null);
+      setAnswers({});
+      setSubmitted(false);
+      setIsCorrect(false);
+      return;
     }
     const completedExerciseIds = isCorrect && !passedExerciseIds.includes(exercise.id)
       ? [...passedExerciseIds, exercise.id]
@@ -533,16 +590,14 @@ function LessonScreen({ lesson }: { lesson: Lesson }) {
       setExerciseIndex((previous) => previous + 1);
       setSelectedIndex(null);
       setAnswers({});
+      setPartIndex(0);
       setSubmitted(false);
       setIsCorrect(false);
       return;
     }
-    const baseXp = completedExerciseIds.reduce((total, exerciseId) => {
-      const passedExercise = lesson.exercises.find((candidate) => candidate.id === exerciseId);
-      return total + (passedExercise ? xpPolicy.xpForExercise(passedExercise, true, true) : 0);
-    }, 0) || (allCorrect ? lesson.exercises.length * CARD_XP : 0);
-    const bonus = xpPolicy.calculatePaceBonus({ baseXp, activeDurationMs: Date.now() - startedAt, baselineDurationMs: xpPolicy.estimateLessonBaselineMs(lesson), allCorrect });
-    setSummary({ baseXp, paceBonusXp: bonus.bonusXp, totalXp: baseXp + bonus.bonusXp, perfect: allCorrect, answerStreak });
+    void finishLesson(lesson.id, Date.now() - startedAt).then((settlement) => {
+      setSummary({ baseXp: settlement.baseXp, paceBonusXp: settlement.paceBonusXp, totalXp: settlement.totalXp, perfect: !hadMistake, answerStreak });
+    });
   };
 
   if (summary) {
@@ -553,7 +608,7 @@ function LessonScreen({ lesson }: { lesson: Lesson }) {
           <Text style={styles.summaryHeaderLabel}>Lesson results</Text>
           <Text style={styles.lessonCount}>✓</Text>
         </View>
-        <LessonSummary lesson={lesson} summary={summary} onContinue={() => finishLesson(lesson.id, summary.paceBonusXp)} />
+        <LessonSummary lesson={lesson} summary={summary} onContinue={exitLesson} />
       </View>
     );
   }
@@ -572,15 +627,16 @@ function LessonScreen({ lesson }: { lesson: Lesson }) {
         {exerciseIndex === 0 ? <Text style={styles.lessonIntro}>{lesson.explanation}</Text> : null}
         <View style={styles.lessonStreakRow}>
           <Text style={styles.lessonStreakIcon}>🔥</Text>
-          <Text style={styles.lessonStreakText}>{answerStreak > 0 ? `${answerStreak} correct in a row` : 'Build your answer streak'}</Text>
+          <Text style={styles.lessonStreakText}>{answerStreak > 0 ? `${answerStreak} correct in a row` : 'Build your answer streak'} · ♥ {hearts}/{maxHearts}</Text>
         </View>
         <Card style={styles.questionCard}>
           <Badge label={exercise.type.replace('_', ' ')} variant="sage" />
           <Text style={styles.questionText}>{exercise.prompt}</Text>
           {exercise.type === 'multiple_choice' && exercise.code ? <CodeBlock code={exercise.code} /> : null}
-          <ExerciseInput exercise={exercise} selectedIndex={selectedIndex} answers={answers} submitted={submitted} onSelect={setSelectedIndex} onAnswer={(key, value) => setAnswers((previous) => ({ ...previous, [key]: value }))} onText={(value) => setAnswers((previous) => ({ ...previous, output: value, code: value, part: value }))} />
-          {submitted ? <KodaBubble variant={isCorrect ? 'sage' : 'clay'} title={isCorrect ? 'Good reasoning' : 'We’ll circle back'} message={isCorrect ? exerciseExplanation(exercise) : 'Not quite yet. This card is moving to the back of your practice queue.'} /> : null}
-          <Button title={submitted ? (isCorrect ? (passedExerciseIds.length + (passedExerciseIds.includes(exercise.id) ? 0 : 1) === lesson.exercises.length ? 'Finish lesson' : 'Next card') : 'Next card') : 'Check answer'} onPress={submitted ? nextStep : submitAnswer} disabled={!submitted && !hasAnswer} variant="primary" size="lg" />
+          {exercise.type === 'multi_part_problem' ? <Text style={styles.mutedText}>Part {partIndex + 1} of {exercise.parts.length}</Text> : null}
+          <ExerciseInput exercise={exercise} partIndex={partIndex} selectedIndex={selectedIndex} answers={answers} submitted={submitted} onSelect={setSelectedIndex} onAnswer={(key, value) => setAnswers((previous) => ({ ...previous, [key]: value }))} onText={(value) => setAnswers((previous) => ({ ...previous, output: value, code: value, part: value }))} />
+          {submitted ? <KodaBubble variant={isCorrect ? 'sage' : 'clay'} title={isCorrect ? 'Good reasoning' : 'We’ll circle back'} message={isCorrect ? exerciseExplanation(exercise, partIndex) : 'Not quite yet. This card is moving to the back of your practice queue.'} /> : null}
+          <Button title={submitted ? (isCorrect ? (passedExerciseIds.length + (passedExerciseIds.includes(exercise.id) ? 0 : 1) === lesson.exercises.length ? 'Finish lesson' : 'Next card') : 'Next card') : checking ? 'Checking…' : 'Check answer'} onPress={() => void (submitted ? nextStep() : submitAnswer())} disabled={!submitted && (!hasAnswer || checking)} variant="primary" size="lg" loading={checking} />
         </Card>
         <Text style={styles.lessonHint}>Missed cards move to the back of the queue. No code editor here: learn the decision first, then apply it in your own project.</Text>
       </ScrollView>
@@ -590,6 +646,12 @@ function LessonScreen({ lesson }: { lesson: Lesson }) {
 
 function MainNavigator() {
   const app = useApp();
+  if (!app.isHydrated) {
+    return <View style={styles.startupState}><ActivityIndicator size="large" color={Colors.primary} /><Text style={styles.startupTitle}>Opening your learning space…</Text><Text style={styles.mutedText}>Your progress stays on this device.</Text></View>;
+  }
+  if (app.storageError && !app.activeLessonParams) {
+    return <View style={styles.startupState}><OctopusMascot mood="encouraging" size={96} animate={false} /><Text style={styles.startupTitle}>Local progress is unavailable</Text><Text style={styles.errorText}>{app.storageError}</Text><Text style={styles.mutedText}>Build the native Android beta or Expo development build to use SQLite-backed lessons.</Text></View>;
+  }
   if (app.screen === 'onboarding') return <OnboardingScreen />;
   if (app.screen === 'lesson' && app.activeLessonParams) {
     const course = getCourse(app.selectedLanguage);
@@ -613,17 +675,21 @@ function MainNavigator() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="dark" backgroundColor={Colors.background} />
-        <MainNavigator />
-      </SafeAreaView>
-    </AppProvider>
+    <SafeAreaProvider>
+      <AppProvider>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <StatusBar style="dark" />
+          <MainNavigator />
+        </SafeAreaView>
+      </AppProvider>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: Colors.background },
+  startupState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.xl, gap: Spacing.md, backgroundColor: Colors.background },
+  startupTitle: { ...Typography.headlineSmall, color: Colors.text, textAlign: 'center' },
   mainContainer: { flex: 1, backgroundColor: Colors.background },
   tabContent: { flex: 1 },
   screen: { flex: 1, backgroundColor: Colors.background },
@@ -697,6 +763,13 @@ const styles = StyleSheet.create({
   settingsLanguageLabel: { ...Typography.labelMedium, color: Colors.textMuted, flex: 1 },
   settingsLanguageLabelSelected: { color: Colors.octopusPurpleDark },
   settingsLanguageCheck: { ...Typography.labelMedium, color: Colors.success },
+  goalNumbers: { ...Typography.labelMedium, color: Colors.primary },
+  goalChoices: { flexDirection: 'row', gap: Spacing.xs, marginTop: Spacing.md },
+  goalChoice: { flex: 1, alignItems: 'center', paddingVertical: Spacing.sm, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surface },
+  goalChoiceSelected: { borderColor: Colors.primary, backgroundColor: Colors.primaryContainer },
+  goalChoiceText: { ...Typography.labelMedium, color: Colors.textMuted },
+  goalChoiceTextSelected: { color: Colors.primaryDark, fontWeight: '800' },
+  errorText: { ...Typography.bodySmall, color: Colors.error ?? Colors.tertiary, lineHeight: 18 },
   byokNotice: { ...Typography.bodySmall, color: Colors.textMuted, lineHeight: 18, marginTop: Spacing.sm },
   byokForm: { gap: Spacing.sm, marginTop: Spacing.sm },
   providerRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -14,11 +14,10 @@ import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { OctopusMascot } from '../components/octopus/OctopusMascot';
-import { SyncStatusBadge } from '../components/sync/SyncStatusBadge';
-import { SyncModal } from '../components/sync/SyncModal';
 import { useApp } from '../domain/state/AppContext';
 import { getCourse, getLanguageOption } from '../data/courseCatalog';
 import { DefaultDailyGoalTracker } from '@learn/core';
+import { AdBanner } from '../services/ads';
 
 export const HomeScreen: React.FC = () => {
   const {
@@ -28,17 +27,14 @@ export const HomeScreen: React.FC = () => {
     currentStreak,
     freezesHeld,
     reviewCards,
-    syncStatus,
-    pendingOutboxCount,
-    lastSyncedAt,
     setTab,
     startLesson,
-    triggerManualSync,
     completedLessonIds,
     selectedLanguage,
+    hearts,
+    maxHearts,
+    isAdFree,
   } = useApp();
-
-  const [syncModalVisible, setSyncModalVisible] = useState(false);
 
   // Daily goal calculation via @learn/core DefaultDailyGoalTracker
   const goalTracker = new DefaultDailyGoalTracker(dailyTargetXp);
@@ -51,8 +47,8 @@ export const HomeScreen: React.FC = () => {
 
   const course = getCourse(selectedLanguage);
   const language = getLanguageOption(selectedLanguage);
-  const nextChapter = course.chapters[0];
-  const nextLesson = nextChapter?.lessons[0];
+  const nextChapter = course.chapters.find((chapter) => chapter.lessons.some((lesson) => !completedLessonIds.includes(lesson.id))) ?? course.chapters[course.chapters.length - 1];
+  const nextLesson = nextChapter?.lessons.find((lesson) => !completedLessonIds.includes(lesson.id)) ?? nextChapter?.lessons[0];
   const nextChapterId = nextChapter?.id ?? '';
   const nextLessonId = nextLesson?.id ?? '';
   const isLessonCompleted = completedLessonIds.includes(nextLessonId);
@@ -63,7 +59,7 @@ export const HomeScreen: React.FC = () => {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerIcon}>⚡</Text>
-          <Text style={styles.headerTitle}>Learn {language.label}</Text>
+          <Text style={styles.headerTitle}>Learn Code</Text>
         </View>
 
         <View style={styles.headerRight}>
@@ -79,12 +75,10 @@ export const HomeScreen: React.FC = () => {
             <Text style={styles.indicatorText}>{freezesHeld}</Text>
           </View>
 
-          {/* Visible sync status affordance */}
-          <SyncStatusBadge
-            status={syncStatus}
-            pendingCount={pendingOutboxCount}
-            onPress={() => setSyncModalVisible(true)}
-          />
+          <View style={styles.indicatorPill} accessible accessibilityLabel={`${hearts} of ${maxHearts} hearts available`}>
+            <Text style={styles.flameIcon}>♥</Text>
+            <Text style={styles.indicatorText}>{hearts}/{maxHearts}</Text>
+          </View>
         </View>
       </View>
 
@@ -104,7 +98,7 @@ export const HomeScreen: React.FC = () => {
               {user.displayName ? `Ready, ${user.displayName}?` : 'Ready to code?'}
             </Text>
             <Text style={styles.greetingBody}>
-              Practice {language.description.toLowerCase()} with Octo today.
+              Practice {language.shortLabel} interview questions with Koda today.
             </Text>
           </View>
           <OctopusMascot mood="greeting" size={72} />
@@ -181,7 +175,7 @@ export const HomeScreen: React.FC = () => {
                 )}
               </View>
               <Text style={styles.reviewSubtitle}>
-                `val` vs `var`, string templates, null safety
+                {dueCardsCount > 0 ? 'Retrieve one weak idea before your next lesson.' : 'Mistakes will return here for spaced practice.'}
               </Text>
             </View>
           </View>
@@ -199,64 +193,33 @@ export const HomeScreen: React.FC = () => {
           <View style={styles.pathSnapshotHeader}>
             <View style={styles.pathSnapshotTitleRow}>
               <Text style={styles.pathTreeIcon}>❖</Text>
-              <Text style={styles.pathSnapshotTitle}>Track: Kotlin Core</Text>
+              <Text style={styles.pathSnapshotTitle}>Track: {language.label}</Text>
             </View>
             <TouchableOpacity onPress={() => setTab('path')}>
-              <Text style={styles.viewPathLink}>View all chapters →</Text>
+              <Text style={styles.viewPathLink}>See path →</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Stepper visualizer */}
+          {/* Stepper visualizer, sourced from the selected JSON pack */}
           <View style={styles.stepperContainer}>
-            <View style={styles.stepNode}>
-              <View style={[styles.stepCircle, styles.stepDone]}>
-                <Text style={styles.stepDoneCheck}>✓</Text>
-              </View>
-              <Text style={styles.stepLabel}>Syntax</Text>
-            </View>
-
-            <View style={[styles.stepConnector, styles.connectorDone]} />
-
-            <View style={styles.stepNode}>
-              <View style={[styles.stepCircle, styles.stepActive]}>
-                <Text style={styles.stepActiveNum}>2</Text>
-              </View>
-              <Text style={styles.stepLabel}>Control</Text>
-            </View>
-
-            <View style={styles.stepConnector} />
-
-            <View style={styles.stepNode}>
-              <View style={styles.stepCircle}>
-                <Text style={styles.stepMutedNum}>3</Text>
-              </View>
-              <Text style={styles.stepLabel}>Strings</Text>
-            </View>
-
-            <View style={styles.stepConnector} />
-
-            <View style={styles.stepNode}>
-              <View style={styles.stepCircle}>
-                <Text style={styles.stepMutedNum}>4</Text>
-              </View>
-              <Text style={styles.stepLabel}>Tests</Text>
-            </View>
+            {course.chapters.slice(0, 4).map((chapter, index) => {
+              const complete = chapter.lessons.length > 0 && chapter.lessons.every((lesson) => completedLessonIds.includes(lesson.id));
+              const active = !complete && chapter.lessons.some((lesson) => !completedLessonIds.includes(lesson.id));
+              return <React.Fragment key={chapter.id}>
+                <View style={styles.stepNode}>
+                  <View style={[styles.stepCircle, complete && styles.stepDone, active && styles.stepActive]}>
+                    <Text style={complete ? styles.stepDoneCheck : active ? styles.stepActiveNum : styles.stepMutedNum}>{complete ? '✓' : index + 1}</Text>
+                  </View>
+                  <Text style={styles.stepLabel} numberOfLines={1}>{chapter.title.replace(/^(Chapter |Unit )?\d+ · /, '')}</Text>
+                </View>
+                {index < Math.min(3, course.chapters.length - 1) ? <View style={[styles.stepConnector, complete && styles.connectorDone]} /> : null}
+              </React.Fragment>;
+            })}
           </View>
         </Card>
+        <AdBanner isAdFree={isAdFree} />
       </ScrollView>
 
-      {/* Sync Status Sheet Modal */}
-      <SyncModal
-        visible={syncModalVisible}
-        status={syncStatus}
-        pendingCount={pendingOutboxCount}
-        lastSyncedAt={lastSyncedAt}
-        userType={user.type}
-        userEmail={user.email}
-        onClose={() => setSyncModalVisible(false)}
-        onTriggerSync={triggerManualSync}
-        onGoToSettings={() => setTab('settings')}
-      />
     </View>
   );
 };
@@ -498,12 +461,15 @@ const styles = StyleSheet.create({
   pathSnapshotHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
   },
   pathSnapshotTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
+    flex: 1,
+    minWidth: 0,
   },
   pathTreeIcon: {
     fontSize: 16,
@@ -512,6 +478,7 @@ const styles = StyleSheet.create({
   pathSnapshotTitle: {
     ...Typography.labelLarge,
     color: Colors.text,
+    flexShrink: 1,
   },
   viewPathLink: {
     ...Typography.labelSmall,
@@ -527,6 +494,8 @@ const styles = StyleSheet.create({
   stepNode: {
     alignItems: 'center',
     gap: Spacing.xs,
+    flex: 1,
+    minWidth: 0,
   },
   stepCircle: {
     width: 26,
@@ -565,9 +534,11 @@ const styles = StyleSheet.create({
     ...Typography.labelSmall,
     fontSize: 10,
     color: Colors.textSecondary,
+    width: '100%',
+    textAlign: 'center',
   },
   stepConnector: {
-    flex: 1,
+    width: 8,
     height: 2,
     backgroundColor: Colors.border,
     marginBottom: 16,

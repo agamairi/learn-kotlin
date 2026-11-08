@@ -9,13 +9,22 @@
   "scripts": {
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "validate:packs": "npm --workspace @learn/content run validate",
     "test:api": "npm --workspace @learn/api test",
     "typecheck:api": "npm --workspace @learn/api run typecheck",
     "mobile:start": "npm --workspace @learn/mobile start"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "expo": "~58.0.23",
+    "react": "19.3.0",
+    "react-native": "0.88.1"
   }
 }

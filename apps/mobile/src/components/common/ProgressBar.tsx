@@ -36,7 +36,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         style={[
           styles.fill,
           {
-            width: percentage,
+            width: percentage as `${number}%`,
             height,
             borderRadius: height / 2,
             backgroundColor: color,

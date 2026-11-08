@@ -10,6 +10,7 @@
     "./schema.json": "./schema/course-pack.schema.json"
   },
   "scripts": {
-    "test": "node --experimental-strip-types --test src/__tests__/*.test.ts"
+    "test": "node --experimental-strip-types --test src/__tests__/*.test.ts",
+    "validate": "node --experimental-strip-types src/validate-packs.ts"
   }
 }

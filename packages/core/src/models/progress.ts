@@ -3,6 +3,8 @@
  */
 export interface ExerciseResult {
   exerciseId: string;
+  /** Parent exercise ID for a multipart part result. */
+  problemId?: string | null;
   correct: boolean;
   xpAwarded: number;
   epochMillis: number;

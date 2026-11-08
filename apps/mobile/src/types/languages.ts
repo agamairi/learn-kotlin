@@ -1,1 +1,1 @@
-export type SupportedLanguage = 'kotlin' | 'swift' | 'react' | 'typescript';
+export type SupportedLanguage = 'kotlin' | 'swift' | 'flutter' | 'react-native' | 'java';
