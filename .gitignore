@@ -4,3 +4,32 @@ node_modules/
 dist/
 coverage/
 *.log
+
+# Local environment and editor state
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Generated Android/Expo build state
+**/build/
+**/.gradle/
+**/.cxx/
+**/local.properties
+**/debug.keystore
+**/*.keystore
+**/*.jks
+*.jsbundle
+
+# Local release artifacts
+*.apk
+*.aab
+
+# Local-only files intentionally kept out of the repository
+/app.json
+/expo-qr.png
+/docs/*
+!/docs/PRD.md
